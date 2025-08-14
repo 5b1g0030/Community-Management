@@ -1,0 +1,15 @@
+== 虛擬環境 ==
+
+建立: python -m venv venv
+啟動: .\venv\Scripts\activate
+退出: deactivate
+
+** 僅Windows適用 **
+
+如果出現錯誤: AttributeError: module 'cv2' has no attribute 'face'
+
+# 先卸載現有的 OpenCV
+pip uninstall opencv-python opencv-contrib-python
+
+# 安裝包含 face 模組的版本
+pip install opencv-contrib-python
