@@ -21,7 +21,7 @@ class FaceRecognitionSystem:
     # 3. 資料庫
     # 4. 載入模型
     # =====================    
-    def __init__(self, db_path='face_database.db', model_path='face_model.pkl'):
+    def __init__(self, db_path='face_detector/face_database.db', model_path='face_detector/face_model.pkl'):
         # 初始化檔案路徑
         self.db_path = db_path # 指定 SQLite 資料庫
         self.model_path = model_path # 指定訓練好的人臉辨識模型
@@ -249,27 +249,29 @@ class FaceRecognitionSystem:
                 label, confidence = self.recognizer.predict(face_resized)
                 
                 # ----- 查詢人名 -----
-                conn = sqlite3.connect(self.db_path)
-                cursor = conn.cursor()
-                cursor.execute("SELECT name FROM faces WHERE id = ?", (label,))
-                result = cursor.fetchone()
+                conn = sqlite3.connect(self.db_path) # 連接資料庫
+                cursor = conn.cursor() # 建立游標物件執行 SQL 指令
+                cursor.execute("SELECT name FROM faces WHERE id = ?", (label,))# SQL 查詢，跟據 ID 查詢人名
+                result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
                 
-                if result and confidence < 100:  # 信心度閾值
+                # 有資料且信心度閾值小於100，執行以下內容
+                if result and confidence < 100:  
                     name = result[0]
                     
                     # ---- 記錄辨識結果 -----
-                    recognition_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    recognition_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串
+                    # SQL 指令，寫入人臉ID、辨識時間、信心度
                     cursor.execute('''
                         INSERT INTO recognition_log (face_id, recognition_date, confidence)
                         VALUES (?, ?, ?)
                     ''', (label, recognition_date, confidence))
-                    conn.commit()
+                    conn.commit() # 提交變更、確保資料真的儲存到資料庫。
                     
                     # 辨識成功的資料
                     results.append({
-                        'name': name,
-                        'confidence': confidence,
-                        'position': (x, y, w, h)
+                        'name': name,               # 人名
+                        'confidence': confidence,   # 信心閾值
+                        'position': (x, y, w, h)    # 人臉座標
                     })
                 else:
                     # 辨識失敗的資料
@@ -279,10 +281,10 @@ class FaceRecognitionSystem:
                         'position': (x, y, w, h)
                     })
                 
-                conn.close()
+                conn.close() # 關閉連接，釋放資源
                 
             # 辨識錯誤的資料
-            except cv2.error:
+            except cv2.error: # 例外處理與法，捕捉 OpenCV 執行過程中發生的錯誤
                 results.append({
                     'name': '無法辨識',
                     'confidence': 0,
@@ -292,44 +294,81 @@ class FaceRecognitionSystem:
         # ----- 回傳結果 -----
         return results
     
+    # ===== 處理靜態圖片 =====
+    # 1. 讀取圖片
+    # 2. 呼叫「辨識人臉函式」
+    # 3. 在圖片上標記辨識結果
+    # 4. 顯示標記後的圖片
+    # 5. 等待使用者關閉視窗
+    # ======================= 
     def process_image(self, image_path):
-        """處理靜態圖片"""
-        image = cv2.imread(image_path)
+
+        # ----- 讀取圖片 -----
+        image = cv2.imread(image_path) # 從指定路徑讀取圖片，轉換成 NumPy 陣列，路徑錯誤或檔案不存在會是 None
         if image is None:
             print(f"無法讀取圖片: {image_path}")
             return
         
-        results = self.recognize_face(image)
+        # ----- 呼叫「辨識人臉函式」 -----
+        results = self.recognize_face(image) 
         
-        # 在圖片上標記辨識結果
-        for result in results:
-            x, y, w, h = result['position']
-            name = result['name']
-            confidence = result['confidence']
+        # ----- 在圖片上標記辨識結果 -----
+        for result in results:                  # 逐一處理所有辨識到的人臉結果。 
+            x, y, w, h = result['position']     # 人臉座標
+            name = result['name']               # 人名
+            confidence = result['confidence']   # 辨識信心度
             
-            cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2) # 以綠色方框標記人臉區域
             
-            label = f"{name} ({confidence:.1f})"
-            cv2.putText(image, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+            label = f"{name} ({confidence:.1f})" # 要顯示的文字
+            cv2.putText(image, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2) # 在方框上方顯示人名和信心度
         
-        cv2.imshow('Face Recognition - Image', image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # ----- 顯示標記後的圖片 -----
+        cv2.imshow('Face Recognition - Image', image) 
+        cv2.waitKey(0) # 等待使用者關閉視窗
+        cv2.destroyAllWindows() # 關閉所有 OpenCV 視窗
     
+    # ===== 即時鏡頭辨識 =====
+    #  
     def camera_recognition(self):
-        """即時鏡頭辨識"""
+        # ----- 開啟攝影機 -----
+        # cv2.VideoCapture(0) => 使用預設後端(有可能使用到不適合的系統)
+        # cv2.VideoCapture(0, cv2.【系統參數】) => 可以指定適合的系統 
+        # Windows => CAP_DSHOW(推薦), CAP_MSMF
+        # macOS => CAP_AVFOUNDATION(推薦)
+        # Linux => CAP_V4L2(推薦), CAP_GSTREAMER
+        # --------------------- 
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+        # ----- 設定解析度與編碼格式 -----
+        # cv2.CAP_PROP_FRAME_WIDTH => 影像寬度
+        # cv2.CAP_PROP_FRAME_HEIGHT => 影像高度
+        # 影像寬度 + 影像高度 = 影像解析度(寬*高)
+        # 常見解析度:
+        # VGA (640*480)
+        # HD 720p (1280*720)
+        # Full HD 1080p (1920*1080)
+        # 注意事項: 
+        # 1. 攝影機不一定支援所有解析度
+        # 2. 解析度越高，處理速度越慢(延遲高)
+        # 3. 要在攝影機開啟後立即設定
+        # 4. 如果攝影機不支援該解析度，OpenCV 會自動選擇最接近的解析度
+        # -------------------------------
+        # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 920)
+        # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 540)
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG')) # 用 MJPG 編碼減少延遲
         
-        print("開始鏡頭辨識，按 'q' 退出，按 's' 截圖並加入資料庫")
+        print("開始鏡頭辨識，按 'q' 退出，按 's' 截圖並加入資料庫") # 提示操作說明
         
         while True:
+            # ----- 讀取影像 -----
             ret, frame = cap.read()
-            if not ret:
+            if not ret: # 檢查有沒有讀取到影像
                 break
             
-            results = self.recognize_face(frame)
+            results = self.recognize_face(frame) # 呼叫「人臉辨識函式」
             
-            # 在畫面上標記辨識結果
+            # ----- 在畫面上標記辨識結果 -----
             for result in results:
                 x, y, w, h = result['position']
                 name = result['name']
@@ -341,16 +380,17 @@ class FaceRecognitionSystem:
                 label = f"{name} ({confidence:.1f})"
                 cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
             
+            # ----- 顯示標記後的畫面 -----
             cv2.imshow('Face Recognition - Camera', frame)
             
             key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
+            if key == ord('q'): # 按 q 退出
                 break
-            elif key == ord('s'):
+            elif key == ord('s'): # 按 s 截圖儲存到資料庫
                 # 截圖並加入資料庫
                 name = input("請輸入人名: ")
                 if name:
-                    self.add_face_to_database(frame, name)
+                    self.add_face_to_database(frame, name) # 呼叫「將人臉加入資料庫函式」
         
         cap.release()
         cv2.destroyAllWindows()
@@ -401,6 +441,10 @@ def main():
         
         elif choice == '2':
             cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) # Windows專用參數
+            # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 920)
+            # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 540)
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+            
             print("按空白鍵拍照，按 'q' 退出")
             
             while True:
