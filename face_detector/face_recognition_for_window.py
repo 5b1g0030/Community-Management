@@ -4,6 +4,7 @@ import numpy as np              # 數值計算和陣列操作
 import os                       # 作業系統相關操作
 import pickle                   # 物件序列化和反序列化
 from datetime import datetime   # 日期和時間處理
+import platform                 # 獲取作業系統資訊(選擇鏡頭系統參數用)
 
 # ===== 人臉辨識系統類別 =====
 # 裡面包含:
@@ -39,6 +40,37 @@ class FaceRecognitionSystem:
         # 載入已存在的模型（如果有的話）
         self.load_model()
     
+    # ====== 決定鏡頭所用參數 =====
+    # 1. 取得作業系統資訊
+    # 2. 根據作業系統選擇後端參數
+    # 3. 回傳這個作業系統的鏡頭參數
+    # ============================ 
+    def camera_type(self):
+        # ***** 攝影機參數 *****
+        # cv2.VideoCapture(0) => 使用預設後端(有可能使用到不適合的系統)
+        # cv2.VideoCapture(0, cv2.【系統參數】) => 可以指定適合的系統 
+        # Windows => CAP_DSHOW(推薦), CAP_MSMF
+        # macOS => CAP_AVFOUNDATION(推薦)
+        # Linux => CAP_V4L2(推薦), CAP_GSTREAMER
+        # ********************* 
+
+        # ----- 取得作業系統資訊 -----
+        os_type = platform.system() # 會回傳一個字串，代表你目前的作業系統
+        backends = []
+
+        # ----- 根據作業系統選擇後端參數 -----
+        if os_type == "Windows":    # windows系統
+            backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_VFW]
+        elif os_type == "Darwin":   # macOS系統
+            backends = [cv2.CAP_AVFOUNDATION]
+        elif os_type == "Linux":    # linux系統
+            backends = [cv2.CAP_V4L2, cv2.CAP_GSTREAMER]
+        else:
+            backends = [0]  # 預設
+        
+        # ----- 回傳這個作業系統的鏡頭參數 -----
+        return backends
+
     # ===== 初始化SQLite資料庫 =====
     # 1. 創建人臉資料表
     # 2. 創建辨識紀錄資料表
@@ -329,16 +361,31 @@ class FaceRecognitionSystem:
         cv2.destroyAllWindows() # 關閉所有 OpenCV 視窗
     
     # ===== 即時鏡頭辨識 =====
-    #  
+    # 1. 開啟攝影機(根據作業系統選擇後端參數)
+    # 2. 設定解析度與編碼格式
+    # 3. 讀取影像
+    # 4. 在畫面上標記辨識結果
+    # 5. 顯示標記後的畫面
+    # 6. 退出或截圖儲存資料庫
+    # ======================= 
     def camera_recognition(self):
         # ----- 開啟攝影機 -----
-        # cv2.VideoCapture(0) => 使用預設後端(有可能使用到不適合的系統)
-        # cv2.VideoCapture(0, cv2.【系統參數】) => 可以指定適合的系統 
-        # Windows => CAP_DSHOW(推薦), CAP_MSMF
-        # macOS => CAP_AVFOUNDATION(推薦)
-        # Linux => CAP_V4L2(推薦), CAP_GSTREAMER
-        # --------------------- 
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        backends = self.camera_type() # 呼叫「決定鏡頭所用參數函式」
+        cap = None
+        for backend in backends: # 依序測試系統參數
+            try:
+                cap = cv2.VideoCapture(0, backend) # 放入參數
+                if cap.isOpened(): # 如果攝影機成功開啟，則跳出迴圈
+                    break
+                else:
+                    cap.release()
+            except Exception: # 錯誤處理
+                continue
+        
+        # 沒有參數適合的情況
+        if cap is None or not cap.isOpened():
+            print("無法開啟攝影機，請檢查設備或驅動程式。")
+            return
 
         # ----- 設定解析度與編碼格式 -----
         # cv2.CAP_PROP_FRAME_WIDTH => 影像寬度
@@ -395,19 +442,30 @@ class FaceRecognitionSystem:
         cap.release()
         cv2.destroyAllWindows()
     
+    # ===== 列出資料庫中的所有人臉資料 =====
+    # 1. 連接資料庫
+    # 2. 查詢人臉資料
+    # 3. 查詢辨識紀錄
+    # 4. 關閉資料庫
+    # 5. 顯示資料
+    # ==================================== 
     def list_faces(self):
-        """列出資料庫中的所有人臉資料"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
         
+        # ----- 連接資料庫 -----
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor() # 建立游標物件執行 SQL 指令
+        
+        # ----- 查詢人臉資料 -----
         cursor.execute("SELECT id, name, created_date FROM faces")
         faces = cursor.fetchall()
         
+        # ----- 查詢辨識紀錄 -----
         cursor.execute("SELECT COUNT(*) FROM recognition_log")
         total_recognitions = cursor.fetchone()[0]
         
-        conn.close()
+        conn.close() # 關閉資料庫
         
+        # ----- 顯示資料 -----
         print(f"\n資料庫中共有 {len(faces)} 個人臉資料:")
         print("=" * 50)
         for face_id, name, created_date in faces:
@@ -415,10 +473,14 @@ class FaceRecognitionSystem:
         
         print(f"\n總辨識次數: {total_recognitions}")
 
+# ===== 主程式 =====
+#  
 def main():
-    system = FaceRecognitionSystem()
+    # ----- 引入類別 -----
+    system = FaceRecognitionSystem() 
     
     while True:
+        # ----- 顯示功能表 -----
         print("\n=== 人臉辨識系統 ===")
         print("1. 從圖片加入人臉資料")
         print("2. 從鏡頭加入人臉資料")
@@ -427,44 +489,80 @@ def main():
         print("5. 查看資料庫資料")
         print("6. 退出")
         
-        choice = input("\n請選擇功能 (1-6): ")
+        # ----- 使用者輸入 -----
+        choice = input("\n請選擇功能 (1-6): ") 
         
+        # ----- 選1: 輸入圖片加入資料庫訓練模型 -----
+        # 1. 輸入圖片
+        # 2. 讀取圖片
+        # 3. 加入資料庫或輸出錯誤
+        # ----------------------------------------- 
         if choice == '1':
+            # --- 輸入圖片 ---
             image_path = input("請輸入圖片路徑: ")
             name = input("請輸入人名: ")
             
-            image = cv2.imread(image_path)
-            if image is not None:
-                system.add_face_to_database(image, name, image_path)
+            # --- 讀取圖片 ---
+            image = cv2.imread(image_path) 
+            
+            # --- 加入資料庫或輸出錯誤 ---
+            if image is not None: # 如果有圖片
+                system.add_face_to_database(image, name, image_path) # 呼叫「將人臉加入資料庫函式」
             else:
                 print("無法讀取圖片")
         
+        # ----- 選2: 用鏡頭拍照加入資料庫訓練模型 -----
+        # 1. 開啟攝影機
+        # 2. 顯示畫面
+        # 3. 按下空白鍵拍照並儲存資料庫
+        # 4. 退出
+        # ------------------------------------------- 
         elif choice == '2':
-            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW) # Windows專用參數
+            # --- 開啟攝影機 ---
+            backends = system.camera_type() # 呼叫「決定鏡頭所用參數函式」
+            cap = None
+            for backend in backends: # 依序測試系統參數
+                try:
+                    cap = cv2.VideoCapture(0, backend) # 放入參數
+                    if cap.isOpened(): # 如果攝影機成功開啟，則跳出迴圈
+                        break
+                    else:
+                        cap.release()
+                except Exception: # 錯誤處理
+                    continue
+        
+            # 沒有參數適合的情況
+            if cap is None or not cap.isOpened():
+                print("無法開啟攝影機，請檢查設備或驅動程式。")
+                return
+            
             # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 920)
             # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 540)
             cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
             
-            print("按空白鍵拍照，按 'q' 退出")
+            print("按空白鍵拍照，按 'q' 退出") # 提示詞
             
             while True:
-                ret, frame = cap.read()
+                ret, frame = cap.read() # 讀取影像
                 if not ret:
                     break
                 
+                # --- 顯示畫面 ---
                 cv2.imshow('Camera - Press SPACE to capture', frame)
                 
-                key = cv2.waitKey(1) & 0xFF
+                key = cv2.waitKey(1) & 0xFF # 即時更新
+                
+                # --- 按下空白鍵拍照並儲存資料庫 ---
                 if key == ord(' '):
                     name = input("請輸入人名: ")
                     if name:
-                        system.add_face_to_database(frame, name)
+                        system.add_face_to_database(frame, name) # 呼叫「將人臉加入資料庫函式」
                     break
-                elif key == ord('q'):
+                elif key == ord('q'): # 按 q 退出
                     break
             
-            cap.release()
-            cv2.destroyAllWindows()
+            cap.release() # 釋放資源
+            cv2.destroyAllWindows() # 關閉所有 OpenCV 視窗
         
         elif choice == '3':
             image_path = input("請輸入圖片路徑: ")
@@ -483,5 +581,6 @@ def main():
         else:
             print("請輸入有效選項")
 
+# 在此檔案被執行時才執行主程式
 if __name__ == "__main__":
     main()

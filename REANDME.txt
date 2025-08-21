@@ -4,12 +4,24 @@
 啟動: .\venv\Scripts\activate
 退出: deactivate
 
+
+** 需要安裝的模組 **
+
+# OpenCV（含人臉辨識模組）
+python -m pip install opencv-contrib-python
+
+# NumPy
+python -m pip install numpy
+
+
 ** 僅Windows適用 **
 
 如果出現錯誤: AttributeError: module 'cv2' has no attribute 'face'
-
-# 先卸載現有的 OpenCV
+1. 先卸載現有的 OpenCV
 pip uninstall opencv-python opencv-contrib-python
 
-# 安裝包含 face 模組的版本
+2. 安裝包含 face 模組的版本
 pip install opencv-contrib-python
+
+# 如果 venv 無法啟動 (powershell)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
