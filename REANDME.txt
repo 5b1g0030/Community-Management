@@ -25,3 +25,7 @@ pip install opencv-contrib-python
 
 # 如果 venv 無法啟動 (powershell)
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+** Git 使用者資訊設定 **
+git config --global user.email "you@example.com"
+git config --global user.name "Your Name"
