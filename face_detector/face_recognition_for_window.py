@@ -474,7 +474,13 @@ class FaceRecognitionSystem:
         print(f"\n總辨識次數: {total_recognitions}")
 
 # ===== 主程式 =====
-#  
+# 1. 引入類別
+# 2. 顯示功能表
+# 3. 使用者輸入
+# 4. 根據選擇啟動不同功能
+# 5. 例外處理
+# 6. 直到使用者輸入 6 退出函式
+# ================== 
 def main():
     # ----- 引入類別 -----
     system = FaceRecognitionSystem() 
@@ -564,23 +570,42 @@ def main():
             cap.release() # 釋放資源
             cv2.destroyAllWindows() # 關閉所有 OpenCV 視窗
         
+        # ----- 選3: 辨識圖片中的人臉 -----
+        # 1. 輸入圖片
+        # 2. 呼叫「處理靜態圖片」
+        # -------------------------------  
         elif choice == '3':
-            image_path = input("請輸入圖片路徑: ")
+            # --- 輸入圖片 ---
+            image_path = input("請輸入圖片路徑: ") 
+            # --- 呼叫「處理靜態圖片」 ---
             system.process_image(image_path)
         
+        # ----- 選4: 開始鏡頭辨識 -----
+        # 1. 呼叫「即時鏡頭辨識」
+        # ----------------------- 
         elif choice == '4':
+            # --- 呼叫「即時鏡頭辨識」 ---
             system.camera_recognition()
         
+        # ----- 選5: 查看資料庫資料 -----
+        # 1. 列出資料庫中的所有人臉資料
+        # ------------------------------ 
         elif choice == '5':
             system.list_faces()
         
+        # ----- 選6: 退出 -----
+        # 1. 顯示退出訊息
+        # 2. 跳出無限迴圈結束此函式運行
+        # -------------------- 
         elif choice == '6':
+            # --- 顯示退出訊息 ---
             print("程式結束")
+            # --- 跳出無限迴圈結束此函式運行 ---
             break
         
         else:
-            print("請輸入有效選項")
+            print("請輸入有效選項") # 例外處理
 
 # 在此檔案被執行時才執行主程式
 if __name__ == "__main__":
-    main()
+    main() # 呼叫「主程式」
