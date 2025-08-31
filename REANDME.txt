@@ -29,3 +29,13 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ** Git 使用者資訊設定 **
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
+
+** 網頁設定 **
+# 原本的套件
+pip install opencv-contrib-python numpy
+
+# 新增的Flask相關套件
+pip install flask flask-socketio flask-caching
+
+# 如果需要CORS支援（前端分離開發）
+pip install flask-cors

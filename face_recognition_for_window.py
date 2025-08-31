@@ -6,6 +6,8 @@ import pickle                   # 物件序列化和反序列化
 from datetime import datetime   # 日期和時間處理
 import platform                 # 獲取作業系統資訊(選擇鏡頭系統參數用)
 
+""" 網頁將引用 FaceRecognitionSystem 類別 """
+
 # ===== 人臉辨識系統類別 =====
 # 裡面包含:
 # 1. 初始化系統
