@@ -444,7 +444,7 @@ class FaceRecognitionSystem:
         cap.release()
         cv2.destroyAllWindows()
     
-    # ===== 列出資料庫中的所有人臉資料 =====
+    # ===== 列出資料庫中的所有人臉資料(終端) =====
     # 1. 連接資料庫
     # 2. 查詢人臉資料
     # 3. 查詢辨識紀錄
@@ -474,6 +474,16 @@ class FaceRecognitionSystem:
             print(f"ID: {face_id}, 姓名: {name}, 建立時間: {created_date}")
         
         print(f"\n總辨識次數: {total_recognitions}")
+
+    # ===== 列出資料庫中的所有人臉資料(網頁) =====
+    def get_all_faces(self):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, created_date FROM faces")
+        faces = [{'id': row[0], 'name': row[1], 'created_date': row[2]} for row in cursor.fetchall()]
+        conn.close()
+        return faces
+    
 
 # ===== 主程式 =====
 # 1. 引入類別

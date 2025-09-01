@@ -1,16 +1,63 @@
 <!-- Flask 網頁前端 -->
 
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>社區人臉辨識系統</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-
 <body>
+    <div class="container">
+        <div class="main-content">
+            <h1>社區人臉辨識系統</h1>
+            
+            <!-- 功能按鈕區 -->
+            <div class="function-buttons">
+                <div class="upload-section">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <input type="file" id="faceImage" accept="image/*" style="display: none;">
+                        <input type="text" id="personName" placeholder="請輸入人名" style="display: none;">
+                        <button type="button" id="addFaceBtn">加入人臉</button> <!-- 功能測試正常 -->
+                    </form>
+                </div>
+                <div class="test-section">
+                    <form id="testForm" enctype="multipart/form-data">
+                        <input type="file" id="testImage" accept="image/*" style="display: none;">
+                        <button type="button" id="testFaceBtn">測試辨識</button> <!-- 功能測試正常 -->
+                    </form>
+                </div>
+                <button id="viewDbBtn">查看資料庫</button> <!-- 功能已修復正常 -->
+            </div>
 
+            <!-- 資料表格 -->
+            <div id="dbTable" class="database-table" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>姓名</th>
+                            <th>建立時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 即時影像與紀錄區 -->
+        <div class="sidebar">
+            <div class="video-container">
+                <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="即時影像">
+            </div>
+            <div class="log-container">
+                <h3>辨識紀錄</h3>
+                <div id="recognitionLog"></div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
-
 </html>
