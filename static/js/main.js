@@ -89,17 +89,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // WebSocket 連線（辨識紀錄）
-    let wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    let ws = new WebSocket(wsProtocol + '//' + location.host + '/ws');
-    ws.onmessage = function(event) {
-        try {
-            const data = JSON.parse(event.data);
-            if (data.type === 'recognition') {
-                addLogEntry(data.message);
-            }
-        } catch (e) {}
-    };
+    // SocketIO 連線（辨識紀錄）
+    const socket = io();
+    socket.on('recognition', function(data) {
+        if (data.type === 'recognition') {
+            addLogEntry(data.message);
+        }
+    });
+    
     function addLogEntry(message) {
         const entry = document.createElement('div');
         entry.className = 'log-entry';

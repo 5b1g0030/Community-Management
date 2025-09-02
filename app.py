@@ -18,7 +18,10 @@ face_system = FaceRecognitionSystem()
 def index():
     return render_template('index.html')
 
+last_names = set()
+
 def gen_frames():
+    global last_names
     cap = cv2.VideoCapture(0)
     while True:
         ret, frame = cap.read()
@@ -27,6 +30,16 @@ def gen_frames():
         
         # 進行人臉辨識
         results = face_system.recognize_face(frame)
+        current_names = set([r['name'] for r in results])
+        # 只在新住戶或未知人物出現時推送
+        if current_names != last_names:
+            for result in results:
+                name = result['name']
+                if name != '未知':
+                    socketio.emit('recognition', {'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
+                else:
+                    socketio.emit('recognition', {'type': 'recognition', 'message': '偵測到未知人物'})
+            last_names = current_names
         
         # 在影像上繪製辨識結果
         for result in results:
@@ -39,12 +52,6 @@ def gen_frames():
             
             label = f"{name} ({confidence:.1f})"
             cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-            
-            # 發送辨識結果到前端
-            if name != '未知':
-                socketio.emit('recognition', {'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
-            else:
-                socketio.emit('recognition', {'type': 'recognition', 'message': '偵測到未知人物'})
         
         # 將影像轉換為 JPEG 格式
         ret, buffer = cv2.imencode('.jpg', frame)
