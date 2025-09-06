@@ -6,32 +6,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>社區人臉辨識系統</title>
+    <!-- 引入CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
         <div class="main-content">
-            <h1>社區人臉辨識系統</h1>
+            <h1>社區人臉辨識系統</h1> <!-- 標題 -->
             
             <!-- 功能按鈕區 -->
             <div class="function-buttons">
-                <div class="upload-section">
-                    <form id="uploadForm" enctype="multipart/form-data">
-                        <input type="file" id="faceImage" accept="image/*" style="display: none;">
-                        <input type="text" id="personName" placeholder="請輸入人名" style="display: none;">
-                        <button type="button" id="addFaceBtn">加入人臉</button> <!-- 功能測試正常 -->
-                    </form>
-                </div>
-                <div class="test-section">
-                    <form id="testForm" enctype="multipart/form-data">
-                        <input type="file" id="testImage" accept="image/*" style="display: none;">
-                        <button type="button" id="testFaceBtn">測試辨識</button> <!-- 功能測試正常 -->
-                    </form>
-                </div>
-                <button id="viewDbBtn">查看資料庫</button> <!-- 功能已修復正常 -->
+                <button type="button" id="addFaceBtn">加入人臉</button>
+                <button type="button" id="testFaceBtn">測試辨識</button>
+                <button type="button" id="viewDbBtn">查看資料庫</button>
             </div>
 
-            <!-- 資料表格 -->
+            <!-- 資料表格(查看資料庫功能) -->
             <div id="dbTable" class="database-table" style="display: none;">
                 <table>
                     <thead>
@@ -41,6 +31,12 @@
                             <th>建立時間</th>
                         </tr>
                     </thead>
+                    <!-- 資料表格的表身區域 -->
+                    <!-- 
+                    當你按下「查看資料庫」按鈕時，前端 JavaScript 會取得資料庫資料，
+                    然後用程式動態建立 <tr>（表格列）並插入到這個 <tbody> 裡，讓網頁
+                    即時顯示所有人臉資料 
+                    -->
                     <tbody id="tableBody">
                     </tbody>
                 </table>
@@ -49,16 +45,65 @@
 
         <!-- 即時影像與紀錄區 -->
         <div class="sidebar">
+            <!-- 及時辨識影像畫面 -->
             <div class="video-container">
                 <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="即時影像">
             </div>
+
+            <!-- 辨識紀錄清單 -->
             <div class="log-container">
                 <h3>辨識紀錄</h3>
-                <div id="recognitionLog"></div>
+                <div id="recognitionLog"></div> <!-- 清單內容放這裡 -->
             </div>
         </div>
     </div>
+    <!-- 引入 JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- 引入 Flask SocketIO -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+    <!-- 加入人臉 Modal -->
+    <div id="addFaceModal" class="modal" style="display:none;">
+        <div class="modal-content" style="position:fixed; left:50vw; top:20vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+            <span class="close" id="closeAddFaceModal">&times;</span>
+            <h2>加入人臉</h2>
+            <form id="modalUploadForm" enctype="multipart/form-data">
+                <input type="file" id="modalFaceImage" accept="image/*" required><br><br>
+                <input type="text" id="modalPersonName" placeholder="請輸入人名" required><br><br>
+                <button type="submit">送出</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 測試辨識 Modal -->
+    <div id="testFaceModal" class="modal" style="display:none;">
+        <div class="modal-content" style="position:fixed; left:55vw; top:25vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+            <span class="close" id="closeTestFaceModal">&times;</span>
+            <h2>測試辨識</h2>
+            <form id="modalTestForm" enctype="multipart/form-data">
+                <input type="file" id="modalTestImage" accept="image/*" required><br><br>
+                <button type="submit">送出</button>
+            </form>
+            <div id="testResult"></div>
+        </div>
+    </div>
+
+    <!-- 查看資料庫 Modal -->
+    <div id="viewDbModal" class="modal" style="display:none;">
+        <div class="modal-content" style="position:fixed; left:60vw; top:15vh; z-index:2000; min-width:350px; min-height:200px; max-height:80vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+            <span class="close" id="closeViewDbModal">&times;</span>
+            <h2>資料庫資料</h2>
+            <table style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>姓名</th>
+                        <th>建立時間</th>
+                    </tr>
+                </thead>
+                <tbody id="modalTableBody"></tbody>
+            </table>
+        </div>
+    </div>
 </body>
 </html>
