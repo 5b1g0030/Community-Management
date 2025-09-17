@@ -347,18 +347,33 @@ class FaceRecognitionSystem:
         results = self.recognize_face(image) 
         
         # ----- 在圖片上標記辨識結果 -----
-        for result in results:                  # 逐一處理所有辨識到的人臉結果。 
+        # 假設你想要顯示 800x600
+        target_size = (800, 600)
+        image_resized = cv2.resize(image, target_size) 
+
+        # 你也要根據縮放比例調整框的座標
+        scale_x = target_size[0] / image.shape[1]
+        scale_y = target_size[1] / image.shape[0]
+        for result in results:                  # 逐一處理所有辨識到的人臉結果。
+            print("辨識結果：", results) 
             x, y, w, h = result['position']     # 人臉座標
+            x = int(x * scale_x)
+            y = int(y * scale_y)
+            w = int(w * scale_x)
+            h = int(h * scale_y)
+            print(f"框座標: x={x}, y={y}, w={w}, h={h}")
             name = result['name']               # 人名
             confidence = result['confidence']   # 辨識信心度
             
-            cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2) # 以綠色方框標記人臉區域
+            cv2.rectangle(image_resized, (x, y), (x+w, y+h), (0, 255, 0), 2) # 以綠色方框標記人臉區域
             
             label = f"{name} ({confidence:.1f})" # 要顯示的文字
-            cv2.putText(image, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2) # 在方框上方顯示人名和信心度
+            cv2.putText(image_resized, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2) # 在方框上方顯示人名和信心度
         
         # ----- 顯示標記後的圖片 -----
-        cv2.imshow('Face Recognition - Image', image) 
+        cv2.namedWindow('Face Recognition - Image', cv2.WINDOW_NORMAL) # 讓視窗可自由縮放
+        #cv2.resizeWindow('Face Recognition - Image', 800, 600)          # 設定初始大小為 800x600
+        cv2.imshow('Face Recognition - Image', image_resized) 
         cv2.waitKey(0) # 等待使用者關閉視窗
         cv2.destroyAllWindows() # 關閉所有 OpenCV 視窗
     
