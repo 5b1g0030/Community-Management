@@ -280,47 +280,53 @@ class FaceRecognitionSystem:
             
             try:
                 # ----- 進行人臉辨識 -----
+                # 呼叫以載入的模型
+                # label => 預測的人臉 ID（數字），對應資料庫
+                # confidence => 辨識信心度（數值，通常越低代表越接近）
+                # ----------------------- 
                 label, confidence = self.recognizer.predict(face_resized)
                 
-                # ----- 查詢人名 -----
-                conn = sqlite3.connect(self.db_path) # 連接資料庫
-                cursor = conn.cursor() # 建立游標物件執行 SQL 指令
-                cursor.execute("SELECT name FROM faces WHERE id = ?", (label,))# SQL 查詢，跟據 ID 查詢人名
-                result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
+                # 分數夠低才查詢人名
+                if confidence < 100: 
+                    # ----- 查詢人名 -----
+                    conn = sqlite3.connect(self.db_path) # 連接資料庫
+                    cursor = conn.cursor() # 建立游標物件執行 SQL 指令
+                    cursor.execute("SELECT name FROM faces WHERE id = ?", (label,))# SQL 查詢，跟據 ID 查詢人名
+                    result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
                 
-                # 有資料且信心度閾值小於100，執行以下內容
-                if result and confidence < 100:  
-                    name = result[0]
+                    # 有資料且信心度閾值小於100，執行以下內容
+                    if result:  
+                        name = result[0]
+                        
+                        # ---- 記錄辨識結果 -----
+                        recognition_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串
+                        # SQL 指令，寫入人臉ID、辨識時間、信心度
+                        cursor.execute('''
+                            INSERT INTO recognition_log (face_id, recognition_date, confidence)
+                            VALUES (?, ?, ?)
+                        ''', (label, recognition_date, confidence))
+                        conn.commit() # 提交變更、確保資料真的儲存到資料庫。
+                        
+                        # 辨識成功的資料
+                        results.append({
+                            'name': name,               # 人名
+                            'confidence': confidence,   # 信心閾值
+                            'position': (x, y, w, h)    # 人臉座標
+                        })
+                    else:
+                        # 辨識失敗的資料
+                        results.append({
+                            'name': '未知',
+                            'confidence': confidence,
+                            'position': (x, y, w, h)
+                        })
                     
-                    # ---- 記錄辨識結果 -----
-                    recognition_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串
-                    # SQL 指令，寫入人臉ID、辨識時間、信心度
-                    cursor.execute('''
-                        INSERT INTO recognition_log (face_id, recognition_date, confidence)
-                        VALUES (?, ?, ?)
-                    ''', (label, recognition_date, confidence))
-                    conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-                    
-                    # 辨識成功的資料
-                    results.append({
-                        'name': name,               # 人名
-                        'confidence': confidence,   # 信心閾值
-                        'position': (x, y, w, h)    # 人臉座標
-                    })
-                else:
-                    # 辨識失敗的資料
-                    results.append({
-                        'name': '未知',
-                        'confidence': confidence,
-                        'position': (x, y, w, h)
-                    })
-                
-                conn.close() # 關閉連接，釋放資源
+                    conn.close() # 關閉連接，釋放資源
                 
             # 辨識錯誤的資料
             except cv2.error: # 例外處理與法，捕捉 OpenCV 執行過程中發生的錯誤
                 results.append({
-                    'name': '無法辨識',
+                    'name': '發生錯誤，無法辨識',
                     'confidence': 0,
                     'position': (x, y, w, h)
                 })

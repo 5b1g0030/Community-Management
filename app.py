@@ -29,16 +29,23 @@ def gen_frames():
             break
         
         # 進行人臉辨識
-        results = face_system.recognize_face(frame)
-        current_names = set([r['name'] for r in results])
+        results = face_system.recognize_face(frame) # 呼叫「辨識人臉」函式
+        current_names = set([r['name'] for r in results]) # 本次影像中所有被辨識到的人名（不重複）
         # 只在新住戶或未知人物出現時推送
         if current_names != last_names:
-            for result in results:
-                name = result['name']
-                if name != '未知':
-                    socketio.emit('recognition', {'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
-                else:
-                    socketio.emit('recognition', {'type': 'recognition', 'message': '偵測到未知人物'})
+            # 沒有人臉資料(沒偵測到人臉)，顯示未偵測到人臉
+            if not results:
+                    socketio.emit('recognition', {'type': 'recognition', 'message': '未偵測到人臉'})
+            else:
+                # 查看每一筆資料
+                for result in results:
+                    name = result['name'] # 名字欄位
+                    # 如果不是「未知」，顯示名字
+                    if name != '未知':
+                        socketio.emit('recognition', {'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
+                    # 如果是「未知」，顯示未知人物
+                    else:
+                        socketio.emit('recognition', {'type': 'recognition', 'message': '偵測到未知人物'})
             last_names = current_names
         
         # 在影像上繪製辨識結果
