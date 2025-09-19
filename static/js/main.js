@@ -126,6 +126,54 @@ document.addEventListener('DOMContentLoaded', () => {
         recognitionLog.insertBefore(entry, recognitionLog.firstChild);
     }
 
+    // ===== 人工審核視窗 =====
+    socket.on('unknown_face', function(data) {
+        showReviewModal(data.image_url);
+    });
+    function showReviewModal(imageUrl) {
+        // 移除舊的審核 modal（避免疊加）
+        const oldModal = document.getElementById('reviewModal');
+        if (oldModal) oldModal.remove();
+        // 建立審核 modal
+        let modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'reviewModal';
+        modal.style.display = 'block';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" id="closeReviewModal">&times;</span>
+                <h2>認識的人？</h2>
+                <img id="reviewImage" src="${imageUrl}" style="width:100%;max-width:350px;"><br><br>
+                <input type="text" id="reviewPersonName" placeholder="請輸入人名"><br><br>
+                <button id="reviewYesBtn">是</button>
+                <button id="reviewNoBtn">否</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('closeReviewModal').onclick = () => {
+            modal.remove();
+        };
+        document.getElementById('reviewNoBtn').onclick = () => {
+            modal.remove();
+        };
+        document.getElementById('reviewYesBtn').onclick = async () => {
+            const name = document.getElementById('reviewPersonName').value;
+            if (!name) {
+                alert('請輸入人名');
+                return;
+            }
+            // 送到後端新增人臉
+            const formData = new FormData();
+            // 直接用 <img> src 路徑 fetch blob
+            const imgBlob = await fetch(document.getElementById('reviewImage').src).then(r => r.blob());
+            formData.append('image', imgBlob);
+            formData.append('name', name);
+            await fetch('/add_face', { method: 'POST', body: formData });
+            modal.remove();
+        };
+    }
+
     // ===== Modal 浮空視窗拖曳與置中功能 =====
     function centerModal(modal) {
         const content = modal.querySelector('.modal-content');
