@@ -14,6 +14,8 @@ socketio = SocketIO(app)
 # 初始化人臉辨識系統
 face_system = FaceRecognitionSystem()
 
+latest_frame = None # 紀錄最新影像
+
 
 @app.route('/')
 def index():
@@ -24,6 +26,7 @@ last_names = set()
 
 
 def gen_frames():
+    # ===== 根據辨識情況推送訊息函式 =====
     def face_message():
         # 查看每一筆資料
         for result in results:
@@ -31,7 +34,8 @@ def gen_frames():
             # 如果不是「未知」，則顯示名字
             if name != '未知':
                 # 辨識紀錄訊息「偵測到xxx住戶來到大門」
-                socketio.emit('recognition', {'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
+                socketio.emit('recognition', {
+                              'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
             # 如果是「未知」，顯示未知人物
             else:
                 # 辨識紀錄訊息「偵測到未知人物」
@@ -49,13 +53,14 @@ def gen_frames():
                 socketio.emit('unknown_face', {
                     'image_url': '/' + img_path.replace('\\', '/')
                 })
-
-    global last_names
+    
+    global last_names, latest_frame
     cap = cv2.VideoCapture(0)
     while True:
         ret, frame = cap.read()
         if not ret:
             break
+        latest_frame = frame.copy() # 紀錄最新影像
 
         # 進行人臉辨識
         results = face_system.recognize_face(frame)  # 呼叫「辨識人臉」函式
@@ -68,22 +73,7 @@ def gen_frames():
                 socketio.emit('recognition', {
                               'type': 'recognition', 'message': '未偵測到人臉'})
             else:
-                for result in results:
-                    name = result['name']
-                    if name != '未知':
-                        socketio.emit('recognition', {
-                                      'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
-                    else:
-                        socketio.emit('recognition', {
-                                      'type': 'recognition', 'message': '偵測到未知人物'})
-                        temp_dir = os.path.join('static', 'temp')
-                        if not os.path.exists(temp_dir):
-                            os.makedirs(temp_dir)
-                        img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
-                        cv2.imwrite(img_path, frame)
-                        socketio.emit('unknown_face', {
-                            'image_url': '/' + img_path.replace('\\', '/')
-                        })
+                face_message() # 呼叫「根據辨識情況推送訊息函式」
             last_names = current_names
         # 只在新住戶或未知人物出現時推送
         elif current_names != last_names:
@@ -92,32 +82,7 @@ def gen_frames():
                 socketio.emit('recognition', {
                               'type': 'recognition', 'message': '未偵測到人臉'})
             else:
-                # 查看每一筆資料
-                for result in results:
-                    name = result['name']  # 名字欄位
-                    # 如果不是「未知」，則顯示名字
-                    if name != '未知':
-                        # 辨識紀錄訊息「偵測到xxx住戶來到大門」
-                        socketio.emit('recognition', {
-                                      'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
-
-                    # 如果是「未知」，顯示未知人物
-                    else:
-                        # 辨識紀錄訊息「偵測到未知人物」
-                        socketio.emit('recognition', {
-                                      'type': 'recognition', 'message': '偵測到未知人物'})
-
-                        # 檢查 static/temp 路徑是否存在，若無則建立
-                        temp_dir = os.path.join('static', 'temp')
-                        if not os.path.exists(temp_dir):
-                            os.makedirs(temp_dir)
-
-                        # 儲存暫存圖片(請確保路徑存在)
-                        img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
-                        cv2.imwrite(img_path, frame)
-                        socketio.emit('unknown_face', {
-                            'image_url': '/' + img_path.replace('\\', '/')
-                        })
+                face_message() # 呼叫「根據辨識情況推送訊息函式」
             last_names = current_names  # 更新偵測結果(名字或 null)
 
         # 在影像上繪製辨識結果
@@ -169,6 +134,7 @@ def add_face():
     return jsonify({'message': '成功加入人臉資料'})
 
 
+
 @app.route('/test_face', methods=['POST'])
 def test_face():
     if 'image' not in request.files:
@@ -200,6 +166,20 @@ def test_face():
 def get_faces():
     faces = face_system.get_all_faces()
     return jsonify(faces)
+
+# ===== 再拍一張功能-獲取最新人物影像 =====
+@app.route('/latest_unknown_face')
+def latest_unknown_face():
+    global latest_frame
+    if latest_frame is None:
+        return jsonify({'image_url': None})
+    temp_dir = os.path.join('static', 'temp')
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir)
+    img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
+    cv2.imwrite(img_path, latest_frame)
+    image_url = '/' + img_path.replace('\\', '/')
+    return jsonify({'image_url': image_url})
 
 
 if __name__ == '__main__':

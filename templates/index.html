@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container">
+    <!-- 顯示在網頁上的區域(start) -->
+    <div class="container"> 
         <div class="main-content">
             <h1>社區人臉辨識系統</h1> <!-- 標題 -->
             
@@ -20,6 +21,9 @@
                 <button type="button" id="testFaceBtn">測試辨識</button>
                 <button type="button" id="viewDbBtn">查看資料庫</button>
             </div>
+
+            <!-- 人工審核區 -->
+            <div id="reviewPanel"></div>
 
             <!-- 資料表格(查看資料庫功能) -->
             <div id="dbTable" class="database-table" style="display: none;">
@@ -55,55 +59,62 @@
                 <h3>辨識紀錄</h3>
                 <div id="recognitionLog"></div> <!-- 清單內容放這裡 -->
             </div>
+
         </div>
     </div>
+    <!-- 顯示在網頁上的區域(end) -->
+
     <!-- 引入 JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <!-- 引入 Flask SocketIO -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
-    <!-- 加入人臉 Modal -->
+    <!-- 加入人臉 Modal(彈出視窗) -->
     <div id="addFaceModal" class="modal" style="display:none;">
-        <div class="modal-content" style="position:fixed; left:50vw; top:20vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
-            <span class="close" id="closeAddFaceModal">&times;</span>
-            <h2>加入人臉</h2>
-            <form id="modalUploadForm" enctype="multipart/form-data">
-                <input type="file" id="modalFaceImage" accept="image/*" required><br><br>
-                <input type="text" id="modalPersonName" placeholder="請輸入人名" required><br><br>
-                <button type="submit">送出</button>
-            </form>
-        </div>
+            <div class="modal-content"
+                style="position:fixed; left:50vw; top:20vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+                <span class="close" id="closeAddFaceModal">&times;</span>
+                <h2>加入人臉</h2>
+                <form id="modalUploadForm" enctype="multipart/form-data">
+                    <input type="file" id="modalFaceImage" accept="image/*" required><br><br>
+                    <input type="text" id="modalPersonName" placeholder="請輸入人名" required><br><br>
+                    <button type="submit">送出</button>
+                </form>
+            </div>
     </div>
-
-    <!-- 測試辨識 Modal -->
+        
+    <!-- 測試辨識 Modal(彈出視窗) -->
     <div id="testFaceModal" class="modal" style="display:none;">
-        <div class="modal-content" style="position:fixed; left:55vw; top:25vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
-            <span class="close" id="closeTestFaceModal">&times;</span>
-            <h2>測試辨識</h2>
-            <form id="modalTestForm" enctype="multipart/form-data">
-                <input type="file" id="modalTestImage" accept="image/*" required><br><br>
-                <button type="submit">送出</button>
-            </form>
-            <div id="testResult"></div>
-        </div>
+            <div class="modal-content"
+                style="position:fixed; left:55vw; top:25vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+                <span class="close" id="closeTestFaceModal">&times;</span>
+                <h2>測試辨識</h2>
+                <form id="modalTestForm" enctype="multipart/form-data">
+                    <input type="file" id="modalTestImage" accept="image/*" required><br><br>
+                    <button type="submit">送出</button>
+                </form>
+                <div id="testResult"></div>
+            </div>
     </div>
-
-    <!-- 查看資料庫 Modal -->
+        
+    <!-- 查看資料庫 Modal(彈出視窗) -->
     <div id="viewDbModal" class="modal" style="display:none;">
-        <div class="modal-content" style="position:fixed; left:60vw; top:15vh; z-index:2000; min-width:350px; min-height:200px; max-height:80vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
-            <span class="close" id="closeViewDbModal">&times;</span>
-            <h2>資料庫資料</h2>
-            <table style="width:100%;">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>姓名</th>
-                        <th>建立時間</th>
-                    </tr>
-                </thead>
-                <tbody id="modalTableBody"></tbody>
-            </table>
-        </div>
+            <div class="modal-content"
+                style="position:fixed; left:60vw; top:15vh; z-index:2000; min-width:350px; min-height:200px; max-height:80vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+                <span class="close" id="closeViewDbModal">&times;</span>
+                <h2>資料庫資料</h2>
+                <table style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>姓名</th>
+                            <th>建立時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalTableBody"></tbody>
+                </table>
+            </div>
     </div>
+    
 </body>
 </html>
