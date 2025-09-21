@@ -286,8 +286,16 @@ class FaceRecognitionSystem:
                 # ----------------------- 
                 label, confidence = self.recognizer.predict(face_resized)
                 
+                # 先判斷信心度，分數太高直接判定為未知
+                if confidence >= 90:
+                    results.append({
+                        'name': '未知',
+                        'confidence': confidence,
+                        'position': (x, y, w, h)
+                    })
+                    
                 # 分數夠低才查詢人名
-                if confidence < 100: 
+                else: 
                     # ----- 查詢人名 -----
                     conn = sqlite3.connect(self.db_path) # 連接資料庫
                     cursor = conn.cursor() # 建立游標物件執行 SQL 指令
