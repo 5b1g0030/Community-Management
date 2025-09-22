@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 標題 -->
     <title>社區人臉辨識系統</title>
     <!-- 引入CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -29,19 +30,21 @@
             <div id="dbTable" class="database-table" style="display: none;">
                 <table>
                     <thead>
+                        <!-- 表格欄位名稱 -->
                         <tr>
                             <th>ID</th>
                             <th>姓名</th>
                             <th>建立時間</th>
                         </tr>
                     </thead>
-                    <!-- 資料表格的表身區域 -->
-                    <!-- 
-                    當你按下「查看資料庫」按鈕時，前端 JavaScript 會取得資料庫資料，
-                    然後用程式動態建立 <tr>（表格列）並插入到這個 <tbody> 裡，讓網頁
-                    即時顯示所有人臉資料 
-                    -->
+
+                    <!-- 用戶資料顯示區 -->
                     <tbody id="tableBody">
+                        <!-- 
+                        從前端 JavaScript 會取得資料庫資料，
+                        動態建立 <tr>（表格列）並插入到這個 <tbody> 裡，讓網頁
+                        即時顯示所有人臉資料 
+                        -->
                     </tbody>
                 </table>
             </div>
@@ -51,6 +54,8 @@
         <div class="sidebar">
             <!-- 及時辨識影像畫面 -->
             <div class="video-container">
+                <!-- 從後端「/video_feed」顯示在網頁上 -->
+                <!-- {{}} => Flask 的 Jinja2 模板語法 -->
                 <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="即時影像">
             </div>
 
@@ -70,6 +75,12 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
     <!-- 加入人臉 Modal(彈出視窗) -->
+    <!--
+        預設不顯示(display: none)
+        固定位置(class="modal-content")
+        關閉觸發(&times;)
+        額外補充或覆蓋原樣式(style=...)這樣方便測試，確定後可以寫成不同的CSS
+    -->
     <div id="addFaceModal" class="modal" style="display:none;">
             <div class="modal-content"
                 style="position:fixed; left:50vw; top:20vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">

@@ -24,17 +24,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeViewDbModal = document.getElementById('closeViewDbModal');
     const modalTableBody = document.getElementById('modalTableBody');
 
-    // ===== 加入人臉 Modal 控制 =====
-    addFaceBtn.onclick = () => addFaceModal.style.display = 'block';
+    // ===== 加入人臉 Modal 控制 =====  
+    // 按下按鈕後，顯示視窗(display 設為 block)
+    addFaceBtn.onclick = () => addFaceModal.style.display = 'block'; // 顯示視窗
+
+    // 點擊關閉按鈕，隱藏視窗(display 設為 none)
     closeAddFaceModal.onclick = () => {
-        addFaceModal.style.display = 'none';
-        modalUploadForm.reset();
+        addFaceModal.style.display = 'none'; // 隱藏視窗
+        modalUploadForm.reset(); // 清空在視窗中輸入的資料，避免殘留
     };
+
+    // 點擊送出按鈕，送出照片和人名到後端 
     modalUploadForm.onsubmit = async (e) => {
-        e.preventDefault();
-        const formData = new FormData();
-        formData.append('image', modalFaceImage.files[0]);
-        formData.append('name', modalPersonName.value);
+        e.preventDefault();                 // 阻止預設提交(避免網頁自動更新，導致 javaScript 函式無法執行或執行不完整)
+        const formData = new FormData();    // 用來裝表單的資料
+        formData.append('image', modalFaceImage.files[0]);  // 圖片儲存欄位名稱(image)
+        formData.append('name', modalPersonName.value);     // 人名儲存欄位名稱(name)
         try {
             const response = await fetch('/add_face', {
                 method: 'POST',

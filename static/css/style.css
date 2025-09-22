@@ -97,6 +97,7 @@ th {
     left: 0; top: 0; width: 100vw; height: 100vh;
     background-color: rgba(0,0,0,0.4);
 }
+
 /* 浮空視窗本體 */
 .modal-content {
     background-color: #fff;
@@ -114,6 +115,7 @@ th {
     border-radius: 8px;
     padding: 20px;
 }
+
 .close {
     position: absolute;
     right: 10px;
