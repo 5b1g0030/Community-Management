@@ -16,7 +16,7 @@ face_system = FaceRecognitionSystem()
 
 latest_frame = None # 紀錄最新影像
 
-
+# ===== 首頁 =====
 @app.route('/')
 def index():
     return render_template('index.html')

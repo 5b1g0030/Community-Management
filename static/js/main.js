@@ -40,17 +40,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();    // 用來裝表單的資料
         formData.append('image', modalFaceImage.files[0]);  // 圖片儲存欄位名稱(image)
         formData.append('name', modalPersonName.value);     // 人名儲存欄位名稱(name)
+        
+        // ----- 例外處理語法 -----
+        // 當 try 裡面執行的程式碼發生錯誤，將會跳到 catch 執行處理錯誤
+        // error變數 => 儲存錯誤訊息
+        // -----------------------
         try {
+            // ----- 把資料送到後端的'/add_face' -----
             const response = await fetch('/add_face', {
-                method: 'POST',
-                body: formData
+                method: 'POST', // 指定用POST方法
+                body: formData  // 人臉和姓名資料
             });
-            const result = await response.json();
-            alert(result.message);
-            addFaceModal.style.display = 'none';
-            modalUploadForm.reset();
+            const result = await response.json();   // 把後段傳回的資料轉換為json格式，取得處理結果(是否成功、辨識結果、資料庫內容、錯誤原因)
+            alert(result.message);                  // 顯示處理結果或錯誤原因
+            addFaceModal.style.display = 'none';    // 隱藏浮動視窗
+            modalUploadForm.reset();                // 輸入欄位清空，避免資料殘留
         } catch (error) {
-            alert('上傳失敗');
+            alert('上傳失敗：' + error.message); // 展示錯誤訊息
         }
     };
 
