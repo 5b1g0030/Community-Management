@@ -138,66 +138,71 @@ class FaceRecognitionSystem:
     
     # ===== 將人臉加入資料庫 =====
     # 1. 取得人臉座標、灰階影像
-    # 2. 檢查有沒有偵測到人臉
+    # 2. 檢查有沒有偵測到人臉 -> false
     # 3. 取第一個人臉(簡化流程，確保指輸入一張人臉資料)
     # 4. 調整人臉大小(方便辨識與儲存)
     # 5. 儲存到資料庫
     # 6. 顯示成功訊息
-    # 7. 重新訓練模型
+    # 7. 重新訓練模型 -> true
     # =========================== 
     def add_face_to_database(self, image, name, image_path=None):
+        try:
+            # ---- 取得人臉座標、灰階影像 -----
+            faces, gray = self.detect_faces(image)
+            
+            # ----- 檢查有沒有偵測到人臉 -----
+            if len(faces) == 0:
+                print("未偵測到人臉")
+                return False # 結束函式
+            
+            # ----- 取第一個偵測到的人臉 -----
+            # (x,y,w,h)=faces[0] => 是 Python 的「序列解包」語法。
+            # 序列解包 => 可以一次把這 4 個值分別存到 4 個變數裡，方便後續使用
+            # y:y+h => 從第 y 列開始，到第 y+h 列（不包含 y+h），即人臉區域的高度範圍。
+            # x:x+w => 從第 x 行開始，到第 x+w 行（不包含 x+w），即人臉區域的寬度範圍。
+            # ------------------------------ 
+            (x, y, w, h) = faces[0]
+            face_roi = gray[y:y+h, x:x+w]
+            
+            # ----- 調整人臉大小(方便辨識與儲存) -----
+            # face_roi => 原本裁切出來的人臉影像，大小不一定。
+            # (100, 100)：指定要縮放成的目標尺寸（寬 100、高 100）。
+            # 樣做可以讓所有人臉影像在資料庫和模型訓練時，尺寸一致，方便後續辨識與比對。
+            # -------------------------------------- 
+            face_resized = cv2.resize(face_roi, (100, 100))
+            
+            # ----- 儲存到資料庫 -----
+            conn = sqlite3.connect(self.db_path) # 連接SQLite
+            cursor = conn.cursor() # 建立游標物件，用來執行 SQL 指令（查詢、插入、更新等）
+            
+            face_blob = pickle.dumps(face_resized) # 人臉影像（NumPy 陣列）序列化成二進位資料（BLOB），方便儲存到資料庫。
+            created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串，記錄資料建立的時間。
+            
+            # SQL 指令，意思是「新增一筆資料到 faces 表格」。
+            # ? 是參數佔位符，防止 SQL injection（安全性）。
+            # 插入的資料，分別是人名、序列化後的人臉影像、圖片路徑、建立時間。 
+            cursor.execute('''
+                INSERT INTO faces (name, face_encoding, image_path, created_date)
+                VALUES (?, ?, ?, ?)
+            ''', (name, face_blob, image_path, created_date))
+            
 
-        # ---- 取得人臉座標、灰階影像 -----
-        faces, gray = self.detect_faces(image)
-        
-        # ----- 檢查有沒有偵測到人臉 -----
-        if len(faces) == 0:
-            print("未偵測到人臉")
-            return False
-        
-        # ----- 取第一個偵測到的人臉 -----
-        # (x,y,w,h)=faces[0] => 是 Python 的「序列解包」語法。
-        # 序列解包 => 可以一次把這 4 個值分別存到 4 個變數裡，方便後續使用
-        # y:y+h => 從第 y 列開始，到第 y+h 列（不包含 y+h），即人臉區域的高度範圍。
-        # x:x+w => 從第 x 行開始，到第 x+w 行（不包含 x+w），即人臉區域的寬度範圍。
-        # ------------------------------ 
-        (x, y, w, h) = faces[0]
-        face_roi = gray[y:y+h, x:x+w]
-        
-        # ----- 調整人臉大小(方便辨識與儲存) -----
-        # face_roi => 原本裁切出來的人臉影像，大小不一定。
-        # (100, 100)：指定要縮放成的目標尺寸（寬 100、高 100）。
-        # 樣做可以讓所有人臉影像在資料庫和模型訓練時，尺寸一致，方便後續辨識與比對。
-        # -------------------------------------- 
-        face_resized = cv2.resize(face_roi, (100, 100))
-        
-        # ----- 儲存到資料庫 -----
-        conn = sqlite3.connect(self.db_path) # 連接SQLite
-        cursor = conn.cursor() # 建立游標物件，用來執行 SQL 指令（查詢、插入、更新等）
-        
-        face_blob = pickle.dumps(face_resized) # 人臉影像（NumPy 陣列）序列化成二進位資料（BLOB），方便儲存到資料庫。
-        created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串，記錄資料建立的時間。
-        
-        # SQL 指令，意思是「新增一筆資料到 faces 表格」。
-        # ? 是參數佔位符，防止 SQL injection（安全性）。
-        # 插入的資料，分別是人名、序列化後的人臉影像、圖片路徑、建立時間。 
-        cursor.execute('''
-            INSERT INTO faces (name, face_encoding, image_path, created_date)
-            VALUES (?, ?, ?, ?)
-        ''', (name, face_blob, image_path, created_date))
-        
+            face_id = cursor.lastrowid # 取得剛剛插入資料的「自動遞增主鍵」ID (唯一編號)
+            conn.commit() # 提交變更，確保資料儲存到資料庫
+            conn.close() # 關閉連接，避免記憶體洩漏或效能問題
+            
+            # ----- 顯示成功訊息 -----
+            print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id})")
+            
+            # ----- 重新訓練模型 -----
+            self.train_model()
 
-        face_id = cursor.lastrowid # 取得剛剛插入資料的「自動遞增主鍵」ID (唯一編號)
-        conn.commit() # 提交變更，確保資料儲存到資料庫
-        conn.close() # 關閉連接，避免記憶體洩漏或效能問題
+            return True # 成功
         
-        # ----- 顯示成功訊息 -----
-        print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id})")
-        
-        # ----- 重新訓練模型 -----
-        self.train_model()
-
-        return True
+        # 如果執行過程中出錯
+        except Exception as e:
+            print(f'加入人臉資料失敗: {str(e)}') # 顯示錯誤訊息(終端顯示)
+            raise e # 重新拋出例外讓 Flask 處理(網頁顯示)
     
     # ===== 訓練人臉辨識模型 =====
     # 1. 連接資料庫取得人臉資料

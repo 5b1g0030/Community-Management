@@ -112,26 +112,35 @@ def video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+# ===== 加入人臉到資料庫 =====
 @app.route('/add_face', methods=['POST'])
 def add_face():
+    # 檢查是否有圖片
     if 'image' not in request.files:
-        return jsonify({'message': '未選擇圖片'}), 400
+        return jsonify({'message': '未選擇圖片'}), 400 # flask 錯誤訊息回應語法轉json格式 , 網頁狀態碼
 
-    file = request.files['image']
-    name = request.form.get('name')
+    file = request.files['image']   # 上傳的圖片
+    name = request.form.get('name') # 上傳的姓名
 
+    # 檢查是否有姓名
     if not name:
         return jsonify({'message': '未輸入姓名'}), 400
 
     # 讀取並處理圖片
-    image_bytes = file.read()
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    image_bytes = file.read()                       # 讀取圖片資料(二進位)
+    nparr = np.frombuffer(image_bytes, np.uint8)    # 轉換為 numpy 陣列
+    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)   # 解碼為 opencv 可用的影像格式
 
-    # 加入人臉到資料庫
-    face_system.add_face_to_database(image, name)
-
-    return jsonify({'message': '成功加入人臉資料'})
+    # 加入人臉到資料庫(使用例外處理)
+    try:
+        success = face_system.add_face_to_database(image, name) # 呼叫「將人臉加入資料庫函式」
+        # 當函式完整執行完的結果
+        if success:
+            return jsonify({'message': '成功加入人臉資料'}) # flask 錯誤訊息回應語法，狀態碼預設為 200
+        else:
+            return jsonify({'message': '加入失敗：未偵測到人臉'}), 400
+    except Exception as e:
+        return jsonify({'message': f'加入失敗：{str(e)}'}), 500
 
 
 

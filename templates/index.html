@@ -55,7 +55,7 @@
             <!-- 及時辨識影像畫面 -->
             <div class="video-container">
                 <!-- 從後端「/video_feed」顯示在網頁上 -->
-                <!-- {{}} => Flask 的 Jinja2 模板語法 -->
+                {# {{}} => Flask 的 Jinja2 模板語法 #}
                 <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="即時影像">
             </div>
 
