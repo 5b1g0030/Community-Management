@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const viewDbModal = document.getElementById('viewDbModal');
     const closeViewDbModal = document.getElementById('closeViewDbModal');
-    const modalTableBody = document.getElementById('modalTableBody');
+    const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
 
     // ===== 加入人臉 Modal 控制 =====  
     // 按下按鈕後，顯示視窗(display 設為 block)
@@ -84,19 +84,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ===== 查看資料庫 Modal 控制 =====
+    // 「()=>」 => 箭頭函式，一般 function 的簡寫版
     viewDbBtn.onclick = async () => {
-        viewDbModal.style.display = 'block';
-        setTimeout(()=>centerModal(viewDbModal), 0);
+        viewDbModal.style.display = 'block';         // 顯示彈出視窗
+        setTimeout(()=>centerModal(viewDbModal), 0); // 延遲一點點時間在讓函式執行(讓瀏覽器有時間渲染)
         // AJAX 取得資料
+        // try...catch => JavaScript 錯誤處理語法，try 發生錯誤時執行 catch 區塊
         try {
-            const response = await fetch('/get_faces');
-            const faces = await response.json();
-            modalTableBody.innerHTML = '';
+            // await => 等待後端回應，沒有 await 不會拿到空資料，而是拿到「承諾會給你資料的憑證」，但還沒拿到真正的資料
+            const response = await fetch('/get_faces'); // 從後端的'get_faces'取得資料
+            const faces = await response.json();        // 把資料轉 json 格式
+            modalTableBody.innerHTML = '';              // 清除表格殘留的程式碼
+            // 對 faces 陣列中的每一個元素執行這個函式
+            // face 代表目前處理的這筆資料 
             faces.forEach(face => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${face.id}</td><td>${face.name}</td><td>${face.created_date}</td>`;
-                modalTableBody.appendChild(row);
+                const row = document.createElement('tr'); // 建立表格列元素 <tr></tr>
+                row.innerHTML = `<td>${face.id}</td><td>${face.name}</td><td>${face.created_date}</td>`; // 把資料製作成列表，加入 <tr></tr> 中
+                modalTableBody.appendChild(row); // 把這個列表加入資料庫表格中
             });
+        // 錯誤處理(error => JavaScript 自動提供的錯誤物件)
         } catch (error) {
             modalTableBody.innerHTML = '<tr><td colspan="3">獲取資料失敗</td></tr>';
         }

@@ -80,6 +80,8 @@
         固定位置(class="modal-content")
         關閉觸發(&times;)
         額外補充或覆蓋原樣式(style=...)這樣方便測試，確定後可以寫成不同的CSS
+        position:fixed => 讓該元素不受其 他元素影響，不隨畫面滾動和移動
+        z-index:2000 => 堆疊順序(數值越大越上層)，防止被其他元素覆蓋
     -->
     <div id="addFaceModal" class="modal" style="display:none;">
             <div class="modal-content"
