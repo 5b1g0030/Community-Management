@@ -24,10 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeViewDbModal = document.getElementById('closeViewDbModal');
     const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
 
-    // ===== 加入人臉 Modal 控制 =====  
+    // ===== 加入人臉彈出視窗 =====  
     // 按下按鈕後，顯示視窗(display 設為 block)
     addFaceBtn.onclick = () => addFaceModal.style.display = 'block'; // 顯示視窗
 
+    // ===== 關閉加入人臉彈出視窗 =====
     // 點擊關閉按鈕，隱藏視窗(display 設為 none)
     closeAddFaceModal.onclick = () => {
         addFaceModal.style.display = 'none'; // 隱藏視窗
@@ -60,8 +61,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ===== 測試辨識 Modal 控制 =====
+    // ===== 測試辨識彈出視窗 =====
     testFaceBtn.onclick = () => testFaceModal.style.display = 'block';
+
+    // ===== 關閉測試辨識彈出視窗 =====
     closeTestFaceModal.onclick = () => {
         testFaceModal.style.display = 'none';
         modalTestForm.reset();
@@ -83,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ===== 查看資料庫 Modal 控制 =====
+    // ===== 查看資料庫彈出視窗 =====
     // 「()=>」 => 箭頭函式，一般 function 的簡寫版
     viewDbBtn.onclick = async () => {
         viewDbModal.style.display = 'block';         // 顯示彈出視窗
@@ -93,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // await => 等待後端回應，沒有 await 不會拿到空資料，而是拿到「承諾會給你資料的憑證」，但還沒拿到真正的資料
             const response = await fetch('/get_faces'); // 從後端的'get_faces'取得資料
-            const faces = await response.json();        // 把資料轉 json 格式
+            const faces = await response.json();        // 把 json 格式的資料解析成 JavaScript 可以直接使用的字串
             modalTableBody.innerHTML = '';              // 清除表格殘留的程式碼
             // 對 faces 陣列中的每一個元素執行這個函式
             // face 代表目前處理的這筆資料 
@@ -104,28 +107,35 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         // 錯誤處理(error => JavaScript 自動提供的錯誤物件)
         } catch (error) {
-            modalTableBody.innerHTML = '<tr><td colspan="3">獲取資料失敗</td></tr>';
+            //  HTML + JavaScript 樣板字串:
+            // `字串內容 ${變數} 更多內容`
+            modalTableBody.innerHTML = `<tr><td colspan="3">獲取資料失敗: ${error.message}</td></tr>`;
         }
     };
+    // ===== 關閉資料庫彈出視窗 =====
     closeViewDbModal.onclick = () => {
-        viewDbModal.style.display = 'none';
-        modalTableBody.innerHTML = '';
+        viewDbModal.style.display = 'none'; // 隱藏彈出視窗
+        modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
     };
 
-    // ===== 點擊 modal 外部關閉 =====
+    // ===== 點擊外部關閉 =====
+    // 監聽整個網頁的點擊事件
     window.onclick = (event) => {
-        if (event.target === addFaceModal) {
-            addFaceModal.style.display = 'none';
-            modalUploadForm.reset();
+        // 加入人臉視窗
+        if (event.target === addFaceModal) {     // 只有在點擊是窗外的空白部分才會執行
+            addFaceModal.style.display = 'none'; // 隱藏視窗
+            modalUploadForm.reset();             // 清空表單輸入內容
         }
+        // 測試辨識視窗
         if (event.target === testFaceModal) {
             testFaceModal.style.display = 'none';
             modalTestForm.reset();
-            testResult.textContent = '';
+            testResult.textContent = '';         // 清空輸入框文字
         }
+        // 查看資料庫視窗
         if (event.target === viewDbModal) {
             viewDbModal.style.display = 'none';
-            modalTableBody.innerHTML = '';
+            modalTableBody.innerHTML = '';      // 清空表格顯示區
         }
     };
 

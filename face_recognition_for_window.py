@@ -509,14 +509,14 @@ class FaceRecognitionSystem:
         
         print(f"\n總辨識次數: {total_recognitions}")
 
-    # ===== 列出資料庫中的所有人臉資料(網頁) =====
+    # ===== 列出資料庫中的所有人臉資料(網頁) ===== 
     def get_all_faces(self):
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, created_date FROM faces")
-        faces = [{'id': row[0], 'name': row[1], 'created_date': row[2]} for row in cursor.fetchall()]
-        conn.close()
-        return faces
+        conn = sqlite3.connect(self.db_path) # 連接資料庫
+        cursor = conn.cursor()               # 建立物件執行 SQL 指令
+        cursor.execute("SELECT id, name, created_date FROM faces") # 查詢資料(face 表格中的三個欄位(id, name, created_date))
+        faces = [{'id': row[0], 'name': row[1], 'created_date': row[2]} for row in cursor.fetchall()] # 資料轉換(列表推導式，把原始資料轉換為字典格式)
+        conn.close() # 關閉連接
+        return faces # 回傳資料查詢結果
     
 
 # ===== 主程式 =====

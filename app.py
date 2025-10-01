@@ -170,11 +170,11 @@ def test_face():
 
     return jsonify({'message': '辨識結果：' + '、'.join(messages)})
 
-
+# ===== 取得資料庫資料 =====
 @app.route('/get_faces')
 def get_faces():
-    faces = face_system.get_all_faces()
-    return jsonify(faces)
+    faces = face_system.get_all_faces() # 呼叫「列出資料庫中的所有人臉資料(網頁)函式」
+    return jsonify(faces)               # 轉 json 格式
 
 # ===== 再拍一張功能-獲取最新人物影像 =====
 @app.route('/latest_unknown_face')

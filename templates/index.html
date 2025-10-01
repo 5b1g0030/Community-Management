@@ -82,6 +82,8 @@
         額外補充或覆蓋原樣式(style=...)這樣方便測試，確定後可以寫成不同的CSS
         position:fixed => 讓該元素不受其 他元素影響，不隨畫面滾動和移動
         z-index:2000 => 堆疊順序(數值越大越上層)，防止被其他元素覆蓋
+        accept="image/*" => 允許的檔案類型(設定為接受所有圖片格式)
+        required => 強制要求使用者必須填寫該欄位
     -->
     <div id="addFaceModal" class="modal" style="display:none;">
             <div class="modal-content"
@@ -89,7 +91,9 @@
                 <span class="close" id="closeAddFaceModal">&times;</span>
                 <h2>加入人臉</h2>
                 <form id="modalUploadForm" enctype="multipart/form-data">
+                    <!-- 檔案上傳 -->
                     <input type="file" id="modalFaceImage" accept="image/*" required><br><br>
+                    <!-- 輸入人名 -->
                     <input type="text" id="modalPersonName" placeholder="請輸入人名" required><br><br>
                     <button type="submit">送出</button>
                 </form>
@@ -103,6 +107,7 @@
                 <span class="close" id="closeTestFaceModal">&times;</span>
                 <h2>測試辨識</h2>
                 <form id="modalTestForm" enctype="multipart/form-data">
+                    <!-- 檔案上傳 -->
                     <input type="file" id="modalTestImage" accept="image/*" required><br><br>
                     <button type="submit">送出</button>
                 </form>
