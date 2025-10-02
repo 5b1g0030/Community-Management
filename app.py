@@ -16,17 +16,26 @@ face_system = FaceRecognitionSystem()
 
 latest_frame = None # 紀錄最新影像
 
-# ===== 首頁 =====
-@app.route('/')
-def index():
-    return render_template('index.html')
+# ===== 管理者端 =====
+@app.route('/manager')
+def manager():
+    return render_template('manager.html')
 
+# ===== 登入(首頁) =====
+@app.route('/')
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+# ===== 註冊 =====
+@app.route('/register')
+def register():
+    return render_template('register.html')
 
 last_names = set()
 
-
+# ===== 根據辨識情況推送訊息函式 =====
 def gen_frames():
-    # ===== 根據辨識情況推送訊息函式 =====
     def face_message():
         # 查看每一筆資料
         for result in results:
@@ -106,6 +115,7 @@ def gen_frames():
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 
+# ===== 鏡頭影像顯示 =====
 @app.route('/video_feed')
 def video_feed():
     return Response(gen_frames(),
@@ -141,7 +151,6 @@ def add_face():
             return jsonify({'message': '加入失敗：未偵測到人臉'}), 400
     except Exception as e:
         return jsonify({'message': f'加入失敗：{str(e)}'}), 500
-
 
 
 @app.route('/test_face', methods=['POST'])

@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeViewDbModal = document.getElementById('closeViewDbModal');
     const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
 
+
+    // ===== 註冊資料獲取 =====
+    
+
     // ===== 加入人臉彈出視窗 =====  
     // 按下按鈕後，顯示視窗(display 設為 block)
     addFaceBtn.onclick = () => addFaceModal.style.display = 'block'; // 顯示視窗
