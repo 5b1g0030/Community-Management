@@ -24,9 +24,89 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeViewDbModal = document.getElementById('closeViewDbModal');
     const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
 
+    const registerForm = document.getElementById('registerForm');
+    const username = document.getElementById('username');
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const usernameError = document.getElementById('usernameError');
+    const passwordError = document.getElementById('passwordError');
+    const confirmPasswordError = document.getElementById('confirmPasswordError');
+    const submitMessage = document.getElementById('submitMessage');
+
 
     // ===== 註冊資料獲取 =====
-    
+    // 即時密碼確認檢查
+    confirmPassword.addEventListener('input', () => {
+        if (password.value !== confirmPassword.value) {
+            confirmPasswordError.textContent = '密碼不一致';
+            confirmPassword.style.borderColor = 'red';
+        } else {
+            confirmPasswordError.textContent = '';
+            confirmPassword.style.borderColor = '#ccc';
+        }
+    });
+
+    // 表單提交處理
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // 清空之前的錯誤訊息
+        usernameError.textContent = '';
+        passwordError.textContent = '';
+        confirmPasswordError.textContent = '';
+        submitMessage.textContent = '';
+
+        // 前端驗證
+        let hasError = false;
+
+        if (username.value.trim().length < 3) {
+            usernameError.textContent = '使用者名稱至少需要3個字元';
+            hasError = true;
+        }
+
+        if (password.value.length < 6) {
+            passwordError.textContent = '密碼至少需要6個字元';
+            hasError = true;
+        }
+
+        if (password.value !== confirmPassword.value) {
+            confirmPasswordError.textContent = '密碼不一致';
+            hasError = true;
+        }
+
+        if (hasError) return;
+
+        // 發送註冊請求
+        try {
+            const formData = new FormData();
+            formData.append('username', username.value);
+            formData.append('password', password.value);
+            formData.append('confirm_password', confirmPassword.value);
+
+            const response = await fetch('/register', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                submitMessage.textContent = result.message;
+                submitMessage.className = 'success';
+                registerForm.reset();
+                // 3秒後跳轉到登入頁面
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 3000);
+            } else {
+                submitMessage.textContent = result.message;
+                submitMessage.className = 'error';
+            }
+        } catch (error) {
+            submitMessage.textContent = '註冊失敗：' + error.message;
+            submitMessage.className = 'error';
+        }
+    });
 
     // ===== 加入人臉彈出視窗 =====  
     // 按下按鈕後，顯示視窗(display 設為 block)

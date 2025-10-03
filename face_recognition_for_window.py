@@ -5,17 +5,11 @@ import os                       # 作業系統相關操作
 import pickle                   # 物件序列化和反序列化
 from datetime import datetime   # 日期和時間處理
 import platform                 # 獲取作業系統資訊(選擇鏡頭系統參數用)
+import hashlib                  # 使用者密碼加密用
 
 """ 網頁將引用 FaceRecognitionSystem 類別 """
 
-# ===== 人臉辨識系統類別 =====
-# 裡面包含:
-# 1. 初始化系統
-# 2. 人臉資料管理
-# 3. 人臉辨識
-# 4. 資料庫管理
-# 5. 模型訓練    
-# ===========================  
+# ===== 人臉辨識系統類別 ===== 
 class FaceRecognitionSystem:
     
     # ===== 初始化系統 =====
@@ -41,6 +35,7 @@ class FaceRecognitionSystem:
         
         # 載入已存在的模型（如果有的話）
         self.load_model()
+
     
     # ====== 決定鏡頭所用參數 =====
     # 1. 取得作業系統資訊
@@ -76,8 +71,9 @@ class FaceRecognitionSystem:
     # ===== 初始化SQLite資料庫 =====
     # 1. 創建人臉資料表
     # 2. 創建辨識紀錄資料表
-    # 3. 確認變更(寫入磁碟)
-    # 4. 關閉連接
+    # 3. 創建使用者資料表
+    # 4. 確認變更(寫入磁碟)
+    # 5. 關閉連接
     # ============================== 
     def init_database(self):
         conn = sqlite3.connect(self.db_path) # 連接到指定路徑的 SQLite 資料庫
@@ -117,6 +113,17 @@ class FaceRecognitionSystem:
                 confidence REAL,
                 FOREIGN KEY (face_id) REFERENCES faces (id)
             )
+        ''')
+
+         # ----- 建立使用者資料表格 -----
+         #  
+        cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP       
+                )    
         ''')
         
         conn.commit() # 確認變更(寫入磁碟，表格才會建立)
@@ -509,7 +516,13 @@ class FaceRecognitionSystem:
         
         print(f"\n總辨識次數: {total_recognitions}")
 
-    # ===== 列出資料庫中的所有人臉資料(網頁) ===== 
+    # ===== 列出資料庫中的所有人臉資料(網頁) =====
+    # 1. 連接資料庫
+    # 2. 查詢所有資料
+    # 3. 把內容轉為字典格式
+    # 4. 關閉資料庫
+    # 5. 回傳字典格式的資料 
+    # ==========================================   
     def get_all_faces(self):
         conn = sqlite3.connect(self.db_path) # 連接資料庫
         cursor = conn.cursor()               # 建立物件執行 SQL 指令
@@ -517,6 +530,60 @@ class FaceRecognitionSystem:
         faces = [{'id': row[0], 'name': row[1], 'created_date': row[2]} for row in cursor.fetchall()] # 資料轉換(列表推導式，把原始資料轉換為字典格式)
         conn.close() # 關閉連接
         return faces # 回傳資料查詢結果
+    
+    # ===== 使用者註冊 =====
+    def register_uer(self, username, password):
+        try:
+            conn = sqlite3.connect(self.db_path) # 連接資料庫
+            cursor = conn.cursor() # 建立游標執行 SQL 指令
+
+            # 檢查使用者是否已存在
+            cursor.execute("SELECT id FROM users WHERE username= ?", (username,))
+            # 檢查第一筆資料，如果重複則結束函式並告訴使用者「此名稱已存在」
+            if cursor.fetchone():
+                conn.close() # 關閉資料庫連接
+                return False, "使用者名稱已被使用"
+            
+            # 密碼加密
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+            # 插入新使用者
+            cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                           (username, password_hash)
+                           )
+            
+            conn.commit() # 更新資料庫
+            conn.close() # 關閉連接
+
+            return True, "註冊成功"
+
+        # 例外錯誤處理
+        except Exception as e:
+            return False, f"註冊失敗: {str(e)}"
+    
+    # ===== 使用者登入 =====
+    def login_user(self, username, password):
+        try:
+            conn = sqlite3.connect(self.db_path) # 連接資料庫
+            cursor = conn.cursor() # 建立游標執行 SQL 指令
+
+            # 把使用者輸入的密碼加密
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+            # 查詢使用者與密碼
+            cursor.execute("SELECT id FROM WHERE username = ? AND password = ?",
+                           (username, password_hash)
+                           )
+            
+            # 紀錄第一筆資料
+            user = cursor.fetchone()
+            conn.close() # 關閉連接
+
+            return user is not None
+
+        # 例外錯誤處理
+        except Exception as e:
+            return False
     
 
 # ===== 主程式 =====
