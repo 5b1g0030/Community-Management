@@ -33,6 +33,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmPasswordError = document.getElementById('confirmPasswordError');
     const submitMessage = document.getElementById('submitMessage');
 
+    const loginForm = document.getElementById('loginForm');
+    const loginMessage = document.getElementById('loginMessage');
+
+    
+    // ===== 登入資料獲取 =====
+    loginForm.addEventListener('submit', async (e)=> {
+        e.preventDefault();
+        loginMessage.textContent = '';
+
+        const formData = new FormData(loginForm);
+
+        try {
+            const response = await fetch('/login', { method: 'POST', body: formData});
+            const result = await response.json();
+
+            if (response.ok) {
+                loginMessage.textContent = result.message;
+                loginMessage.className = 'success';
+
+                // 登入成功後跳轉
+                if(result.redirect) {
+                    setTimeout(()=>{
+                        window.location.href = result.redirect;
+                    }, 1000);
+                }
+            } else {
+                loginMessage.textContent = result.message;
+                loginMessage.className = 'error';
+            }
+        // 例外錯誤處理
+        } catch (error) {
+            loginMessage.textContent = '登入失敗: ' + error.message;
+            loginMessage.className = 'error';
+        }
+
+    });
+
 
     // ===== 註冊資料獲取 =====
     // 即時密碼確認檢查
@@ -45,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmPassword.style.borderColor = '#ccc';
         }
     });
-
     // 表單提交處理
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();

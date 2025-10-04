@@ -23,14 +23,61 @@ def manager():
 
 # ===== 登入(首頁) =====
 @app.route('/')
-@app.route('/login')
+@app.route('/login', method=['GET', 'POST'])
 def login():
-    return render_template('login.html')
+    if request.method == 'GET':
+        return render_template('login.html')
+    
+    # POST 處理
+    username = request.form.get('username')
+    password = request.form.get('password')
+
+    if not username or not password:
+        return jsonify({'message': '請輸入使用者名稱和密碼'}), 400
+    
+    # 驗證使用者
+    if face_system.login_user(username, password):
+        # 登入成功則導向管理者介面
+        return jsonify({'message': '登入成功', 'redirect': '/manager'}),
+    else:
+        return jsonify({'message': '使用者名稱或密碼錯誤'}), 401
 
 # ===== 註冊 =====
-@app.route('/register')
+@app.route('/register', method=['GET', 'POST'])
 def register():
-    return render_template('register.html')
+    if request.method == 'GET':
+        return render_template('register.html')
+    
+    # POST 處理
+    username = request.form.get('username')
+    password = request.form.get('password')
+    confirm_password = request.form.get('confirm_password')
+
+    # ----- 後端驗證 -----
+    if not username or not password or not confirm_password:
+        return jsonify({'message': '所有欄位都需要填寫'}), 400
+    
+    # 使用者名稱
+    if len(username.strip()) < 3:
+        return jsonify({'message': '使用者名稱至少要三字元'}), 400
+    
+    # 密碼
+    if len(password) < 6:
+        return jsonify({'message': '密碼需要超過6字元'}), 400
+    
+    # 二次密碼驗證
+    if password != confirm_password:
+        return jsonify({'message': '兩次密碼不相同'}), 400
+    
+    # ----- 註冊使用者 -----
+    success, message = face_system.register_uer(username, password)
+
+    # 如果註冊成功
+    if success:
+        return jsonify({'message': message}), 200
+    # 如果註冊失敗
+    else:
+        return jsonify({'message': message}), 400
 
 last_names = set()
 

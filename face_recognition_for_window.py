@@ -119,7 +119,7 @@ class FaceRecognitionSystem:
          #  
         cursor.execute('''
                 CREATE TABLE IF NOT EXISTS users (
-                    id INTGER PRIMARY KEY AUTOINCREMENT,
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP       
@@ -532,6 +532,8 @@ class FaceRecognitionSystem:
         return faces # 回傳資料查詢結果
     
     # ===== 使用者註冊 =====
+    # 回傳 執行結果, 訊息
+    # ===================== 
     def register_uer(self, username, password):
         try:
             conn = sqlite3.connect(self.db_path) # 連接資料庫
@@ -562,6 +564,8 @@ class FaceRecognitionSystem:
             return False, f"註冊失敗: {str(e)}"
     
     # ===== 使用者登入 =====
+    # 回傳 執行結果
+    # ===================== 
     def login_user(self, username, password):
         try:
             conn = sqlite3.connect(self.db_path) # 連接資料庫
