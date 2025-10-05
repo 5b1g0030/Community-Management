@@ -36,113 +36,110 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const loginMessage = document.getElementById('loginMessage');
 
-    
-    // ===== 登入資料獲取 =====
-    loginForm.addEventListener('submit', async (e)=> {
-        e.preventDefault();
-        loginMessage.textContent = '';
+    // ===== 登入功能（只在登入頁面執行） =====
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (loginMessage) loginMessage.textContent = '';
 
-        const formData = new FormData(loginForm);
+            const formData = new FormData(loginForm);
 
-        try {
-            const response = await fetch('/login', { method: 'POST', body: formData});
-            const result = await response.json();
+            try {
+                const response = await fetch('/login', { method: 'POST', body: formData});
+                const result = await response.json();
 
-            if (response.ok) {
-                loginMessage.textContent = result.message;
-                loginMessage.className = 'success';
+                if (response.ok) {
+                    alert(result.message);
+                    if(result.redirect) {
+                        setTimeout(() => {
+                            window.location.href = result.redirect;
+                        }, 100);
+                    }
+                } else {
+                    alert(result.message);
+                    loginForm.reset();
+                }
+            } catch (error) {
+                alert('登入失敗: ' + error.message);
+                loginForm.reset();
+            }
+        });
+    }
 
-                // 登入成功後跳轉
-                if(result.redirect) {
-                    setTimeout(()=>{
-                        window.location.href = result.redirect;
-                    }, 1000);
+    // ===== 註冊功能（只在註冊頁面執行） =====
+    if (registerForm && username && password && confirmPassword) {
+        // 即時密碼確認檢查
+        confirmPassword.addEventListener('input', () => {
+            if (password.value !== confirmPassword.value) {
+                if (confirmPasswordError) {
+                    confirmPasswordError.textContent = '密碼不一致';
+                    confirmPassword.style.borderColor = 'red';
                 }
             } else {
-                loginMessage.textContent = result.message;
-                loginMessage.className = 'error';
+                if (confirmPasswordError) {
+                    confirmPasswordError.textContent = '';
+                    confirmPassword.style.borderColor = '#ccc';
+                }
             }
-        // 例外錯誤處理
-        } catch (error) {
-            loginMessage.textContent = '登入失敗: ' + error.message;
-            loginMessage.className = 'error';
-        }
+        });
 
-    });
+        // 表單提交處理
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
+            // 清空之前的錯誤訊息
+            if (usernameError) usernameError.textContent = '';
+            if (passwordError) passwordError.textContent = '';
+            if (confirmPasswordError) confirmPasswordError.textContent = '';
+            if (submitMessage) submitMessage.textContent = '';
 
-    // ===== 註冊資料獲取 =====
-    // 即時密碼確認檢查
-    confirmPassword.addEventListener('input', () => {
-        if (password.value !== confirmPassword.value) {
-            confirmPasswordError.textContent = '密碼不一致';
-            confirmPassword.style.borderColor = 'red';
-        } else {
-            confirmPasswordError.textContent = '';
-            confirmPassword.style.borderColor = '#ccc';
-        }
-    });
-    // 表單提交處理
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+            // 前端驗證
+            if (username.value.trim().length < 3) {
+                alert('使用者名稱至少需要3個字元');
+                username.focus();
+                return;
+            }
 
-        // 清空之前的錯誤訊息
-        usernameError.textContent = '';
-        passwordError.textContent = '';
-        confirmPasswordError.textContent = '';
-        submitMessage.textContent = '';
+            if (password.value.length < 6) {
+                alert('密碼至少需要6個字元');
+                password.focus();
+                return;
+            }
 
-        // 前端驗證
-        let hasError = false;
+            if (password.value !== confirmPassword.value) {
+                alert('密碼不一致');
+                confirmPassword.focus();
+                return;
+            }
 
-        if (username.value.trim().length < 3) {
-            usernameError.textContent = '使用者名稱至少需要3個字元';
-            hasError = true;
-        }
+            // 發送註冊請求
+            try {
+                const formData = new FormData();
+                formData.append('username', username.value);
+                formData.append('password', password.value);
+                formData.append('confirm_password', confirmPassword.value);
 
-        if (password.value.length < 6) {
-            passwordError.textContent = '密碼至少需要6個字元';
-            hasError = true;
-        }
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    body: formData
+                });
 
-        if (password.value !== confirmPassword.value) {
-            confirmPasswordError.textContent = '密碼不一致';
-            hasError = true;
-        }
+                const result = await response.json();
 
-        if (hasError) return;
-
-        // 發送註冊請求
-        try {
-            const formData = new FormData();
-            formData.append('username', username.value);
-            formData.append('password', password.value);
-            formData.append('confirm_password', confirmPassword.value);
-
-            const response = await fetch('/register', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                submitMessage.textContent = result.message;
-                submitMessage.className = 'success';
-                registerForm.reset();
-                // 3秒後跳轉到登入頁面
-                setTimeout(() => {
+                if (response.ok) {
+                    alert(result.message);
+                    registerForm.reset();
                     window.location.href = '/login';
-                }, 3000);
-            } else {
-                submitMessage.textContent = result.message;
-                submitMessage.className = 'error';
+                } else {
+                    alert(result.message);
+                    registerForm.reset();
+                }
+            } catch (error) {
+                alert('註冊失敗：' + error.message);
+                registerForm.reset();
             }
-        } catch (error) {
-            submitMessage.textContent = '註冊失敗：' + error.message;
-            submitMessage.className = 'error';
-        }
-    });
+        });
+    }
 
     // ===== 加入人臉彈出視窗 =====  
     // 按下按鈕後，顯示視窗(display 設為 block)

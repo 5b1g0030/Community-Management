@@ -23,7 +23,7 @@ def manager():
 
 # ===== 登入(首頁) =====
 @app.route('/')
-@app.route('/login', method=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
         return render_template('login.html')
@@ -38,12 +38,12 @@ def login():
     # 驗證使用者
     if face_system.login_user(username, password):
         # 登入成功則導向管理者介面
-        return jsonify({'message': '登入成功', 'redirect': '/manager'}),
+        return jsonify({'message': '登入成功', 'redirect': '/manager'}), 200
     else:
         return jsonify({'message': '使用者名稱或密碼錯誤'}), 401
 
 # ===== 註冊 =====
-@app.route('/register', method=['GET', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
         return render_template('register.html')

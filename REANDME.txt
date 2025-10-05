@@ -9,7 +9,7 @@
 ** 需要安裝的模組 **
 
 # OpenCV（含人臉辨識模組）、Flask、NumPy
-python -m pip install flask flask-socketio opencv-contrib-python numpy 
+python -m pip install flask flask-socketio opencv-contrib-python numpy tabulate
 
 
 ** 如果出現錯誤: AttributeError: module 'cv2' has no attribute 'face' **
@@ -25,42 +25,4 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 
-<!-- 「加入人臉」的上傳表單
-            <div class="upload-section">
-                <form id="uploadForm" enctype="multipart/form-data">
-                    <!-- 檔案選擇欄位: 讓使用者選擇要上傳的人臉圖片 -->
-                    <input type="file" id="faceImage" accept="image/*" style="display: none;">
 
-                    <!-- 文字輸入欄位: 讓使用者輸入人名 -->
-                    <input type="text" id="personName" placeholder="請輸入人名" style="display: none;">
-                </form>
-            </div>
-            <!-- 「測試辨識」功能的表單 -->
-            <div class="test-section">
-                <form id="testForm" enctype="multipart/form-data">
-                    <!-- 檔案選擇欄位: 讓使用者選擇要測試的人臉圖片 -->
-                    <input type="file" id="testImage" accept="image/*" style="display: none;">
-                </form>
-            </div>
-
-            <!-- 資料表格(查看資料庫功能) -->
-            <div id="dbTable" class="database-table" style="display: none;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>姓名</th>
-                            <th>建立時間</th>
-                        </tr>
-                    </thead>
-                    <!-- 資料表格的表身區域 -->
-                    <!-- 
-                    當你按下「查看資料庫」按鈕時，前端 JavaScript 會取得資料庫資料，
-                    然後用程式動態建立 <tr>（表格列）並插入到這個 <tbody> 裡，讓網頁
-                    即時顯示所有人臉資料 
-                    -->
-                    <tbody id="tableBody">
-                    </tbody>
-                </table>
-            </div>
-        </div>

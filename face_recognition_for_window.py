@@ -575,7 +575,7 @@ class FaceRecognitionSystem:
             password_hash = hashlib.sha256(password.encode()).hexdigest()
 
             # 查詢使用者與密碼
-            cursor.execute("SELECT id FROM WHERE username = ? AND password = ?",
+            cursor.execute("SELECT id FROM users WHERE username = ? AND password_hash = ?",
                            (username, password_hash)
                            )
             
