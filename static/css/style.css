@@ -90,6 +90,8 @@ th {
     border-bottom: 1px solid #eee; /* 底部細線 */
 }
 /* 辨識紀錄(已知人物) */
+/* 同時擁有兩個類別的同一個元素 */
+/* 需要在 log-entry 後面加上類別名稱才有效 */
 .log-entry.know-face{
     background-color: green;
 }

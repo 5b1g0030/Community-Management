@@ -79,7 +79,7 @@ def register():
     else:
         return jsonify({'message': message}), 400
 
-last_names = set()
+last_names = set() # 本次影像中所有被辨識到的人名（空集合，不重複）
 
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
@@ -88,43 +88,48 @@ def gen_frames():
         # 查看每一筆資料
         for result in results:
             name = result['name']  # 名字欄位
+
             # ----- 如果不是「未知」，則顯示名字 -----
             if name != '未知':
-                # 辨識紀錄訊息「偵測到xxx住戶來到大門」
+                # 辨識紀錄訊息「偵測到xxx住戶來到大門」，包含「事件名稱, 資料(資料類型, 訊息內容)」
                 socketio.emit('recognition', {
                               'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
             # ----- 如果是「未知」，顯示未知人物 -----
             else:
-                # 辨識紀錄訊息「偵測到未知人物」
+                # ------ 辨識紀錄訊息「偵測到未知人物」 -----
                 socketio.emit('recognition', {
                               'type': 'recognition', 'message': '偵測到未知人物'})
 
-                # 檢查 static/temp 路徑是否存在，若無則建立
+                # ----- 檢查 static/temp 路徑是否存在，若無則建立 -----
                 temp_dir = os.path.join('static', 'temp')
                 if not os.path.exists(temp_dir):
                     os.makedirs(temp_dir)
 
-                # 儲存暫存圖片(請確保路徑存在)
+                # ----- 儲存暫存圖片(請確保路徑存在) -----
                 img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
                 cv2.imwrite(img_path, frame)
+                # 推送未知人臉的圖片路徑
+                # replace('\\', '/') => 確保在 Windows 系統上路徑分隔符號正確
                 socketio.emit('unknown_face', {
                     'image_url': '/' + img_path.replace('\\', '/')
                 })
     
-    global last_names, latest_frame
+    global last_names, latest_frame # 本次辨識到的人臉, 紀錄最新影像
     # cap = cv2.VideoCapture(0) 
 
-    # 使用新的攝影機搜尋功能
+    # ----- 攝影機自動搜尋 -----
     # print("正在尋找攝影機...")
-    camera_index, backend = face_system.camera_type()
+    camera_index, backend = face_system.camera_type() # 呼叫「決定鏡頭所用參數函式」
     
+    # ----- 檢查是否有找到攝影機 -----
     if camera_index and backend is None:
         # print("無法找到可用的攝影機")
         return
     
-    # 使用找到的最佳攝影機設定
+    # ----- 使用找到的最佳攝影機設定開啟攝影機 -----
     cap = cv2.VideoCapture(camera_index, backend)
     
+    # ----- 檢查攝影機有沒有打開 -----
     if not cap.isOpened():
         # print("攝影機開啟失敗")
         return
@@ -132,27 +137,28 @@ def gen_frames():
     try:
         while True:
             ret, frame = cap.read() # 讀取影像
-            # 檢查是否正確讀取，沒有的話則跳出回圈
+            # ----- 檢查是否正確讀取，沒有的話則跳出回圈 -----
             if not ret:
                 break
+            
             latest_frame = frame.copy() # 紀錄最新影像(給人工審核視窗更新照片)
 
-            # 進行人臉辨識
+            # ----- 進行人臉辨識 -----
             results = face_system.recognize_face(frame)  # 呼叫「辨識人臉」函式
             current_names = set([r['name']
                                 for r in results])  # 本次影像中所有被辨識到的人名（不重複）
 
-            # 第一次啟動時，主動推送辨識紀錄
+            # ----- 第一次啟動時，主動推送辨識紀錄 -----
             if last_names is None:
+                # 如果辨識結果為 None，表示沒有偵測到人臉
                 if not results:
                     socketio.emit('recognition', {
                                 'type': 'recognition', 'message': '未偵測到人臉'})
                 else:
                     face_message() # 呼叫「根據辨識情況推送訊息函式」
-                last_names = current_names
-            # 只在新住戶或未知人物出現時推送
+                last_names = current_names # 紀錄本次辨識到的人臉 
+            # ----- 在新住戶或未知人物出現時推送 -----
             elif current_names != last_names:
-                # ----- 沒有人臉資料(沒偵測到人臉)，顯示未偵測到人臉 -----
                 if not results:
                     socketio.emit('recognition', {
                                 'type': 'recognition', 'message': '未偵測到人臉'})
@@ -160,11 +166,11 @@ def gen_frames():
                     face_message() # 呼叫「根據辨識情況推送訊息函式」
                 last_names = current_names  # 更新偵測結果(名字或 null)
 
-            # 在影像上繪製辨識結果
-            for result in results:
-                x, y, w, h = result['position']
-                name = result['name']
-                confidence = result['confidence']
+            # ----- 在影像上繪製辨識結果 -----
+            for result in results: # 遍歷每個人臉
+                x, y, w, h = result['position']     # 人臉位置與大小
+                name = result['name']               # 人臉名稱
+                confidence = result['confidence']   # 人臉辨識信心度()
 
                 color = (0, 255, 0) if name != '未知' else (0, 0, 255)
                 cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)

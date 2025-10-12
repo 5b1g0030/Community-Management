@@ -274,13 +274,15 @@ document.addEventListener('DOMContentLoaded', () => {
         entry.className = 'log-entry'; // CSS 設定(字體、顏色...)
 
         // 根據訊息變換顏色
-        if (message.includes('住戶來到大門')){ // 已知人物 - 綠色
+        // entry.classList.add() => 動態添加樣式(類似添加字串來改變class類別的方式)
+        // message.includes('字串') => message 是否包含此字串? 回傳 true, false 
+        if (message.includes('住戶來到大門')){ // 已知人物 - 綠色(.log-entry.know-face)
             entry.classList.add('know-face')
         }
-        else if(message.includes('未偵測到人臉')){ // 未偵測人臉 - 灰色
+        else if(message.includes('未偵測到人臉')){ // 未偵測人臉 - 灰色(.log-entry.no-face)
             entry.classList.add('no-face')
         }
-        else if(message.includes('偵測到未知人物')){ // 未知人物 - 紅色
+        else if(message.includes('偵測到未知人物')){ // 未知人物 - 紅色(.log-entry.unknow-face)
             entry.classList.add('unknow-face')
         }
 
