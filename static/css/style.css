@@ -83,10 +83,23 @@ th {
     font-size: 14px;
 }
 
+/* 辨識紀錄 */
 .log-entry {
-    margin-bottom: 5px;
-    padding: 5px;
-    border-bottom: 1px solid #eee;
+    margin-bottom: 5px; /* 底部間距 */
+    padding: 5px;       /* 內間距 */
+    border-bottom: 1px solid #eee; /* 底部細線 */
+}
+/* 辨識紀錄(已知人物) */
+.log-entry.know-face{
+    background-color: green;
+}
+/* 辨識紀錄(未知人物) */
+.log-entry.unknow-face{
+    background-color: red;
+}
+/* 辨識紀錄(已知人物) */
+.log-entry.no-face{
+    background-color: gray;
 }
 
 /* 浮空視窗遮罩 */

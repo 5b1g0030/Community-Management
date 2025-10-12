@@ -1,19 +1,20 @@
 // Flask 網頁前端的 JavaScript 主程式檔案
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ===== 取得元素 =====
+    // ===== 功能按鈕、辨識紀錄元素 =====
     const addFaceBtn = document.getElementById('addFaceBtn');           // 「加入人臉」功能按鈕
     const testFaceBtn = document.getElementById('testFaceBtn');         // 「測試辨識」功能按鈕
     const viewDbBtn = document.getElementById('viewDbBtn');             // 「查看資料庫」功能按鈕
     const recognitionLog = document.getElementById('recognitionLog');   // 辨識紀錄清單
 
-    // Modal 相關元素
+    // ===== 加入人臉彈出視窗元素 =====
     const addFaceModal = document.getElementById('addFaceModal');           // 「加入人臉」浮空視窗
     const closeAddFaceModal = document.getElementById('closeAddFaceModal'); // 「加入人臉」關閉視窗鍵
     const modalUploadForm = document.getElementById('modalUploadForm');     // 上傳的表單元素
     const modalFaceImage = document.getElementById('modalFaceImage');       // 表單中圖片欄位
     const modalPersonName = document.getElementById('modalPersonName');     // 表單中人名
 
+    // ===== 測試辨識彈出視窗元素 =====
     const testFaceModal = document.getElementById('testFaceModal');
     const closeTestFaceModal = document.getElementById('closeTestFaceModal');
     const modalTestForm = document.getElementById('modalTestForm');
@@ -256,21 +257,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ===== SocketIO 連線（辨識紀錄） =====
-    const socket = io();
+    // ===== 辨識紀錄 =====
+    const socket = io(); // 建立 WebSocket 連線
+    // 及時辨識紀錄推送(socket.IO 事件監聽)
+    // ( '事件名稱', 當收到事件執行的函數(後端傳來的資料物件) )
     socket.on('recognition', function(data) {
+        // 確認接收到了資料類型是 recognition
         if (data.type === 'recognition') {
-            addLogEntry(data.message);
+            addLogEntry(data.message); // 呼叫「新增即時辨識紀錄函式」
         }
     });
+    // ----- 新增即時辨識紀錄 -----
+    // insertBefore(新元素, 參考元素) => 在參考元素前面插入新元素
     function addLogEntry(message) {
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
-        recognitionLog.insertBefore(entry, recognitionLog.firstChild);
+        const entry = document.createElement('div'); // 建立 div 標籤
+        entry.className = 'log-entry'; // CSS 設定(字體、顏色...)
+
+        // 根據訊息變換顏色
+        if (message.includes('住戶來到大門')){ // 已知人物 - 綠色
+            entry.classList.add('know-face')
+        }
+        else if(message.includes('未偵測到人臉')){ // 未偵測人臉 - 灰色
+            entry.classList.add('no-face')
+        }
+        else if(message.includes('偵測到未知人物')){ // 未知人物 - 紅色
+            entry.classList.add('unknow-face')
+        }
+
+        // 包裝訊息
+        entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`; // 發生時間-訊息
+        recognitionLog.insertBefore(entry, recognitionLog.firstChild); // 將新紀錄插入最上方
     }
 
     // ===== 人工審核區塊 =====
+    // 未知人臉處理
     socket.on('unknown_face', function(data) {
         showReviewPanel(data.image_url);
     });

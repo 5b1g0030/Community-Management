@@ -81,18 +81,19 @@ def register():
 
 last_names = set()
 
-# ===== 根據辨識情況推送訊息函式 =====
+# ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
+    # ----- 推送辨識訊息(已知, 未知) -----
     def face_message():
         # 查看每一筆資料
         for result in results:
             name = result['name']  # 名字欄位
-            # 如果不是「未知」，則顯示名字
+            # ----- 如果不是「未知」，則顯示名字 -----
             if name != '未知':
                 # 辨識紀錄訊息「偵測到xxx住戶來到大門」
                 socketio.emit('recognition', {
                               'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
-            # 如果是「未知」，顯示未知人物
+            # ----- 如果是「未知」，顯示未知人物 -----
             else:
                 # 辨識紀錄訊息「偵測到未知人物」
                 socketio.emit('recognition', {
@@ -111,55 +112,76 @@ def gen_frames():
                 })
     
     global last_names, latest_frame
-    cap = cv2.VideoCapture(0)
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        latest_frame = frame.copy() # 紀錄最新影像
+    # cap = cv2.VideoCapture(0) 
 
-        # 進行人臉辨識
-        results = face_system.recognize_face(frame)  # 呼叫「辨識人臉」函式
-        current_names = set([r['name']
-                            for r in results])  # 本次影像中所有被辨識到的人名（不重複）
+    # 使用新的攝影機搜尋功能
+    # print("正在尋找攝影機...")
+    camera_index, backend = face_system.camera_type()
+    
+    if camera_index and backend is None:
+        # print("無法找到可用的攝影機")
+        return
+    
+    # 使用找到的最佳攝影機設定
+    cap = cv2.VideoCapture(camera_index, backend)
+    
+    if not cap.isOpened():
+        # print("攝影機開啟失敗")
+        return
 
-        # 第一次啟動時，主動推送辨識紀錄
-        if last_names is None:
-            if not results:
-                socketio.emit('recognition', {
-                              'type': 'recognition', 'message': '未偵測到人臉'})
-            else:
-                face_message() # 呼叫「根據辨識情況推送訊息函式」
-            last_names = current_names
-        # 只在新住戶或未知人物出現時推送
-        elif current_names != last_names:
-            # 沒有人臉資料(沒偵測到人臉)，顯示未偵測到人臉
-            if not results:
-                socketio.emit('recognition', {
-                              'type': 'recognition', 'message': '未偵測到人臉'})
-            else:
-                face_message() # 呼叫「根據辨識情況推送訊息函式」
-            last_names = current_names  # 更新偵測結果(名字或 null)
+    try:
+        while True:
+            ret, frame = cap.read() # 讀取影像
+            # 檢查是否正確讀取，沒有的話則跳出回圈
+            if not ret:
+                break
+            latest_frame = frame.copy() # 紀錄最新影像(給人工審核視窗更新照片)
 
-        # 在影像上繪製辨識結果
-        for result in results:
-            x, y, w, h = result['position']
-            name = result['name']
-            confidence = result['confidence']
+            # 進行人臉辨識
+            results = face_system.recognize_face(frame)  # 呼叫「辨識人臉」函式
+            current_names = set([r['name']
+                                for r in results])  # 本次影像中所有被辨識到的人名（不重複）
 
-            color = (0, 255, 0) if name != '未知' else (0, 0, 255)
-            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+            # 第一次啟動時，主動推送辨識紀錄
+            if last_names is None:
+                if not results:
+                    socketio.emit('recognition', {
+                                'type': 'recognition', 'message': '未偵測到人臉'})
+                else:
+                    face_message() # 呼叫「根據辨識情況推送訊息函式」
+                last_names = current_names
+            # 只在新住戶或未知人物出現時推送
+            elif current_names != last_names:
+                # ----- 沒有人臉資料(沒偵測到人臉)，顯示未偵測到人臉 -----
+                if not results:
+                    socketio.emit('recognition', {
+                                'type': 'recognition', 'message': '未偵測到人臉'})
+                else:
+                    face_message() # 呼叫「根據辨識情況推送訊息函式」
+                last_names = current_names  # 更新偵測結果(名字或 null)
 
-            label = f"{name} ({confidence:.1f})"
-            cv2.putText(frame, label, (x, y-10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+            # 在影像上繪製辨識結果
+            for result in results:
+                x, y, w, h = result['position']
+                name = result['name']
+                confidence = result['confidence']
 
-        # 將影像轉換為 JPEG 格式
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
+                color = (0, 255, 0) if name != '未知' else (0, 0, 255)
+                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
 
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                label = f"{name} ({confidence:.1f})"
+                cv2.putText(frame, label, (x, y-10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+
+            # 將影像轉換為 JPEG 格式
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+
+            yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    finally:
+        cap.release()
+        print("攝影機已關閉")
 
 
 # ===== 鏡頭影像顯示 =====

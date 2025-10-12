@@ -53,7 +53,7 @@ class FaceRecognitionSystem:
 
         # ----- 取得作業系統資訊 -----
         os_type = platform.system() # 會回傳一個字串，代表你目前的作業系統
-        backends = []
+        backends = [] # 作業系統可用參數(回傳值)
 
         # ----- 根據作業系統選擇後端參數 -----
         if os_type == "Windows":    # windows系統
@@ -63,11 +63,36 @@ class FaceRecognitionSystem:
         elif os_type == "Linux":    # linux系統
             backends = [cv2.CAP_V4L2, cv2.CAP_GSTREAMER]
         else:
-            backends = [0]  # 預設
-        
-        # ----- 回傳這個作業系統的鏡頭參數 -----
-        return backends
+            backends = [cv2.CAP_ANY]
 
+        # ----- 自動搜尋可用的攝影機 -----
+        print("🔍 搜尋可用的攝影機...")
+        
+        for index in range(6):  # 測試攝影機索引 0-5
+            print(f"  測試攝影機索引 {index}...")
+            
+            for backend in backends: # 逐個嘗試系統參數
+                try:
+                    print(f"    嘗試後端: {backend}")
+                    cap = cv2.VideoCapture(index, backend) # 測試攝影機
+
+                    # # 測試是否能讀取影像
+                    if cap.isOpened():
+                        ret, frame = cap.read()
+                        if ret and frame is not None:
+                            cap.release()
+                            print(f"✅ 找到可用攝影機: 索引 {index}, 後端 {backend}")
+                            return index, backend  # 立即回傳找到的設定(相機索引, 系統參數)
+
+                    cap.release()
+
+                except Exception as e:
+                    print(f"    後端 {backend} 失敗: {e}")
+                    continue
+        # ✅ 沒有找到任何可用攝影機
+        print("❌ 沒有找到可用的攝影機")
+        return None, None
+        
     # ===== 初始化SQLite資料庫 =====
     # 1. 創建人臉資料表
     # 2. 創建辨識紀錄資料表
