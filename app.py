@@ -5,6 +5,7 @@ from flask_socketio import SocketIO
 import cv2
 import numpy as np
 from face_recognition_for_window import FaceRecognitionSystem
+from utils.camera_utils import CameraManager # 相機管理工具
 import os
 from datetime import datetime
 
@@ -115,23 +116,24 @@ def gen_frames():
                 })
     
     global last_names, latest_frame # 本次辨識到的人臉, 紀錄最新影像
-    # cap = cv2.VideoCapture(0) 
 
     # ----- 攝影機自動搜尋 -----
     # print("正在尋找攝影機...")
-    camera_index, backend = face_system.camera_type() # 呼叫「決定鏡頭所用參數函式」
+    # camera_index, backend = face_system.camera_type() # 呼叫「決定鏡頭所用參數函式」
+    backends = CameraManager.get_camera_config()        # 取得系統後端
+    camera_index, backend = CameraManager.find_camera(backends) # 取得可用的相機設定
     
     # ----- 檢查是否有找到攝影機 -----
     if camera_index and backend is None:
-        # print("無法找到可用的攝影機")
+        print("無法找到可用的攝影機")
         return
     
     # ----- 使用找到的最佳攝影機設定開啟攝影機 -----
-    cap = cv2.VideoCapture(camera_index, backend)
+    cap = CameraManager.open_camera(camera_index, backend)
     
     # ----- 檢查攝影機有沒有打開 -----
     if not cap.isOpened():
-        # print("攝影機開啟失敗")
+        print("攝影機開啟失敗")
         return
 
     try:
@@ -186,7 +188,7 @@ def gen_frames():
             yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     finally:
-        cap.release()
+        CameraManager.clean_camera(cap) # 釋放資源
         print("攝影機已關閉")
 
 
@@ -259,6 +261,12 @@ def test_face():
 def get_faces():
     faces = face_system.get_all_faces() # 呼叫「列出資料庫中的所有人臉資料(網頁)函式」
     return jsonify(faces)               # 轉 json 格式
+
+# ===== 取得辨識紀錄資料 =====
+@app.route('/get_recognition_logs')
+def get_recognition_logs():
+    logs = face_system.get_all_recognition_logs() # 呼叫「列出資料庫中的所有辨識紀錄(網頁)函式」
+    return jsonify(logs)                          # 轉 json 格式
 
 # ===== 再拍一張功能-獲取最新人物影像 =====
 @app.route('/latest_unknown_face')

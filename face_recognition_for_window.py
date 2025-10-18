@@ -18,7 +18,7 @@ class FaceRecognitionSystem:
     # 3. 資料庫
     # 4. 載入模型
     # =====================    
-    def __init__(self, db_path='face_detector/face_database.db', model_path='face_detector/face_model.pkl'):
+    def __init__(self, db_path='face_database/face_database.db', model_path='face_database/face_model.pkl'):
         # 初始化檔案路徑
         self.db_path = db_path # 指定 SQLite 資料庫
         self.model_path = model_path # 指定訓練好的人臉辨識模型
@@ -66,7 +66,7 @@ class FaceRecognitionSystem:
             backends = [cv2.CAP_ANY]
 
         # ----- 自動搜尋可用的攝影機 -----
-        print("🔍 搜尋可用的攝影機...")
+        print("搜尋可用的攝影機...")
         
         for index in range(6):  # 測試攝影機索引 0-5
             print(f"  測試攝影機索引 {index}...")
@@ -319,7 +319,11 @@ class FaceRecognitionSystem:
                 # ----- 進行人臉辨識 -----
                 # 呼叫以載入的模型
                 # label => 預測的人臉 ID（數字），對應資料庫
-                # confidence => 辨識信心度（數值，通常越低代表越接近）
+                # confidence => LBPH 信心度，數值越小越準確
+                # LBPH 信心度說明:
+                # 把人臉特徵製成一個列表，裡面有很多數字，當有新人臉時
+                # 把舊的人臉列表與心的人臉列表的數字比較，看看相差多少
+                # 相差越大代表兩人越不像，相差越小代表兩人越像  
                 # ----------------------- 
                 label, confidence = self.recognizer.predict(face_resized)
                 
@@ -556,6 +560,38 @@ class FaceRecognitionSystem:
         conn.close() # 關閉連接
         return faces # 回傳資料查詢結果
     
+    # ===== 列出資料庫中的所有辨識紀錄(網頁) =====
+    # 1. 連接資料庫
+    # 2. 查詢辨識紀錄與對應人名
+    # 3. 把內容轉為字典格式
+    # 4. 關閉資料庫
+    # 5. 回傳字典格式的資料
+    # ============================================
+    def get_all_recognition_logs(self):
+        conn = sqlite3.connect(self.db_path) # 連接資料庫
+        cursor = conn.cursor()               # 建立物件執行 SQL 指令
+        
+        # 查詢辨識紀錄，並與人臉表格做關聯以取得人名
+        cursor.execute('''
+            SELECT rl.id, f.name, rl.recognition_date, rl.confidence
+            FROM recognition_log rl
+            LEFT JOIN faces f ON rl.face_id = f.id
+            ORDER BY rl.recognition_date DESC
+        ''')
+        
+        # 資料轉換為字典格式
+        logs = []
+        for row in cursor.fetchall():
+            logs.append({
+                'id': row[0],
+                'name': row[1],
+                'recognition_date': row[2],
+                'confidence': row[3]
+            })
+        
+        conn.close() # 關閉連接
+        return logs  # 回傳資料查詢結果
+
     # ===== 使用者註冊 =====
     # 回傳 執行結果, 訊息
     # ===================== 

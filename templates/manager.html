@@ -20,7 +20,8 @@
             <div class="function-buttons">
                 <button type="button" id="addFaceBtn">加入人臉</button>
                 <button type="button" id="testFaceBtn">測試辨識</button>
-                <button type="button" id="viewDbBtn">查看資料庫</button>
+                <button type="button" id="viewFaceDbBtn">查看已登錄人臉</button>
+                <button type="button" id="viewLogDbBtn">查看辨識紀錄資料庫</button>
             </div>
 
             <!-- 人工審核區 -->
@@ -132,6 +133,28 @@
                     </thead>
                     <tbody id="modalTableBody"></tbody>
                 </table>
+            </div>
+    </div>
+    
+    <!-- 查看辨識紀錄 Modal(彈出視窗) -->
+    <div id="viewLogDbModal" class="modal" style="display:none;">
+            <div class="modal-content"
+                style="position:fixed; left:50vw; top:10vh; z-index:2000; min-width:450px; min-height:250px; max-height:85vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+                <span class="close" id="closeViewLogDbModal">&times;</span>
+                <h2>辨識紀錄資料庫</h2>
+                <div style="max-height:70vh; overflow-y:auto;">
+                    <table style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>辨識姓名</th>
+                                <th>辨識時間</th>
+                                <th>辨識結果</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalLogTableBody"></tbody>
+                    </table>
+                </div>
             </div>
     </div>
     

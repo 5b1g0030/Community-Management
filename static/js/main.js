@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== 功能按鈕、辨識紀錄元素 =====
     const addFaceBtn = document.getElementById('addFaceBtn');           // 「加入人臉」功能按鈕
     const testFaceBtn = document.getElementById('testFaceBtn');         // 「測試辨識」功能按鈕
-    const viewDbBtn = document.getElementById('viewDbBtn');             // 「查看資料庫」功能按鈕
+    const viewFaceDbBtn = document.getElementById('viewFaceDbBtn');     // 「查看資料庫」功能按鈕
+    const viewLogDbBtn = document.getElementById('viewLogDbBtn');       // 「查看辨識紀錄資料庫」功能按鈕
     const recognitionLog = document.getElementById('recognitionLog');   // 辨識紀錄清單
 
     // ===== 加入人臉彈出視窗元素 =====
@@ -24,6 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewDbModal = document.getElementById('viewDbModal');
     const closeViewDbModal = document.getElementById('closeViewDbModal');
     const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
+
+    const viewLogDbModal = document.getElementById('viewLogDbModal');
+    const closeViewLogDbModal = document.getElementById('closeViewLogDbModal');
+    const modalLogTableBody = document.getElementById('modalLogTableBody'); // 辨識紀錄查詢表格
 
     const registerForm = document.getElementById('registerForm');
     const username = document.getElementById('username');
@@ -206,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 查看資料庫彈出視窗 =====
     // 「()=>」 => 箭頭函式，一般 function 的簡寫版
-    viewDbBtn.onclick = async () => {
+    viewFaceDbBtn.onclick = async () => {
         viewDbModal.style.display = 'block';         // 顯示彈出視窗
         setTimeout(()=>centerModal(viewDbModal), 0); // 延遲一點點時間在讓函式執行(讓瀏覽器有時間渲染)
         // AJAX 取得資料
@@ -236,6 +241,37 @@ document.addEventListener('DOMContentLoaded', () => {
         modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
     };
 
+    // ===== 查看辨識紀錄資料庫彈出視窗 =====
+    viewLogDbBtn.onclick = async () => {
+        viewLogDbModal.style.display = 'block';
+        setTimeout(()=>centerModal(viewLogDbModal), 0);
+        
+        try {
+            const response = await fetch('/get_recognition_logs');
+            const logs = await response.json();
+            modalLogTableBody.innerHTML = '';
+            
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${log.id}</td>
+                    <td>${log.name || '未知'}</td>
+                    <td>${log.recognition_date}</td>
+                    <td>${log.confidence ? log.confidence.toFixed(1) : 'N/A'}</td>
+                `;
+                modalLogTableBody.appendChild(row);
+            });
+        } catch (error) {
+            modalLogTableBody.innerHTML = `<tr><td colspan="4">獲取資料失敗: ${error.message}</td></tr>`;
+        }
+    };
+
+    // ===== 關閉辨識紀錄資料庫彈出視窗 =====
+    closeViewLogDbModal.onclick = () => {
+        viewLogDbModal.style.display = 'none';
+        modalLogTableBody.innerHTML = '';
+    };
+
     // ===== 點擊外部關閉 =====
     // 監聽整個網頁的點擊事件
     window.onclick = (event) => {
@@ -254,6 +290,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === viewDbModal) {
             viewDbModal.style.display = 'none';
             modalTableBody.innerHTML = '';      // 清空表格顯示區
+        }
+        // 查看辨識紀錄視窗
+        if (event.target === viewLogDbModal) {
+            viewLogDbModal.style.display = 'none';
+            modalLogTableBody.innerHTML = '';
         }
     };
 
@@ -373,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         };
     }
-    [addFaceModal, testFaceModal, viewDbModal].forEach(makeModalDraggable);
+    [addFaceModal, testFaceModal, viewDbModal, viewLogDbModal].forEach(makeModalDraggable);
 
     // ====== 彈窗打開時自動置中 ======
     addFaceBtn.onclick = () => {
@@ -384,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
         testFaceModal.style.display = 'block';
         setTimeout(()=>centerModal(testFaceModal), 0);
     };
-    viewDbBtn.onclick = async () => {
+    viewFaceDbBtn.onclick = async () => {
         viewDbModal.style.display = 'block';
         setTimeout(()=>centerModal(viewDbModal), 0);
         // AJAX 取得資料
