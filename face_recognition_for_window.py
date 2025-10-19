@@ -202,12 +202,12 @@ class FaceRecognitionSystem:
             # 樣做可以讓所有人臉影像在資料庫和模型訓練時，尺寸一致，方便後續辨識與比對。
             # -------------------------------------- 
             face_resized = cv2.resize(face_roi, (100, 100))
+            face_blob = pickle.dumps(face_resized) # 人臉影像（NumPy 陣列）序列化成二進位資料（BLOB），方便儲存到資料庫。
             
             # ----- 儲存到資料庫 -----
             conn = sqlite3.connect(self.db_path) # 連接SQLite
             cursor = conn.cursor() # 建立游標物件，用來執行 SQL 指令（查詢、插入、更新等）
             
-            face_blob = pickle.dumps(face_resized) # 人臉影像（NumPy 陣列）序列化成二進位資料（BLOB），方便儲存到資料庫。
             created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串，記錄資料建立的時間。
             
             # SQL 指令，意思是「新增一筆資料到 faces 表格」。
@@ -300,7 +300,7 @@ class FaceRecognitionSystem:
     # 2. 逐一處理每一張人臉
     # 3. 進行人臉辨識
     # 4. 查詢人名
-    # 5. 根據信心度閾值紀錄辨識結果
+    # 5. 根據信心度閾值儲存辨識結果
     # 6. 回傳結果
     # =================== 
     def recognize_face(self, image):
@@ -343,7 +343,7 @@ class FaceRecognitionSystem:
                     cursor.execute("SELECT name FROM faces WHERE id = ?", (label,))# SQL 查詢，跟據 ID 查詢人名
                     result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
                 
-                    # 有資料且信心度閾值小於100，執行以下內容
+                    # 有資料才執行以下內容
                     if result:  
                         name = result[0]
                         
