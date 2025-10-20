@@ -37,7 +37,7 @@ def login():
         return jsonify({'message': '請輸入使用者名稱和密碼'}), 400
     
     # 驗證使用者
-    if face_system.login_user(username, password):
+    if face_system.db_manager.login_user(username, password):
         # 登入成功則導向管理者介面
         return jsonify({'message': '登入成功', 'redirect': '/manager'}), 200
     else:
@@ -71,7 +71,7 @@ def register():
         return jsonify({'message': '兩次密碼不相同'}), 400
     
     # ----- 註冊使用者 -----
-    success, message = face_system.register_uer(username, password)
+    success, message = face_system.db_manager.register_user(username, password)
 
     # 如果註冊成功
     if success:
@@ -259,13 +259,13 @@ def test_face():
 # ===== 取得資料庫資料 =====
 @app.route('/get_faces')
 def get_faces():
-    faces = face_system.get_all_faces() # 呼叫「列出資料庫中的所有人臉資料(網頁)函式」
+    faces = face_system.db_manager.get_all_faces() # 呼叫「列出資料庫中的所有人臉資料(網頁)函式」
     return jsonify(faces)               # 轉 json 格式
 
 # ===== 取得辨識紀錄資料 =====
 @app.route('/get_recognition_logs')
 def get_recognition_logs():
-    logs = face_system.get_all_recognition_logs() # 呼叫「列出資料庫中的所有辨識紀錄(網頁)函式」
+    logs = face_system.db_manager.get_all_recognition_logs() # 呼叫「列出資料庫中的所有辨識紀錄(網頁)函式」
     return jsonify(logs)                          # 轉 json 格式
 
 # ===== 再拍一張功能-獲取最新人物影像 =====

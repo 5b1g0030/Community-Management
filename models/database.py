@@ -70,7 +70,7 @@ class DatabaseManager:
         
         conn.commit() # 確認變更(寫入磁碟，表格才會建立)
         conn.close() # 關閉連接(不關閉資料庫連線會導致資源洩漏、效能問題，甚至程式崩潰。)
-        print("資料庫初始化完成")
+        print("資料庫初始化完成 by database")
     
     # ===== 註冊使用者 =====
     # 回傳 執行結果, 訊息
@@ -85,7 +85,7 @@ class DatabaseManager:
             # 檢查第一筆資料，如果重複則結束函式並告訴使用者「此名稱已存在」
             if cursor.fetchone():
                 conn.close() # 關閉資料庫連接
-                return False, "使用者名稱已被使用"
+                return False, "使用者名稱已被使用 by database"
             
             # 密碼加密
             password_hash = hashlib.sha256(password.encode()).hexdigest()
@@ -98,11 +98,11 @@ class DatabaseManager:
             conn.commit() # 更新資料庫
             conn.close() # 關閉連接
 
-            return True, "註冊成功"
+            return True, "註冊成功 by database"
 
         # 例外錯誤處理
         except Exception as e:
-            return False, f"註冊失敗: {str(e)}"
+            return False, f"註冊失敗 by database: {str(e)}"
     
     # ===== 使用者登入 =====
     # 回傳 執行結果
@@ -153,12 +153,12 @@ class DatabaseManager:
         
         # 查詢資料庫時的例外錯誤(資料庫檔案不存在、權限問題、資料庫鎖定等)
         except sqlite3.DatabaseError as e:
-            print(f"資料庫查詢時發生錯誤: {e}")
+            print(f"資料庫查詢時發生錯誤 by database: {e}")
             return [] # 回傳空列表，防止程式崩潰
         
         # 查詢人臉資料時發生的例外錯誤
         except Exception as e:
-            print(f"查詢人臉資料時發生錯誤: {e}")
+            print(f"查詢人臉資料時發生錯誤 by database: {e}")
             return [] # 回傳空列表
         
         # 一定會執行的部分
@@ -198,11 +198,11 @@ class DatabaseManager:
         
         # 查詢資料庫時的例外錯誤(資料庫檔案不存在、權限問題、資料庫鎖定等)
         except sqlite3.DatabaseError as e:
-            print(f"查詢時發生錯誤: {e}")
+            print(f"查詢時發生錯誤 by database: {e}")
         
         # 查詢辨識紀錄時發生的例外錯誤
         except Exception as e:
-            print(f"查詢辨識紀錄時發生錯誤: {e}")
+            print(f"查詢辨識紀錄時發生錯誤 by database: {e}")
         
         # 一定會執行的部分
         finally:
@@ -210,6 +210,8 @@ class DatabaseManager:
                 conn.close()
     
     # ===== add_face_to_database 儲存人臉資料部分 =====
+    # 傳入 人臉名稱、人臉資訊(二進位)、圖片
+    # ================================================ 
     def save_face_to_db(self, name, face_blob, image_path=None):
         conn = sqlite3.connect(self.db_path)  # 連接SQLite
         cursor = conn.cursor()  # 建立游標物件，用來執行 SQL 指令（查詢、插入、更新等）
@@ -231,10 +233,11 @@ class DatabaseManager:
         conn.close()  # 關閉連接，避免記憶體洩漏或效能問題
 
         # ----- 顯示成功訊息 -----
-        print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id})")
+        print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id}) by database")
     
     # ===== recognize_face 辨識紀錄儲存部分 ======
     # 傳入 人臉id、信心度
+    # 回傳 無 
     # =========================================== 
     def save_recognition_log(self, face_id, confidence):
         try:
@@ -251,14 +254,25 @@ class DatabaseManager:
             ''', (face_id, recognition_date, confidence))
             
             conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-            print("辨識紀錄已儲存") # 成功訊息
+            print("辨識紀錄已儲存 by database") # 成功訊息
         
         # 例外錯誤處理
         except Exception as e:
-            print(f"儲存辨識紀錄失敗: {e}")
+            print(f"儲存辨識紀錄失敗 by database: {e}")
             raise   # 重新拋出相同的例外，讓上層程式碼也能處理
         
         # 無論如何都會執行的程式碼
         finally:
             if 'conn' in locals(): # 檢查 conn 是否存在
                 conn.close() # 關閉資料庫
+
+    # ===== 從資料庫查詢人名 =====
+    # 傳入 
+    # 傳出 人臉資料
+    # =========================== 
+    def search_face(self, face_id):
+        conn = sqlite3.connect(self.db_path) # 連接資料庫
+        cursor = conn.cursor() # 建立游標物件執行 SQL 指令
+        cursor.execute("SELECT name FROM faces WHERE id = ?", (face_id,))# SQL 查詢，跟據 ID 查詢人名
+        result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
+        return result

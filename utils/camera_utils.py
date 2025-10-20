@@ -9,7 +9,7 @@ class CameraManager:
     # ================================
     @staticmethod # 裝飾器，不需要其他變數來當物件，可以直接使用類別呼叫
     def get_camera_config():
-        print("搜尋可用的相機系統後端...")
+        print("搜尋可用的相機系統後端 by camera_utils... ")
 
         # ***** 攝影機參數 *****
         # cv2.VideoCapture(0) => 使用預設後端(有可能使用到不適合的系統)
@@ -44,18 +44,21 @@ class CameraManager:
         print("正在開啟相機...")
         # 如果有系統後端則使用，沒有則不使用
         if backend:
-            print(f"使用索引{index} 系統參數{backend}")
+            print(f"使用索引{index} 系統參數{backend} by camera_utils")
             return cv2.VideoCapture(index, backend)
-        print(f"使用索引{index}")
+        print(f"使用索引{index} by camera_utils")
         return cv2.VideoCapture(index)
     
     # ===== 關閉攝影機&釋放資源 =====
     @staticmethod
     def clean_camera(cap):
-        if cap:
-            cap.release() # 釋放資源
-        cv2.destroyAllWindows() # 關閉cv2所有視窗
-        print("相機資源已釋放")
+        try:
+            if cap and cap.isOpened():
+                cap.release() # 釋放資源
+            cv2.destroyAllWindows() # 關閉cv2所有視窗
+            print("相機資源已釋放 by camera_utils")
+        except Exception as e:
+            print(f"釋放相機資源時發生錯誤 by camera_utils: {e}")
 
     # ===== 搜尋可用的攝影機 =====
     # 傳入: 相機物件
@@ -102,7 +105,7 @@ def main():
     index, backend = CameraManager.find_camera(backends) # 尋找可用相機設定(相機索引, 系統參數)
     cap = CameraManager.open_camera(index, backend) # 開啟相機(開啟函式)
     if cap.isOpened():
-        print("相機已開啟")
+        print("相機已開啟 by camera_utils")
         while True:
             ret, frame = cap.read() # 讀取影像
             # ----- 檢查是否正確讀取，沒有的話則跳出回圈 -----
@@ -113,12 +116,12 @@ def main():
             # ----- 按鍵偵測 -----
             key = cv2.waitKey(1) & 0xff
             if key == ord('q'):
-                print("攝影機關閉")
+                print("攝影機關閉 by camera_utils")
                 break
     else:
-        print("相機未開啟")
-    CameraManager.clean_camera() # 釋放資源
+        print("相機未開啟 by camera_utils")
+    CameraManager.clean_camera(cap) # 釋放資源
 
 if __name__ == "__main__":
     main()
-    print("程式執行完畢")
+    print("程式執行完畢 by camera_utils")
