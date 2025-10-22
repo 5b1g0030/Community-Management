@@ -166,7 +166,6 @@ class DatabaseManager:
             if 'conn' in locals(): # 檢查 conn 是否存在
                 conn.close() # 關閉資料庫
 
-    
     # ===== 列出資料庫中的所有辨識紀錄 =====
     # 回傳 字典格式資料
     # =================================== 
@@ -254,7 +253,7 @@ class DatabaseManager:
             ''', (face_id, recognition_date, confidence))
             
             conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-            print("辨識紀錄已儲存 by database") # 成功訊息
+            # print("辨識紀錄已儲存 by database") # 成功訊息
         
         # 例外錯誤處理
         except Exception as e:
@@ -266,7 +265,7 @@ class DatabaseManager:
             if 'conn' in locals(): # 檢查 conn 是否存在
                 conn.close() # 關閉資料庫
 
-    # ===== 從資料庫查詢人名 =====
+    # ===== 透過id從資料庫查詢人名 =====
     # 傳入 
     # 傳出 人臉資料
     # =========================== 
@@ -276,3 +275,21 @@ class DatabaseManager:
         cursor.execute("SELECT name FROM faces WHERE id = ?", (face_id,))# SQL 查詢，跟據 ID 查詢人名
         result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
         return result
+    
+
+    # ===== 訓練模型-取得訓練資料 =====
+    # 傳入 無
+    # 回傳 人臉id、人臉二進位資訊
+    # =======================
+    def train_model_faces(self):
+        '''
+            訓練模型真正需要的只有「特徵向量」(face_encoding) 和對應的「類別標籤」(id)
+            其他的欄位不影響結果，如果要知道是哪一個人可以透過id查詢
+        '''
+        # ------ 連接資料庫取得人臉資料 ----- 
+        conn = sqlite3.connect(self.db_path) # 連接 SQLite
+        cursor = conn.cursor() # 建立游標物件來執行 SQL 指令
+        cursor.execute("SELECT id, face_encoding FROM faces") # 資料查詢(所有人臉資料)
+        data = cursor.fetchall() # 取得查詢結果
+        conn.close() # 關閉資料庫連接
+        return data

@@ -7,6 +7,7 @@ from datetime import datetime   # 日期和時間處理
 import platform                 # 獲取作業系統資訊(選擇鏡頭系統參數用)
 import hashlib                  # 使用者密碼加密用
 from models.database import DatabaseManager # 資料庫管理工具(自製)
+from models.face_detector import FaceDetector # 影像處理工具(自製)
 
 """ 網頁將引用 FaceRecognitionSystem 類別 """
 
@@ -33,10 +34,12 @@ class FaceRecognitionSystem:
         
         # 初始化資料庫(建立或檢查資料庫表格)
         self.db_manager = DatabaseManager(db_path)
-        #self.init_database()
+        
+        # 初始化影像處理工具
+        self.face_detector = FaceDetector()
         
         # 載入已存在的模型（如果有的話）
-        self.load_model()
+        #self.load_model()
 
     
     # ====== 決定鏡頭所用參數 =====
@@ -95,80 +98,7 @@ class FaceRecognitionSystem:
         print("❌ 沒有找到可用的攝影機")
         return None, None
         
-    # ===== 初始化SQLite資料庫 =====
-    # 1. 創建人臉資料表
-    # 2. 創建辨識紀錄資料表
-    # 3. 創建使用者資料表
-    # 4. 確認變更(寫入磁碟)
-    # 5. 關閉連接
-    # ============================== 
-    # def init_database(self):
-    #     conn = sqlite3.connect(self.db_path) # 連接到指定路徑的 SQLite 資料庫
-    #     cursor = conn.cursor() # 建立游標物件用於執行 SQL 指令
-        
-    #     # ----- 創建人臉資料表(faces) -----
-    #     # id: 主鍵、自動遞增、不可重複
-    #     # name: 人名、不可為空值
-    #     # face_encoding: 人臉特徵資料、BLOB 格式序列化陣列
-    #     # image_path: 原始圖片(可不存)
-    #     # create_date: 資料建立日期時間
-    #     # ------------------------- 
-    #     cursor.execute('''
-    #         CREATE TABLE IF NOT EXISTS faces (
-    #             id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #             name TEXT NOT NULL,
-    #             face_encoding BLOB,
-    #             image_path TEXT,
-    #             created_date TEXT
-    #         )
-    #     ''')
-        
-    #     # ------ 創建辨識記錄表(recognition_log) -----
-    #     # id: 主鍵、自動遞增、不可重複
-    #     # face_id: 參照faces表格id
-    #     # recognition_date: 辨識發生日期時間
-    #     # FOREIGN KEY: 建立與 faces 表格的關聯性
-    #     # 補充:
-    #     # IF NOT EXISTS: 只有在表格不存在時才建立，避免重複建立錯誤
-    #     # 資料關聯性: 透過外鍵建立兩個表格間的關聯，確保資料完整性
-    #     # -------------------------------------------- 
-    #     cursor.execute('''
-    #         CREATE TABLE IF NOT EXISTS recognition_log (
-    #             id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #             face_id INTEGER,
-    #             recognition_date TEXT,
-    #             confidence REAL,
-    #             FOREIGN KEY (face_id) REFERENCES faces (id)
-    #         )
-    #     ''')
-
-    #      # ----- 建立使用者資料表格 -----
-    #      #  
-    #     cursor.execute('''
-    #             CREATE TABLE IF NOT EXISTS users (
-    #                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #                 username TEXT UNQUE NOT NULL,
-    #                 password_hash TEXT NOT NULL,
-    #                 created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP       
-    #             )    
-    #     ''')
-        
-    #     conn.commit() # 確認變更(寫入磁碟，表格才會建立)
-    #     conn.close() # 關閉連接(不關閉資料庫連線會導致資源洩漏、效能問題，甚至程式崩潰。)
-    #     print("資料庫初始化完成")
     
-    # ===== 偵測圖像中的人臉 =====
-    # 1. 影像轉灰階
-    # 2. 取得所有人臉的座標（x, y, w, h）
-    # 3. 回傳出結果(包含灰階影像、人臉座標)
-    # 補充: 
-    # (gray, 1.3, 5) => (灰階影像, 影像尺寸縮小比例, 判定為人臉的分數)
-    # 影像尺寸縮小比例 => 每次影像縮小到原本的 1/1.3，有些人臉可能比較大或比較小，偵測器會在不同尺寸的影像中都嘗試偵測，增加找到人臉的機會。
-    # =========================== 
-    def detect_faces(self, image):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # 的影像轉灰階（因為人臉偵測只需灰階資訊）
-        faces = self.face_cascade.detectMultiScale(gray, 1.3, 5) # Haar 級聯分類器偵測人臉，回傳所有人臉的座標（x, y, w, h）
-        return faces, gray # 兩者皆為 NumPy 陣列
     
     # ===== 將人臉加入資料庫 =====
     # 1. 取得人臉座標、灰階影像
@@ -182,7 +112,7 @@ class FaceRecognitionSystem:
     def add_face_to_database(self, image, name, image_path=None):
         try:
             # ---- 取得人臉座標、灰階影像 -----
-            faces, gray = self.detect_faces(image)
+            faces, gray = self.face_detector.detect_faces(image)
             
             # ----- 檢查有沒有偵測到人臉 -----
             if len(faces) == 0:
@@ -208,26 +138,7 @@ class FaceRecognitionSystem:
             
             # ----- 儲存到資料庫 -----
             self.db_manager.save_face_to_db(name, face_blob, image_path)
-            # conn = sqlite3.connect(self.db_path) # 連接SQLite
-            # cursor = conn.cursor() # 建立游標物件，用來執行 SQL 指令（查詢、插入、更新等）
             
-            # created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串，記錄資料建立的時間。
-            
-            # # SQL 指令，意思是「新增一筆資料到 faces 表格」。
-            # # ? 是參數佔位符，防止 SQL injection（安全性）。
-            # # 插入的資料，分別是人名、序列化後的人臉影像、圖片路徑、建立時間。 
-            # cursor.execute('''
-            #     INSERT INTO faces (name, face_encoding, image_path, created_date)
-            #     VALUES (?, ?, ?, ?)
-            # ''', (name, face_blob, image_path, created_date))
-            
-
-            # face_id = cursor.lastrowid # 取得剛剛插入資料的「自動遞增主鍵」ID (唯一編號)
-            # conn.commit() # 提交變更，確保資料儲存到資料庫
-            # conn.close() # 關閉連接，避免記憶體洩漏或效能問題
-            
-            # # ----- 顯示成功訊息 -----
-            # print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id})")
             
             # ----- 重新訓練模型 -----
             self.train_model()
@@ -248,55 +159,28 @@ class FaceRecognitionSystem:
     # ========================== 
     def train_model(self):
 
-        # ------ 連接資料庫取得人臉資料 ----- 
-        conn = sqlite3.connect(self.db_path) # 連接 SQLite
-        cursor = conn.cursor() # 建立游標物件來執行 SQL 指令
+        # ----- 訓練模型-取得訓練資料 -----
+        data = self.db_manager.train_model_faces()
         
-        cursor.execute("SELECT id, face_encoding FROM faces") # 資料查詢(所有人臉資料)
-        data = cursor.fetchall() # 取得查詢結果
-        conn.close() # 關閉資料庫連接
-        
-        # ----- 檢查資料庫是否有資料 -----
-        if len(data) == 0:
-            print("資料庫中沒有人臉資料")
-            return # 結束此函式
-        
-        faces = [] # 存放人臉影像
-        labels = [] # 每張人臉對應的 ID (主鍵)
-        
-        # ----- 資料反序列化 ----- 
-        for face_id, face_blob in data: # 遍歷資料
-            face_array = pickle.loads(face_blob) # 把 BLOB 格式的人臉影像還原成 NumPy 陣列
-            faces.append(face_array) # 把還原後的影像加入 faces 列表
-            labels.append(face_id) # 把人臉的 ID 加入 labels 列表，作為模型訓練的標籤
-        
-        # ----- 訓練模型 -----
-        # 使用 LBPH 人臉辨識器（OpenCV 提供）
-        # 參數 => (有人臉影像的 NumPy 陣列列表 , 每張人臉對應的 ID) 
-        self.recognizer.train(faces, np.array(labels))
-        
-        # ----- 儲存模型 -----
-        # 把目前訓練好的模型儲存成檔案 
-        self.recognizer.save(self.model_path)
+        # -----訓練模型-資料處理 -----
+        self.face_detector.train_model_processing(data)
 
-        # ----- 輸出成功訊息 -----
-        print(f"模型訓練完成，已儲存至 {self.model_path}")
     
     # ===== 載入已訓練的模型 =====
     # 1. 檢查模型檔案是否存在
     # 2. 載入模型(如果有檔案)
     # 3. 顯示載入結果 
-    def load_model(self):
+    # def load_model(self):
         
-        # 檢查模型檔案是否存在
-        if os.path.exists(self.model_path):
-            # 載入模型
-            self.recognizer.read(self.model_path)
-            # 成功訊息
-            print("模型載入成功")
-        else:
-            # 失敗訊息
-            print("未找到已訓練的模型")
+    #     # 檢查模型檔案是否存在
+    #     if os.path.exists(self.model_path):
+    #         # 載入模型
+    #         self.recognizer.read(self.model_path)
+    #         # 成功訊息
+    #         print("模型載入成功")
+    #     else:
+    #         # 失敗訊息
+    #         print("未找到已訓練的模型")
     
     # ===== 辨識人臉 =====
     # 1. 取得所有人臉座標和灰階影像
@@ -309,81 +193,28 @@ class FaceRecognitionSystem:
     def recognize_face(self, image):
         
         # ----- 取得所有人臉座標和灰階影像 -----
-        faces, gray = self.detect_faces(image)
-        
-        results = [] # 儲存辨識結果
+        faces, gray = self.face_detector.detect_faces(image)
 
-        # ----- 逐一處理每一張人臉 -----
+        results = [] # 儲存辨識結果        
+
+        # # ----- 逐一處理每一張人臉 -----
         for (x, y, w, h) in faces:
             face_roi = gray[y:y+h, x:x+w] # 裁切出人臉區域
             face_resized = cv2.resize(face_roi, (100, 100)) # 縮放成 100x100 像素
-            
+
             try:
-                # ----- 進行人臉辨識 -----
-                # 呼叫以載入的模型
-                # label => 預測的人臉 ID（數字），對應資料庫
-                # confidence => LBPH 信心度，數值越小越準確
-                # LBPH 信心度說明:
-                # 把人臉特徵製成一個列表，裡面有很多數字，當有新人臉時
-                # 把舊的人臉列表與心的人臉列表的數字比較，看看相差多少
-                # 相差越大代表兩人越不像，相差越小代表兩人越像  
-                # ----------------------- 
-                face_id, confidence = self.recognizer.predict(face_resized)
+                #face_id, confidence = self.recognizer.predict(face_resized)
+                result = self.face_detector.predict_face(face_resized, position=(x, y, w, h))
                 
-                # 先判斷信心度，分數太高直接判定為未知
-                if confidence >= 90:
+                results.append(result)  
+                    
+                # 辨識錯誤的資料
+            except cv2.error: # 例外處理與法，捕捉 OpenCV 執行過程中發生的錯誤
                     results.append({
-                        'name': '未知',
-                        'confidence': confidence,
+                        'name': '發生錯誤，無法辨識',
+                        'confidence': 0,
                         'position': (x, y, w, h)
                     })
-                    
-                # 分數夠低才查詢人名
-                else: 
-                    # ----- 查詢人名 -----
-                    result = self.db_manager.search_face(face_id)
-                    # conn = sqlite3.connect(self.db_path) # 連接資料庫
-                    # cursor = conn.cursor() # 建立游標物件執行 SQL 指令
-                    # cursor.execute("SELECT name FROM faces WHERE id = ?", (face_id,))# SQL 查詢，跟據 ID 查詢人名
-                    # result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
-                
-                    # 有資料才執行以下內容
-                    if result:  
-                        name = result[0]
-                        
-                        # ---- 記錄辨識結果 -----
-                        self.db_manager.save_recognition_log(face_id, confidence)
-                        # recognition_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串
-                        # # SQL 指令，寫入人臉ID、辨識時間、信心度
-                        # cursor.execute('''
-                        #     INSERT INTO recognition_log (face_id, recognition_date, confidence)
-                        #     VALUES (?, ?, ?)
-                        # ''', (label, recognition_date, confidence))
-                        # conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-                        # conn.close() # 關閉連接，釋放資源
-                        
-                        # 辨識成功的資料
-                        results.append({
-                            'name': name,               # 人名
-                            'confidence': confidence,   # 信心閾值
-                            'position': (x, y, w, h)    # 人臉座標
-                        })
-                    else:
-                        # 辨識失敗的資料
-                        results.append({
-                            'name': '未知',
-                            'confidence': confidence,
-                            'position': (x, y, w, h)
-                        })
-                
-                
-            # 辨識錯誤的資料
-            except cv2.error: # 例外處理與法，捕捉 OpenCV 執行過程中發生的錯誤
-                results.append({
-                    'name': '發生錯誤，無法辨識',
-                    'confidence': 0,
-                    'position': (x, y, w, h)
-                })
         
         # ----- 回傳結果 -----
         return results
