@@ -4,6 +4,7 @@ import pickle
 import os
 from models.database import DatabaseManager
 
+# ===== 影像處理類別 =====
 class FaceDetector:
     # ===== 初始化 =====
     def __init__(self, model_path='face_database/face_model.pkl', db_path='face_database/face_database.db'):

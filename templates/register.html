@@ -1,53 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>社區人臉辨識系統 註冊</title>
+  <meta charset="utf-8">
+  <title>社區人臉辨識系統 註冊</title>
 </head>
 <body>
-    <h1>系統註冊</h1>
-    <form id="registerForm" action="/register" method="POST">
+  <h1>系統註冊</h1>
+  <form id="registerForm" method="post" action="/register">
 
-        <!-- 使用者名稱錯誤訊息顯示區域 -->
-        <div id="usernameError" style="color: red; font-size: 12px;"></div>
-        
-        <!-- for => 與同id的元素連接，點擊時能自動引導到該元素 -->
-        <label for="username">使用者名稱：</label>
-        <!-- 使用者名稱輸入 -->
-        <!-- 
-            type => 欄位種類
-            id => 元素識別碼
-            name => 欄位名稱(後端接收用)
-            placeholder => 顯示提示字
-            required => 必填欄位設定 
-        -->
-        <input type="text" id="username" name="username" placeholder="輸入使用者名稱" required>
-        <br>
+    <!-- 使用者名稱錯誤訊息顯示區域 -->
+    <div id="usernameError" style="color: red; font-size: 12px;"></div>
+    
+    <!-- for => 與同id的元素連接，點擊時能自動引導到該元素 -->
+    <label for="username">使用者名稱：</label>
+    <!-- 使用者名稱輸入 -->
+    <!-- 
+        type => 欄位種類
+        id => 元素識別碼
+        name => 欄位名稱(後端接收用)
+        placeholder => 顯示提示字
+        required => 必填欄位設定 
+    -->
+    <input type="text" id="username" name="username" placeholder="輸入使用者名稱" required>
+    <br>
 
-        <!-- 密碼錯誤訊息顯示區域 -->
-        <div id="passwordError" style="color: red; font-size: 12px;"></div>
+    <!-- 密碼錯誤訊息顯示區域 -->
+    <div id="passwordError" style="color: red; font-size: 12px;"></div>
 
-        <!-- 密碼輸入 -->
-        <label for="password">密碼：</label>
-        <input type="password" id="password" name="password" placeholder="輸入密碼" required>
-        <br>
+    <!-- 密碼輸入 -->
+    <label for="password">密碼：</label>
+    <input type="password" id="password" name="password" placeholder="輸入密碼" required>
+    <br>
 
-        <!-- 確認密碼錯誤訊息顯示區域 -->
-        <div id="confirmPasswordError" style="color: red; font-size: 12px;"></div>
+    <!-- 確認密碼錯誤訊息顯示區域 -->
+    <div id="confirmPasswordError" style="color: red; font-size: 12px;"></div>
 
-        <label for="confirm_password">確認密碼：</label>
-        <input type="password" id="confirm_password" name="confirm_password" placeholder="再次輸入密碼" required>
-        
-        <br><br>
-        <!-- 註冊按鈕(要從人臉資料裡認證身分-可選) -->
-         <button type="submit">註冊</button>
-    </form>
+    <label for="confirm_password">確認密碼：</label>
+    <input type="password" id="confirm_password" name="confirm_password" placeholder="再次輸入密碼" required>
+    
+    <br><br>
+    <!-- 身分選擇 -->
+    <p>選擇身分（只能選一項）：</p>
+    <label><input type="radio" name="role" value="住戶" checked> 住戶</label><br>
+    <label><input type="radio" name="role" value="管理員"> 管理員</label><br>
 
-    <!-- 加入提交訊息顯示區域 -->
-    <div id="submitMessage" style="margin-top: 10px;"></div>
+    <!-- 註冊按鈕(要從人臉資料裡認證身分-可選) -->
+     <button type="submit">註冊</button>
+  </form>
 
-    <!-- 引入 JavaScript -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <!-- 加入提交訊息顯示區域 -->
+  <div id="submitMessage" style="margin-top: 10px;"></div>
+
+  <!-- 引入 JavaScript -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

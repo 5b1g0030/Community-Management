@@ -124,14 +124,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('username', username.value);
                 formData.append('password', password.value);
                 formData.append('confirm_password', confirmPassword.value);
-
+                // 加上身分欄位（從 radio 讀取選中的值）
+                formData.append('role', document.querySelector('input[name="role"]:checked').value);
                 const response = await fetch('/register', {
                     method: 'POST',
                     body: formData
                 });
-
                 const result = await response.json();
-
                 if (response.ok) {
                     alert(result.message);
                     registerForm.reset();

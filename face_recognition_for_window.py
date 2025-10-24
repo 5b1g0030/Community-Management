@@ -18,7 +18,8 @@ class FaceRecognitionSystem:
     # 1. 檔案路徑
     # 2. 人臉辨識器
     # 3. 資料庫
-    # 4. 載入模型
+    # 4. 影像處理工具 
+    # 5. 載入模型
     # =====================    
     def __init__(self, db_path='face_database/face_database.db', model_path='face_database/face_model.pkl'):
         # 初始化檔案路徑
@@ -164,23 +165,6 @@ class FaceRecognitionSystem:
         
         # -----訓練模型-資料處理 -----
         self.face_detector.train_model_processing(data)
-
-    
-    # ===== 載入已訓練的模型 =====
-    # 1. 檢查模型檔案是否存在
-    # 2. 載入模型(如果有檔案)
-    # 3. 顯示載入結果 
-    # def load_model(self):
-        
-    #     # 檢查模型檔案是否存在
-    #     if os.path.exists(self.model_path):
-    #         # 載入模型
-    #         self.recognizer.read(self.model_path)
-    #         # 成功訊息
-    #         print("模型載入成功")
-    #     else:
-    #         # 失敗訊息
-    #         print("未找到已訓練的模型")
     
     # ===== 辨識人臉 =====
     # 1. 取得所有人臉座標和灰階影像
@@ -381,110 +365,9 @@ class FaceRecognitionSystem:
         
         print(f"\n總辨識次數: {total_recognitions}")
 
-    # ===== 列出資料庫中的所有人臉資料(網頁) =====
-    # 1. 連接資料庫
-    # 2. 查詢所有資料
-    # 3. 把內容轉為字典格式
-    # 4. 關閉資料庫
-    # 5. 回傳字典格式的資料 
-    # ==========================================   
-    # def get_all_faces(self):
-    #     conn = sqlite3.connect(self.db_path) # 連接資料庫
-    #     cursor = conn.cursor()               # 建立物件執行 SQL 指令
-    #     cursor.execute("SELECT id, name, created_date FROM faces") # 查詢資料(face 表格中的三個欄位(id, name, created_date))
-    #     faces = [{'id': row[0], 'name': row[1], 'created_date': row[2]} for row in cursor.fetchall()] # 資料轉換(列表推導式，把原始資料轉換為字典格式)
-    #     conn.close() # 關閉連接
-    #     return faces # 回傳資料查詢結果
+   
     
-    # ===== 列出資料庫中的所有辨識紀錄(網頁) =====
-    # 1. 連接資料庫
-    # 2. 查詢辨識紀錄與對應人名
-    # 3. 把內容轉為字典格式
-    # 4. 關閉資料庫
-    # 5. 回傳字典格式的資料
-    # ============================================
-    # def get_all_recognition_logs(self):
-    #     conn = sqlite3.connect(self.db_path) # 連接資料庫
-    #     cursor = conn.cursor()               # 建立物件執行 SQL 指令
-        
-    #     # 查詢辨識紀錄，並與人臉表格做關聯以取得人名
-    #     cursor.execute('''
-    #         SELECT rl.id, f.name, rl.recognition_date, rl.confidence
-    #         FROM recognition_log rl
-    #         LEFT JOIN faces f ON rl.face_id = f.id
-    #         ORDER BY rl.recognition_date DESC
-    #     ''')
-        
-    #     # 資料轉換為字典格式
-    #     logs = []
-    #     for row in cursor.fetchall():
-    #         logs.append({
-    #             'id': row[0],
-    #             'name': row[1],
-    #             'recognition_date': row[2],
-    #             'confidence': row[3]
-    #         })
-        
-    #     conn.close() # 關閉連接
-    #     return logs  # 回傳資料查詢結果
 
-    # ===== 使用者註冊 =====
-    # 回傳 執行結果, 訊息
-    # ===================== 
-    # def register_uer(self, username, password):
-    #     try:
-    #         conn = sqlite3.connect(self.db_path) # 連接資料庫
-    #         cursor = conn.cursor() # 建立游標執行 SQL 指令
-
-    #         # 檢查使用者是否已存在
-    #         cursor.execute("SELECT id FROM users WHERE username= ?", (username,))
-    #         # 檢查第一筆資料，如果重複則結束函式並告訴使用者「此名稱已存在」
-    #         if cursor.fetchone():
-    #             conn.close() # 關閉資料庫連接
-    #             return False, "使用者名稱已被使用"
-            
-    #         # 密碼加密
-    #         password_hash = hashlib.sha256(password.encode()).hexdigest()
-
-    #         # 插入新使用者
-    #         cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
-    #                        (username, password_hash)
-    #                        )
-            
-    #         conn.commit() # 更新資料庫
-    #         conn.close() # 關閉連接
-
-    #         return True, "註冊成功"
-
-    #     # 例外錯誤處理
-    #     except Exception as e:
-    #         return False, f"註冊失敗: {str(e)}"
-    
-    # ===== 使用者登入 =====
-    # 回傳 執行結果
-    # ===================== 
-    # def login_user(self, username, password):
-    #     try:
-    #         conn = sqlite3.connect(self.db_path) # 連接資料庫
-    #         cursor = conn.cursor() # 建立游標執行 SQL 指令
-
-    #         # 把使用者輸入的密碼加密
-    #         password_hash = hashlib.sha256(password.encode()).hexdigest()
-
-    #         # 查詢使用者與密碼
-    #         cursor.execute("SELECT id FROM users WHERE username = ? AND password_hash = ?",
-    #                        (username, password_hash)
-    #                        )
-            
-    #         # 紀錄第一筆資料
-    #         user = cursor.fetchone()
-    #         conn.close() # 關閉連接
-
-    #         return user is not None
-
-    #     # 例外錯誤處理
-    #     except Exception as e:
-    #         return False
     
 
 # ===== 主程式 =====

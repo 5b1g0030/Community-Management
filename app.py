@@ -36,10 +36,16 @@ def login():
     if not username or not password:
         return jsonify({'message': '請輸入使用者名稱和密碼'}), 400
     
-    # 驗證使用者
-    if face_system.db_manager.login_user(username, password):
-        # 登入成功則導向管理者介面
-        return jsonify({'message': '登入成功', 'redirect': '/manager'}), 200
+    # 驗證使用者 -> 現在 login_user 會回傳身分字串或 None
+    role = face_system.db_manager.login_user(username, password)
+    # 偵錯：在伺服器印出回傳值，檢查是否有空白或其他字元
+    print(f"login_user returned role: {repr(role)}")
+    if role:
+        # 根據身分導向不同頁面
+        if role == '管理員':
+            return jsonify({'message': '登入成功', 'redirect': '/manager'}), 200
+        else:
+            return jsonify({'message': '登入成功', 'redirect': '/residents'}), 200
     else:
         return jsonify({'message': '使用者名稱或密碼錯誤'}), 401
 
@@ -53,11 +59,15 @@ def register():
     username = request.form.get('username')
     password = request.form.get('password')
     confirm_password = request.form.get('confirm_password')
+    role = request.form.get('role', '住戶')  # 預設為住戶
 
     # ----- 後端驗證 -----
     if not username or not password or not confirm_password:
         return jsonify({'message': '所有欄位都需要填寫'}), 400
     
+    if role not in ('住戶', '管理員'):
+        return jsonify({'message': '身分選擇不正確'}), 400
+
     # 使用者名稱
     if len(username.strip()) < 3:
         return jsonify({'message': '使用者名稱至少要三字元'}), 400
@@ -71,7 +81,7 @@ def register():
         return jsonify({'message': '兩次密碼不相同'}), 400
     
     # ----- 註冊使用者 -----
-    success, message = face_system.db_manager.register_user(username, password)
+    success, message = face_system.db_manager.register_user(username, password, role)
 
     # 如果註冊成功
     if success:
@@ -281,6 +291,11 @@ def latest_unknown_face():
     cv2.imwrite(img_path, latest_frame)
     image_url = '/' + img_path.replace('\\', '/')
     return jsonify({'image_url': image_url})
+
+# 新增住戶頁面路由
+@app.route('/residents')
+def residents():
+    return render_template('residents.html')
 
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ from tabulate import tabulate
 from datetime import datetime
 
 class DatabaseManager:
-    def __init__(self, db_path="face_detector/face_database.db"):
+    def __init__(self, db_path="face_database/face_database.db"):
         """初始化資料庫管理器"""
         self.db_path = db_path
         self.conn = None

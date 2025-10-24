@@ -2,6 +2,7 @@ import sqlite3
 import hashlib
 from datetime import datetime
 
+# ===== 資料庫存取類別 =====
 class DatabaseManager:
     # ===== 初始化資料庫觸發函式 =====
     def __init__(self, db_path='face_database/face_database.db'):
@@ -64,18 +65,29 @@ class DatabaseManager:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT '住戶',
                     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP       
                 )    
         ''')
         
-        conn.commit() # 確認變更(寫入磁碟，表格才會建立)
-        conn.close() # 關閉連接(不關閉資料庫連線會導致資源洩漏、效能問題，甚至程式崩潰。)
+        # 如果已有舊的 users 表但沒有 role 欄位，嘗試加入欄位（避免破壞既有資料）
+        try:
+            cursor.execute("PRAGMA table_info(users)")
+            cols = [row[1] for row in cursor.fetchall()]
+            if 'role' not in cols:
+                cursor.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT '住戶'")
+        except Exception:
+            # 若 ALTER 失敗則忽略（不致命）
+            pass
+
+        conn.commit() # 確認變更(寫入磁碟)
+        conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
     
     # ===== 註冊使用者 =====
     # 回傳 執行結果, 訊息
     # =====================  
-    def register_user(self, username, password):
+    def register_user(self, username, password, role='住戶'):
         try:
             conn = sqlite3.connect(self.db_path) # 連接資料庫
             cursor = conn.cursor() # 建立游標執行 SQL 指令
@@ -87,12 +99,17 @@ class DatabaseManager:
                 conn.close() # 關閉資料庫連接
                 return False, "使用者名稱已被使用 by database"
             
+            # 驗證 role
+            if role not in ('住戶', '管理員'):
+                conn.close()
+                return False, "不支援的身分 by database"
+            
             # 密碼加密
             password_hash = hashlib.sha256(password.encode()).hexdigest()
 
-            # 插入新使用者
-            cursor.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                           (username, password_hash)
+            # 插入新使用者（包含 role）
+            cursor.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                           (username, password_hash, role)
                            )
             
             conn.commit() # 更新資料庫
@@ -116,19 +133,20 @@ class DatabaseManager:
             password_hash = hashlib.sha256(password.encode()).hexdigest()
 
             # 查詢使用者與密碼
-            cursor.execute("SELECT id FROM users WHERE username = ? AND password_hash = ?",
+            cursor.execute("SELECT role FROM users WHERE username = ? AND password_hash = ?",
                            (username, password_hash)
                            )
             
-            # 紀錄第一筆資料
-            user = cursor.fetchone()
-            conn.close() # 關閉連接
-
-            return user is not None
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                return row[0]  # 回傳 role
+            else:
+                return None
 
         # 例外錯誤處理
         except Exception as e:
-            return False
+            return None
     
     # ===== 列出資料庫中的所有人臉資料 =====
     # 回傳 字典格式資料
