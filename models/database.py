@@ -80,6 +80,25 @@ class DatabaseManager:
             # 若 ALTER 失敗則忽略（不致命）
             pass
 
+        # ----- 建立訪客預約資料表格 -----
+        # id: 主鍵、自動遞增、不可重複
+        # username: 住戶名稱、文字、不可為空
+        # booking_code: 6位數預約碼、文字、不可為空、不重複
+        # created_date: 預約建立時間
+        # used: 是否已使用、布林值、預設為False
+        # used_date: 使用時間
+        # -----------------------------
+        cursor.execute('''
+                CREATE TABLE IF NOT EXISTS visitor_bookings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL,
+                    booking_code TEXT UNIQUE NOT NULL,
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    used BOOLEAN DEFAULT FALSE,
+                    used_date TIMESTAMP       
+                )    
+        ''')
+
         conn.commit() # 確認變更(寫入磁碟)
         conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
@@ -311,3 +330,56 @@ class DatabaseManager:
         data = cursor.fetchall() # 取得查詢結果
         conn.close() # 關閉資料庫連接
         return data
+    
+    # ===== 建立訪客預約 =====
+    # 回傳 執行結果, 預約碼
+    # =====================  
+    def create_visitor_booking(self, username, booking_code):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # 檢查預約碼是否已存在
+            cursor.execute("SELECT id FROM visitor_bookings WHERE booking_code = ?", (booking_code,))
+            if cursor.fetchone():
+                conn.close()
+                return False, "預約碼已存在，請重新生成"
+            
+            # 插入新預約
+            cursor.execute("INSERT INTO visitor_bookings (username, booking_code) VALUES (?, ?)",
+                           (username, booking_code))
+            
+            conn.commit()
+            conn.close()
+            return True, "預約成功"
+
+        except Exception as e:
+            return False, f"預約失敗: {str(e)}"
+
+    # ===== 驗證並使用訪客預約碼 =====
+    # 回傳 執行結果, 住戶名稱
+    # ==============================  
+    def verify_visitor_booking(self, booking_code):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # 查詢未使用的預約碼
+            cursor.execute("SELECT username FROM visitor_bookings WHERE booking_code = ? AND used = FALSE", 
+                           (booking_code,))
+            row = cursor.fetchone()
+            
+            if row:
+                username = row[0]
+                # 標記為已使用
+                cursor.execute("UPDATE visitor_bookings SET used = TRUE, used_date = CURRENT_TIMESTAMP WHERE booking_code = ?",
+                               (booking_code,))
+                conn.commit()
+                conn.close()
+                return True, username
+            else:
+                conn.close()
+                return False, "無效或已使用的預約碼"
+
+        except Exception as e:
+            return False, f"驗證失敗: {str(e)}"

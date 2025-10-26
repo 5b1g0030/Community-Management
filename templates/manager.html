@@ -22,6 +22,7 @@
                 <button type="button" id="testFaceBtn">測試辨識</button>
                 <button type="button" id="viewFaceDbBtn">查看已登錄人臉</button>
                 <button type="button" id="viewLogDbBtn">查看辨識紀錄資料庫</button>
+                <button type="button" id="visitorBookingBtn">訪客預約</button>
             </div>
 
             <!-- 人工審核區 -->
@@ -156,6 +157,21 @@
                     </table>
                 </div>
             </div>
+    </div>
+    
+    <!-- 訪客預約驗證 Modal(彈出視窗) -->
+    <div id="visitorBookingModal" class="modal" style="display:none;">
+        <div class="modal-content"
+            style="position:fixed; left:45vw; top:30vh; z-index:2000; min-width:300px; min-height:180px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+            <span class="close" id="closeVisitorBookingModal">&times;</span>
+            <h2>訪客預約驗證</h2>
+            <form id="visitorBookingForm">
+                <!-- 預約碼輸入 -->
+                <input type="text" id="bookingCodeInput" placeholder="請輸入6位數預約碼" maxlength="6" required><br><br>
+                <button type="submit">驗證</button>
+            </form>
+            <div id="bookingResult"></div>
+        </div>
     </div>
     
 </body>

@@ -3,8 +3,63 @@
 <head>
   <meta charset="utf-8">
   <title>住戶頁面</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px 0; }
+    .btn:hover { background: #0056b3; }
+    .booking-result { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
+    .booking-code { font-size: 24px; font-weight: bold; color: #007bff; text-align: center; margin: 10px 0; }
+  </style>
 </head>
 <body>
-  <h1>住戶頁面</h1>
+  <div class="container">
+    <h1>住戶頁面</h1>
+    
+    <div>
+      <label for="username">使用者名稱：</label>
+      <input type="text" id="username" placeholder="請輸入您的使用者名稱" required>
+    </div>
+    
+    <button class="btn" id="generateBookingBtn">生成訪客預約碼</button>
+    
+    <div id="bookingResult" class="booking-result" style="display: none;">
+      <h3>訪客預約碼已生成</h3>
+      <div class="booking-code" id="bookingCode"></div>
+      <p>請將此6位數字提供給您的訪客，訪客到達時管理員可使用此代碼確認身份。</p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('generateBookingBtn').addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      
+      if (!username) {
+        alert('請輸入使用者名稱');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('username', username);
+      
+      try {
+        const response = await fetch('/generate_booking_code', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          document.getElementById('bookingCode').textContent = result.booking_code;
+          document.getElementById('bookingResult').style.display = 'block';
+        } else {
+          alert(result.message);
+        }
+      } catch (error) {
+        alert('生成預約碼失敗：' + error.message);
+      }
+    });
+  </script>
 </body>
 </html>

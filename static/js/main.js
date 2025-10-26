@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const testFaceBtn = document.getElementById('testFaceBtn');         // 「測試辨識」功能按鈕
     const viewFaceDbBtn = document.getElementById('viewFaceDbBtn');     // 「查看資料庫」功能按鈕
     const viewLogDbBtn = document.getElementById('viewLogDbBtn');       // 「查看辨識紀錄資料庫」功能按鈕
+    const visitorBookingBtn = document.getElementById('visitorBookingBtn'); // 「訪客預約」功能按鈕
     const recognitionLog = document.getElementById('recognitionLog');   // 辨識紀錄清單
 
     // ===== 加入人臉彈出視窗元素 =====
@@ -271,6 +272,60 @@ document.addEventListener('DOMContentLoaded', () => {
         modalLogTableBody.innerHTML = '';
     };
 
+    // ===== 訪客預約彈出視窗元素 =====
+    const visitorBookingModal = document.getElementById('visitorBookingModal');
+    const closeVisitorBookingModal = document.getElementById('closeVisitorBookingModal');
+    const visitorBookingForm = document.getElementById('visitorBookingForm');
+    const bookingCodeInput = document.getElementById('bookingCodeInput');
+    const bookingResult = document.getElementById('bookingResult');
+
+    // ===== 訪客預約彈出視窗 =====
+    if (visitorBookingBtn) {
+        visitorBookingBtn.onclick = () => {
+            visitorBookingModal.style.display = 'block';
+            setTimeout(() => centerModal(visitorBookingModal), 0);
+        };
+    }
+
+    // ===== 關閉訪客預約彈出視窗 =====
+    if (closeVisitorBookingModal) {
+        closeVisitorBookingModal.onclick = () => {
+            visitorBookingModal.style.display = 'none';
+            visitorBookingForm.reset();
+            bookingResult.textContent = '';
+        };
+    }
+
+    // ===== 訪客預約驗證表單提交 =====
+    if (visitorBookingForm) {
+        visitorBookingForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('booking_code', bookingCodeInput.value);
+            
+            try {
+                const response = await fetch('/verify_booking_code', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    bookingResult.textContent = result.message;
+                    bookingResult.style.color = 'green';
+                    visitorBookingForm.reset();
+                } else {
+                    bookingResult.textContent = result.message;
+                    bookingResult.style.color = 'red';
+                }
+            } catch (error) {
+                bookingResult.textContent = '驗證失敗：' + error.message;
+                bookingResult.style.color = 'red';
+            }
+        };
+    }
+
     // ===== 點擊外部關閉 =====
     // 監聽整個網頁的點擊事件
     window.onclick = (event) => {
@@ -294,6 +349,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === viewLogDbModal) {
             viewLogDbModal.style.display = 'none';
             modalLogTableBody.innerHTML = '';
+        }
+        // 訪客預約視窗
+        if (event.target === visitorBookingModal) {
+            visitorBookingModal.style.display = 'none';
+            visitorBookingForm.reset();
+            bookingResult.textContent = '';
         }
     };
 
@@ -413,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         };
     }
-    [addFaceModal, testFaceModal, viewDbModal, viewLogDbModal].forEach(makeModalDraggable);
+    [addFaceModal, testFaceModal, viewDbModal, viewLogDbModal, visitorBookingModal].forEach(makeModalDraggable);
 
     // ====== 彈窗打開時自動置中 ======
     addFaceBtn.onclick = () => {

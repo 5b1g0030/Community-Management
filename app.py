@@ -8,6 +8,7 @@ from face_recognition_for_window import FaceRecognitionSystem
 from utils.camera_utils import CameraManager # 相機管理工具
 import os
 from datetime import datetime
+import random
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -296,6 +297,43 @@ def latest_unknown_face():
 @app.route('/residents')
 def residents():
     return render_template('residents.html')
+
+# ===== 生成訪客預約碼 =====
+@app.route('/generate_booking_code', methods=['POST'])
+def generate_booking_code():
+    username = request.form.get('username')
+    if not username:
+        return jsonify({'message': '請提供使用者名稱'}), 400
+    
+    # 生成6位數隨機數字
+    booking_code = str(random.randint(100000, 999999))
+    
+    # 儲存到資料庫
+    success, message = face_system.db_manager.create_visitor_booking(username, booking_code)
+    
+    if success:
+        return jsonify({'message': message, 'booking_code': booking_code}), 200
+    else:
+        return jsonify({'message': message}), 400
+
+# ===== 驗證訪客預約碼 =====
+@app.route('/verify_booking_code', methods=['POST'])
+def verify_booking_code():
+    booking_code = request.form.get('booking_code')
+    if not booking_code:
+        return jsonify({'message': '請輸入預約碼'}), 400
+    
+    success, result = face_system.db_manager.verify_visitor_booking(booking_code)
+    
+    if success:
+        # 推送辨識訊息
+        socketio.emit('recognition', {
+            'type': 'recognition', 
+            'message': f'偵測到{result}住戶的訪客已到大門'
+        })
+        return jsonify({'message': f'驗證成功，{result}住戶的訪客', 'username': result}), 200
+    else:
+        return jsonify({'message': result}), 400
 
 
 if __name__ == '__main__':
