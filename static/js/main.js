@@ -315,6 +315,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     bookingResult.textContent = result.message;
                     bookingResult.style.color = 'green';
                     visitorBookingForm.reset();
+                    
+                    // 如果驗證成功且需要開始倒數
+                    if (result.start_countdown) {
+                        startVisitorPhotoCountdown(result.username, result.booking_code);
+                    }
                 } else {
                     bookingResult.textContent = result.message;
                     bookingResult.style.color = 'red';
@@ -324,6 +329,91 @@ document.addEventListener('DOMContentLoaded', () => {
                 bookingResult.style.color = 'red';
             }
         };
+    }
+
+    // ===== 訪客拍照倒數功能 =====
+    function startVisitorPhotoCountdown(username, bookingCode) {
+        let countdown = 3;
+        const originalContent = bookingResult.innerHTML;
+        
+        const countdownInterval = setInterval(() => {
+            bookingResult.innerHTML = `
+                <div style="text-align: center;">
+                    <h4>準備為 ${username} 的訪客拍照</h4>
+                    <div style="font-size: 48px; color: #007bff; font-weight: bold;">${countdown}</div>
+                    <p>請保持鏡頭前方有訪客身影</p>
+                </div>
+            `;
+            
+            countdown--;
+            
+            if (countdown < 0) {
+                clearInterval(countdownInterval);
+                captureVisitorPhoto(username, bookingCode);
+            }
+        }, 1000);
+    }
+
+    // ===== 擷取訪客照片 =====
+    async function captureVisitorPhoto(username, bookingCode) {
+        try {
+            bookingResult.innerHTML = `
+                <div style="text-align: center;">
+                    <h4>正在拍照...</h4>
+                    <p>📸</p>
+                </div>
+            `;
+            
+            const formData = new FormData();
+            formData.append('username', username);
+            if (bookingCode) {
+                formData.append('booking_code', bookingCode);
+            }
+            
+            const response = await fetch('/capture_visitor_photo', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                bookingResult.innerHTML = `
+                    <div style="text-align: center;">
+                        <h4>✅ 拍照成功！</h4>
+                        <p>${result.message}</p>
+                        <p>檔案名稱：${result.filename}</p>
+                        ${result.db_message ? `<p>資料庫：${result.db_message}</p>` : ''}
+                    </div>
+                `;
+                bookingResult.style.color = 'green';
+                
+                // 3秒後關閉彈出視窗
+                setTimeout(() => {
+                    visitorBookingModal.style.display = 'none';
+                    bookingResult.textContent = '';
+                    visitorBookingForm.reset();
+                }, 3000);
+                
+            } else {
+                bookingResult.innerHTML = `
+                    <div style="text-align: center;">
+                        <h4>❌ 拍照失敗</h4>
+                        <p>${result.message}</p>
+                        ${result.db_error ? `<p style="color: orange;">資料庫錯誤：${result.db_error}</p>` : ''}
+                    </div>
+                `;
+                bookingResult.style.color = 'red';
+            }
+        } catch (error) {
+            bookingResult.innerHTML = `
+                <div style="text-align: center;">
+                    <h4>❌ 拍照失敗</h4>
+                    <p>錯誤：${error.message}</p>
+                </div>
+            `;
+            bookingResult.style.color = 'red';
+        }
     }
 
     // ===== 點擊外部關閉 =====

@@ -99,6 +99,23 @@ class DatabaseManager:
                 )    
         ''')
 
+        # ----- 建立訪客留言資料表格 -----
+        # id: 主鍵、自動遞增、不可重複
+        # username: 住戶名稱、文字、不可為空
+        # visitor_image_path: 訪客照片路徑、文字、不可為空
+        # created_date: 留言建立時間
+        # booking_code: 對應的預約碼（選填）
+        # -----------------------------
+        cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_message (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL,
+                    visitor_image_path TEXT NOT NULL,
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    booking_code TEXT
+                )    
+        ''')
+
         conn.commit() # 確認變更(寫入磁碟)
         conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
@@ -383,3 +400,62 @@ class DatabaseManager:
 
         except Exception as e:
             return False, f"驗證失敗: {str(e)}"
+
+    # ===== 儲存訪客留言 =====
+    # 傳入 住戶名稱、訪客照片路徑、預約碼（選填）
+    # 回傳 執行結果, 訊息
+    # =====================  
+    def save_visitor_message(self, username, visitor_image_path, booking_code=None):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # 插入訪客留言資料
+            cursor.execute("""
+                INSERT INTO user_message (username, visitor_image_path, booking_code) 
+                VALUES (?, ?, ?)
+            """, (username, visitor_image_path, booking_code))
+            
+            message_id = cursor.lastrowid  # 取得新插入資料的ID
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"成功儲存訪客留言 (ID: {message_id}) for {username}")
+            return True, f"訪客留言已儲存 (ID: {message_id})"
+
+        except Exception as e:
+            print(f"儲存訪客留言失敗: {str(e)}")
+            return False, f"儲存失敗: {str(e)}"
+
+    # ===== 取得所有訪客留言 =====
+    # 回傳 字典格式資料列表
+    # ===========================
+    def get_all_visitor_messages(self):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # 查詢所有訪客留言，按時間倒序排列
+            cursor.execute("""
+                SELECT id, username, visitor_image_path, created_date, booking_code
+                FROM user_message 
+                ORDER BY created_date DESC
+            """)
+            
+            messages = []
+            for row in cursor.fetchall():
+                messages.append({
+                    'id': row[0],
+                    'username': row[1],
+                    'visitor_image_path': row[2],
+                    'created_date': row[3],
+                    'booking_code': row[4]
+                })
+            
+            conn.close()
+            return messages
+            
+        except Exception as e:
+            print(f"查詢訪客留言失敗: {str(e)}")
+            return []

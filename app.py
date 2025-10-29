@@ -331,10 +331,77 @@ def verify_booking_code():
             'type': 'recognition', 
             'message': f'偵測到{result}住戶的訪客已到大門'
         })
-        return jsonify({'message': f'驗證成功，{result}住戶的訪客', 'username': result}), 200
+        return jsonify({
+            'message': f'驗證成功，{result}住戶的訪客', 
+            'username': result, 
+            'booking_code': booking_code,
+            'start_countdown': True
+        }), 200
     else:
         return jsonify({'message': result}), 400
 
+# ===== 擷取訪客照片 =====
+@app.route('/capture_visitor_photo', methods=['POST'])
+def capture_visitor_photo():
+    global latest_frame
+    
+    if latest_frame is None:
+        return jsonify({'message': '無法取得鏡頭影像'}), 400
+    
+    # 從請求中取得住戶名稱和預約碼
+    username = request.form.get('username')
+    booking_code = request.form.get('booking_code')
+    
+    if not username:
+        return jsonify({'message': '缺少住戶名稱'}), 400
+    
+    try:
+        # 檢查 visitors 資料夾是否存在，若無則建立
+        visitors_dir = os.path.join('static', 'visitors')
+        if not os.path.exists(visitors_dir):
+            os.makedirs(visitors_dir)
+        
+        # 產生檔案名稱（包含時間戳記）
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f'visitor_{timestamp}.jpg'
+        file_path = os.path.join(visitors_dir, filename)
+        
+        # 儲存影像
+        success = cv2.imwrite(file_path, latest_frame)
+        
+        if success:
+            # 將資料存入 user_message 資料表
+            db_success, db_message = face_system.db_manager.save_visitor_message(
+                username=username,
+                visitor_image_path=file_path,
+                booking_code=booking_code
+            )
+            
+            if db_success:
+                return jsonify({
+                    'message': '訪客照片已成功儲存並記錄到資料庫',
+                    'filename': filename,
+                    'file_path': file_path,
+                    'db_message': db_message
+                }), 200
+            else:
+                return jsonify({
+                    'message': '照片已儲存但資料庫記錄失敗',
+                    'filename': filename,
+                    'file_path': file_path,
+                    'db_error': db_message
+                }), 500
+        else:
+            return jsonify({'message': '照片儲存失敗'}), 500
+            
+    except Exception as e:
+        return jsonify({'message': f'拍照失敗：{str(e)}'}), 500
+
+# ===== 取得訪客留言記錄 =====
+@app.route('/get_visitor_messages')
+def get_visitor_messages():
+    messages = face_system.db_manager.get_all_visitor_messages()
+    return jsonify(messages)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
