@@ -240,7 +240,7 @@ def add_face():
     except Exception as e:
         return jsonify({'message': f'加入失敗：{str(e)}'}), 500
 
-
+# ===== 測試辨識人臉
 @app.route('/test_face', methods=['POST'])
 def test_face():
     if 'image' not in request.files:
@@ -267,7 +267,7 @@ def test_face():
 
     return jsonify({'message': '辨識結果：' + '、'.join(messages)})
 
-# ===== 取得資料庫資料 =====
+# ===== 取得人臉資料 =====
 @app.route('/get_faces')
 def get_faces():
     faces = face_system.db_manager.get_all_faces() # 呼叫「列出資料庫中的所有人臉資料(網頁)函式」
@@ -297,6 +297,11 @@ def latest_unknown_face():
 @app.route('/residents')
 def residents():
     return render_template('residents.html')
+
+
+"""
+===== 訪客預約功能 ===== 
+"""
 
 # ===== 生成訪客預約碼 =====
 @app.route('/generate_booking_code', methods=['POST'])
@@ -402,6 +407,19 @@ def capture_visitor_photo():
 def get_visitor_messages():
     messages = face_system.db_manager.get_all_visitor_messages()
     return jsonify(messages)
+
+# ===== 取得特定使用者的訪客留言 =====
+@app.route('/get_user_messages')
+def get_user_messages():
+    username = request.args.get('username')
+    if not username:
+        return jsonify({'message': '缺少使用者名稱'}), 400
+    
+    try:
+        messages = face_system.db_manager.get_user_visitor_messages(username)
+        return jsonify({'messages': messages}), 200
+    except Exception as e:
+        return jsonify({'message': f'查詢失敗：{str(e)}'}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

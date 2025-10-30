@@ -6,10 +6,22 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .container { max-width: 600px; margin: 0 auto; }
-    .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px 0; }
+    .btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px 5px; }
     .btn:hover { background: #0056b3; }
+    .btn.mailbox { background: #28a745; }
+    .btn.mailbox:hover { background: #218838; }
     .booking-result { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; }
     .booking-code { font-size: 24px; font-weight: bold; color: #007bff; text-align: center; margin: 10px 0; }
+    
+    /* 彈出視窗樣式 */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: none; border-radius: 10px; width: 80%; max-width: 700px; max-height: 80vh; overflow-y: auto; }
+    .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+    .close:hover { color: black; }
+    .message-item { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 10px 0; background: #f9f9f9; }
+    .message-item h4 { margin: 0 0 10px 0; color: #333; }
+    .message-item p { margin: 5px 0; }
+    .no-messages { text-align: center; color: #666; padding: 50px; }
   </style>
 </head>
 <body>
@@ -21,7 +33,10 @@
       <input type="text" id="username" placeholder="請輸入您的使用者名稱" required>
     </div>
     
-    <button class="btn" id="generateBookingBtn">生成訪客預約碼</button>
+    <div>
+      <button class="btn" id="generateBookingBtn">生成訪客預約碼</button>
+      <button class="btn mailbox" id="mailboxBtn">信箱</button>
+    </div>
     
     <div id="bookingResult" class="booking-result" style="display: none;">
       <h3>訪客預約碼已生成</h3>
@@ -30,7 +45,19 @@
     </div>
   </div>
 
+  <!-- 信箱彈出視窗 -->
+  <div id="mailboxModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeMailboxModal">&times;</span>
+      <h2>📮 訪客信箱</h2>
+      <div id="mailboxContent">
+        <p>載入中...</p>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // 生成預約碼功能
     document.getElementById('generateBookingBtn').addEventListener('click', async () => {
       const username = document.getElementById('username').value.trim();
       
@@ -60,6 +87,72 @@
         alert('生成預約碼失敗：' + error.message);
       }
     });
+
+    // 信箱功能
+    const mailboxModal = document.getElementById('mailboxModal');
+    const mailboxBtn = document.getElementById('mailboxBtn');
+    const closeMailboxModal = document.getElementById('closeMailboxModal');
+    const mailboxContent = document.getElementById('mailboxContent');
+
+    // 開啟信箱
+    mailboxBtn.addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      
+      if (!username) {
+        alert('請先輸入使用者名稱');
+        return;
+      }
+      
+      mailboxModal.style.display = 'block';
+      mailboxContent.innerHTML = '<p>載入中...</p>';
+      
+      try {
+        const response = await fetch(`/get_user_messages?username=${encodeURIComponent(username)}`);
+        const result = await response.json();
+        
+        if (response.ok) {
+          displayMessages(result.messages);
+        } else {
+          mailboxContent.innerHTML = `<p style="color: red;">載入失敗：${result.message}</p>`;
+        }
+      } catch (error) {
+        mailboxContent.innerHTML = `<p style="color: red;">載入失敗：${error.message}</p>`;
+      }
+    });
+
+    // 關閉信箱
+    closeMailboxModal.addEventListener('click', () => {
+      mailboxModal.style.display = 'none';
+    });
+
+    // 點擊外部關閉
+    window.addEventListener('click', (event) => {
+      if (event.target === mailboxModal) {
+        mailboxModal.style.display = 'none';
+      }
+    });
+
+    // 顯示訊息內容
+    function displayMessages(messages) {
+      if (!messages || messages.length === 0) {
+        mailboxContent.innerHTML = '<div class="no-messages">📭 目前沒有訪客留言</div>';
+        return;
+      }
+      
+      let html = '';
+      messages.forEach((message, index) => {
+        html += `
+          <div class="message-item">
+            <h4>訪客留言 #${message.id}</h4>
+            <p><strong>📅 時間：</strong>${message.created_date}</p>
+            <p><strong>📂 照片路徑：</strong>${message.visitor_image_path}</p>
+            ${message.booking_code ? `<p><strong>🎫 預約碼：</strong>${message.booking_code}</p>` : ''}
+          </div>
+        `;
+      });
+      
+      mailboxContent.innerHTML = html;
+    }
   </script>
 </body>
 </html>

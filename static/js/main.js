@@ -1,30 +1,35 @@
 // Flask 網頁前端的 JavaScript 主程式檔案
 
 document.addEventListener('DOMContentLoaded', () => {
+    // *****************************
+    // 元素定義區
+    // *****************************
+
     // ===== 功能按鈕、辨識紀錄元素 =====
     const addFaceBtn = document.getElementById('addFaceBtn');           // 「加入人臉」功能按鈕
     const testFaceBtn = document.getElementById('testFaceBtn');         // 「測試辨識」功能按鈕
     const viewFaceDbBtn = document.getElementById('viewFaceDbBtn');     // 「查看資料庫」功能按鈕
     const viewLogDbBtn = document.getElementById('viewLogDbBtn');       // 「查看辨識紀錄資料庫」功能按鈕
     const visitorBookingBtn = document.getElementById('visitorBookingBtn'); // 「訪客預約」功能按鈕
-    const recognitionLog = document.getElementById('recognitionLog');   // 辨識紀錄清單
+    const recognitionLog = document.getElementById('recognitionLog');       // 辨識紀錄清單
 
-    // ===== 加入人臉彈出視窗元素 =====
+    // ===== 加入人臉彈出視窗 =====
     const addFaceModal = document.getElementById('addFaceModal');           // 「加入人臉」浮空視窗
     const closeAddFaceModal = document.getElementById('closeAddFaceModal'); // 「加入人臉」關閉視窗鍵
     const modalUploadForm = document.getElementById('modalUploadForm');     // 上傳的表單元素
     const modalFaceImage = document.getElementById('modalFaceImage');       // 表單中圖片欄位
     const modalPersonName = document.getElementById('modalPersonName');     // 表單中人名
 
-    // ===== 測試辨識彈出視窗元素 =====
-    const testFaceModal = document.getElementById('testFaceModal');
-    const closeTestFaceModal = document.getElementById('closeTestFaceModal');
-    const modalTestForm = document.getElementById('modalTestForm');
-    const modalTestImage = document.getElementById('modalTestImage');
-    const testResult = document.getElementById('testResult');
+    // ===== 測試辨識彈出視窗 =====
+    const testFaceModal = document.getElementById('testFaceModal');           // 彈出視窗容器
+    const closeTestFaceModal = document.getElementById('closeTestFaceModal'); // 關閉視窗按鈕
+    const modalTestForm = document.getElementById('modalTestForm');           // 處理表單提交
+    const modalTestImage = document.getElementById('modalTestImage');         // 顯示內容(在 testResult)
+    const testResult = document.getElementById('testResult');                 // 清空顯示內容
 
-    const viewDbModal = document.getElementById('viewDbModal');
-    const closeViewDbModal = document.getElementById('closeViewDbModal');
+    // ===== 查看系統中已註冊的所有人臉資料 =====
+    const viewDbModal = document.getElementById('viewDbModal');             // 彈出視窗容器
+    const closeViewDbModal = document.getElementById('closeViewDbModal');   // 關閉按鈕
     const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
 
     const viewLogDbModal = document.getElementById('viewLogDbModal');

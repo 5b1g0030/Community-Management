@@ -459,3 +459,37 @@ class DatabaseManager:
         except Exception as e:
             print(f"查詢訪客留言失敗: {str(e)}")
             return []
+
+    # ===== 取得特定使用者的訪客留言 =====
+    # 傳入 使用者名稱
+    # 回傳 字典格式資料列表
+    # ===================================
+    def get_user_visitor_messages(self, username):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # 查詢特定使用者的訪客留言，按時間倒序排列
+            cursor.execute("""
+                SELECT id, username, visitor_image_path, created_date, booking_code
+                FROM user_message 
+                WHERE username = ?
+                ORDER BY created_date DESC
+            """, (username,))
+            
+            messages = []
+            for row in cursor.fetchall():
+                messages.append({
+                    'id': row[0],
+                    'username': row[1],
+                    'visitor_image_path': row[2],
+                    'created_date': row[3],
+                    'booking_code': row[4]
+                })
+            
+            conn.close()
+            return messages
+            
+        except Exception as e:
+            print(f"查詢使用者訪客留言失敗: {str(e)}")
+            return []

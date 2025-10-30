@@ -41,65 +41,7 @@ class FaceRecognitionSystem:
         
         # 載入已存在的模型（如果有的話）
         #self.load_model()
-
-    
-    # ====== 決定鏡頭所用參數 =====
-    # 1. 取得作業系統資訊
-    # 2. 根據作業系統選擇後端參數
-    # 3. 回傳這個作業系統的鏡頭參數
-    # ============================ 
-    def camera_type(self):
-        # ***** 攝影機參數 *****
-        # cv2.VideoCapture(0) => 使用預設後端(有可能使用到不適合的系統)
-        # cv2.VideoCapture(0, cv2.【系統參數】) => 可以指定適合的系統 
-        # Windows => CAP_DSHOW(推薦), CAP_MSMF
-        # macOS => CAP_AVFOUNDATION(推薦)
-        # Linux => CAP_V4L2(推薦), CAP_GSTREAMER
-        # ********************* 
-
-        # ----- 取得作業系統資訊 -----
-        os_type = platform.system() # 會回傳一個字串，代表你目前的作業系統
-        backends = [] # 作業系統可用參數(回傳值)
-
-        # ----- 根據作業系統選擇後端參數 -----
-        if os_type == "Windows":    # windows系統
-            backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_VFW]
-        elif os_type == "Darwin":   # macOS系統
-            backends = [cv2.CAP_AVFOUNDATION]
-        elif os_type == "Linux":    # linux系統
-            backends = [cv2.CAP_V4L2, cv2.CAP_GSTREAMER]
-        else:
-            backends = [cv2.CAP_ANY]
-
-        # ----- 自動搜尋可用的攝影機 -----
-        print("搜尋可用的攝影機...")
-        
-        for index in range(6):  # 測試攝影機索引 0-5
-            print(f"  測試攝影機索引 {index}...")
-            
-            for backend in backends: # 逐個嘗試系統參數
-                try:
-                    print(f"    嘗試後端: {backend}")
-                    cap = cv2.VideoCapture(index, backend) # 測試攝影機
-
-                    # # 測試是否能讀取影像
-                    if cap.isOpened():
-                        ret, frame = cap.read()
-                        if ret and frame is not None:
-                            cap.release()
-                            print(f"✅ 找到可用攝影機: 索引 {index}, 後端 {backend}")
-                            return index, backend  # 立即回傳找到的設定(相機索引, 系統參數)
-
-                    cap.release()
-
-                except Exception as e:
-                    print(f"    後端 {backend} 失敗: {e}")
-                    continue
-        # ✅ 沒有找到任何可用攝影機
-        print("❌ 沒有找到可用的攝影機")
-        return None, None
-        
-    
+       
     
     # ===== 將人臉加入資料庫 =====
     # 1. 取得人臉座標、灰階影像
@@ -334,36 +276,6 @@ class FaceRecognitionSystem:
         cap.release()
         cv2.destroyAllWindows()
     
-    # ===== 列出資料庫中的所有人臉資料(終端) =====
-    # 1. 連接資料庫
-    # 2. 查詢人臉資料
-    # 3. 查詢辨識紀錄
-    # 4. 關閉資料庫
-    # 5. 顯示資料
-    # ==================================== 
-    def list_faces(self):
-        
-        # ----- 連接資料庫 -----
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor() # 建立游標物件執行 SQL 指令
-        
-        # ----- 查詢人臉資料 -----
-        cursor.execute("SELECT id, name, created_date FROM faces")
-        faces = cursor.fetchall()
-        
-        # ----- 查詢辨識紀錄 -----
-        cursor.execute("SELECT COUNT(*) FROM recognition_log")
-        total_recognitions = cursor.fetchone()[0]
-        
-        conn.close() # 關閉資料庫
-        
-        # ----- 顯示資料 -----
-        print(f"\n資料庫中共有 {len(faces)} 個人臉資料:")
-        print("=" * 50)
-        for face_id, name, created_date in faces:
-            print(f"ID: {face_id}, 姓名: {name}, 建立時間: {created_date}")
-        
-        print(f"\n總辨識次數: {total_recognitions}")
 
    
     
