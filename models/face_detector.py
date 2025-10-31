@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import pickle
 import os
+import platform
 from models.database import DatabaseManager
 
 # ===== 影像處理類別 =====
@@ -33,6 +34,36 @@ class FaceDetector:
         faces = self.face_cascade.detectMultiScale(gray, 1.3, 5) # Haar 級聯分類器偵測人臉，回傳所有人臉的座標（x, y, w, h）
         return faces, gray # 兩者皆為 NumPy 陣列
     
+    # ===== 將人臉加入資料庫 =====
+    # 傳入 圖片、名稱、圖片路徑
+    # 回傳 成功與否
+    # ===========================
+    def add_face_to_database(self, image, name, image_path=None):
+        try:
+            faces, gray = self.detect_faces(image)
+            
+            if len(faces) == 0:
+                print("未偵測到人臉")
+                return False
+            
+            (x, y, w, h) = faces[0]
+            face_roi = gray[y:y+h, x:x+w]
+            face_resized = cv2.resize(face_roi, (100, 100))
+            face_blob = pickle.dumps(face_resized)
+            
+            self.db_manager.save_face_to_db(name, face_blob, image_path)
+            self.train_model()
+            return True
+        
+        except Exception as e:
+            print(f'加入人臉資料失敗: {str(e)}')
+            raise e
+
+    # ===== 訓練人臉辨識模型 =====
+    def train_model(self):
+        data = self.db_manager.train_model_faces()
+        self.train_model_processing(data)
+
     # ====== 訓練模型-資料處理 =====
     # 傳入 人臉資料(id, 二進位資訊)
     # 回傳 無
@@ -46,13 +77,6 @@ class FaceDetector:
             4. 訓練模型
             5. 儲存模型
         '''
-        #  # ------ 連接資料庫取得人臉資料 ----- 
-        # conn = sqlite3.connect(self.db_path) # 連接 SQLite
-        # cursor = conn.cursor() # 建立游標物件來執行 SQL 指令
-        
-        # cursor.execute("SELECT id, face_encoding FROM faces") # 資料查詢(所有人臉資料)
-        # data = cursor.fetchall() # 取得查詢結果
-        # conn.close() # 關閉資料庫連接
         self.db_manager.train_model_faces()
 
         # ----- 檢查資料庫是否有資料 -----
@@ -99,6 +123,19 @@ class FaceDetector:
             # 失敗訊息
             print("未找到已訓練的模型 by face_detector")
     
+    # ===== 辨識人臉 =====
+    def recognize_face(self, image):
+        faces, gray = self.detect_faces(image)
+        results = []
+
+        for (x, y, w, h) in faces:
+            face_roi = gray[y:y+h, x:x+w]
+            face_resized = cv2.resize(face_roi, (100, 100))
+            result = self.predict_face(face_resized, position=(x, y, w, h))
+            results.append(result)
+        
+        return results
+
     # ===== 偵測人臉 =====
     def predict_face(self, face_resized, position=None, confidence_threshold=90):
         # 從 recognize_face 中提取預測部分
@@ -124,3 +161,4 @@ class FaceDetector:
         # 例外錯誤處理
         except cv2.error:
             return {'name': '發生錯誤，無法辨識', 'confidence': 0, 'position': position}
+

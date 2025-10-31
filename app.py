@@ -4,8 +4,9 @@ from flask import Flask, render_template, request, jsonify, Response
 from flask_socketio import SocketIO
 import cv2
 import numpy as np
-from face_recognition_for_window import FaceRecognitionSystem
-from utils.camera_utils import CameraManager # 相機管理工具
+from models.face_detector import FaceDetector  # 修改引用
+from models.database import DatabaseManager    # 修改引用
+from utils.camera_utils import CameraManager
 import os
 from datetime import datetime
 import random
@@ -13,10 +14,11 @@ import random
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-# 初始化人臉辨識系統
-face_system = FaceRecognitionSystem()
+# 初始化系統組件
+face_detector = FaceDetector()      # 人臉偵測器
+db_manager = DatabaseManager()      # 資料庫管理器
 
-latest_frame = None # 紀錄最新影像
+latest_frame = None
 
 # ===== 管理者端 =====
 @app.route('/manager')
@@ -30,19 +32,15 @@ def login():
     if request.method == 'GET':
         return render_template('login.html')
     
-    # POST 處理
     username = request.form.get('username')
     password = request.form.get('password')
 
     if not username or not password:
         return jsonify({'message': '請輸入使用者名稱和密碼'}), 400
     
-    # 驗證使用者 -> 現在 login_user 會回傳身分字串或 None
-    role = face_system.db_manager.login_user(username, password)
-    # 偵錯：在伺服器印出回傳值，檢查是否有空白或其他字元
+    role = db_manager.login_user(username, password)  # 修改引用
     print(f"login_user returned role: {repr(role)}")
     if role:
-        # 根據身分導向不同頁面
         if role == '管理員':
             return jsonify({'message': '登入成功', 'redirect': '/manager'}), 200
         else:
@@ -56,11 +54,10 @@ def register():
     if request.method == 'GET':
         return render_template('register.html')
     
-    # POST 處理
     username = request.form.get('username')
     password = request.form.get('password')
     confirm_password = request.form.get('confirm_password')
-    role = request.form.get('role', '住戶')  # 預設為住戶
+    role = request.form.get('role', '住戶')
 
     # ----- 後端驗證 -----
     if not username or not password or not confirm_password:
@@ -69,29 +66,23 @@ def register():
     if role not in ('住戶', '管理員'):
         return jsonify({'message': '身分選擇不正確'}), 400
 
-    # 使用者名稱
     if len(username.strip()) < 3:
         return jsonify({'message': '使用者名稱至少要三字元'}), 400
     
-    # 密碼
     if len(password) < 6:
         return jsonify({'message': '密碼需要超過6字元'}), 400
     
-    # 二次密碼驗證
     if password != confirm_password:
         return jsonify({'message': '兩次密碼不相同'}), 400
     
-    # ----- 註冊使用者 -----
-    success, message = face_system.db_manager.register_user(username, password, role)
+    success, message = db_manager.register_user(username, password, role)  # 修改引用
 
-    # 如果註冊成功
     if success:
         return jsonify({'message': message}), 200
-    # 如果註冊失敗
     else:
         return jsonify({'message': message}), 400
 
-last_names = set() # 本次影像中所有被辨識到的人名（空集合，不重複）
+last_names = set()
 
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
@@ -157,7 +148,7 @@ def gen_frames():
             latest_frame = frame.copy() # 紀錄最新影像(給人工審核視窗更新照片)
 
             # ----- 進行人臉辨識 -----
-            results = face_system.recognize_face(frame)  # 呼叫「辨識人臉」函式
+            results = face_detector.recognize_face(frame)  # 修改引用
             current_names = set([r['name']
                                 for r in results])  # 本次影像中所有被辨識到的人名（不重複）
 
@@ -231,7 +222,7 @@ def add_face():
 
     # 加入人臉到資料庫(使用例外處理)
     try:
-        success = face_system.add_face_to_database(image, name) # 呼叫「將人臉加入資料庫函式」
+        success = face_detector.add_face_to_database(image, name)  # 修改引用
         # 當函式完整執行完的結果
         if success:
             return jsonify({'message': '成功加入人臉資料'}) # flask 錯誤訊息回應語法，狀態碼預設為 200
@@ -254,7 +245,7 @@ def test_face():
     image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     # 進行人臉辨識
-    results = face_system.recognize_face(image)
+    results = face_detector.recognize_face(image)  # 修改引用
 
     if not results:
         return jsonify({'message': '未偵測到人臉'})
@@ -270,13 +261,13 @@ def test_face():
 # ===== 取得人臉資料 =====
 @app.route('/get_faces')
 def get_faces():
-    faces = face_system.db_manager.get_all_faces() # 呼叫「列出資料庫中的所有人臉資料(網頁)函式」
+    faces = db_manager.get_all_faces()  # 修改引用
     return jsonify(faces)               # 轉 json 格式
 
 # ===== 取得辨識紀錄資料 =====
 @app.route('/get_recognition_logs')
 def get_recognition_logs():
-    logs = face_system.db_manager.get_all_recognition_logs() # 呼叫「列出資料庫中的所有辨識紀錄(網頁)函式」
+    logs = db_manager.get_all_recognition_logs()  # 修改引用
     return jsonify(logs)                          # 轉 json 格式
 
 # ===== 再拍一張功能-獲取最新人物影像 =====
@@ -293,7 +284,7 @@ def latest_unknown_face():
     image_url = '/' + img_path.replace('\\', '/')
     return jsonify({'image_url': image_url})
 
-# 新增住戶頁面路由
+# ===== 新增住戶頁面路由 =====
 @app.route('/residents')
 def residents():
     return render_template('residents.html')
@@ -314,7 +305,7 @@ def generate_booking_code():
     booking_code = str(random.randint(100000, 999999))
     
     # 儲存到資料庫
-    success, message = face_system.db_manager.create_visitor_booking(username, booking_code)
+    success, message = db_manager.create_visitor_booking(username, booking_code)  # 修改引用
     
     if success:
         return jsonify({'message': message, 'booking_code': booking_code}), 200
@@ -328,7 +319,7 @@ def verify_booking_code():
     if not booking_code:
         return jsonify({'message': '請輸入預約碼'}), 400
     
-    success, result = face_system.db_manager.verify_visitor_booking(booking_code)
+    success, result = db_manager.verify_visitor_booking(booking_code)  # 修改引用
     
     if success:
         # 推送辨識訊息
@@ -376,7 +367,7 @@ def capture_visitor_photo():
         
         if success:
             # 將資料存入 user_message 資料表
-            db_success, db_message = face_system.db_manager.save_visitor_message(
+            db_success, db_message = db_manager.save_visitor_message(  # 修改引用
                 username=username,
                 visitor_image_path=file_path,
                 booking_code=booking_code
@@ -405,7 +396,7 @@ def capture_visitor_photo():
 # ===== 取得訪客留言記錄 =====
 @app.route('/get_visitor_messages')
 def get_visitor_messages():
-    messages = face_system.db_manager.get_all_visitor_messages()
+    messages = db_manager.get_all_visitor_messages()  # 修改引用
     return jsonify(messages)
 
 # ===== 取得特定使用者的訪客留言 =====
@@ -416,7 +407,7 @@ def get_user_messages():
         return jsonify({'message': '缺少使用者名稱'}), 400
     
     try:
-        messages = face_system.db_manager.get_user_visitor_messages(username)
+        messages = db_manager.get_user_visitor_messages(username)  # 修改引用
         return jsonify({'messages': messages}), 200
     except Exception as e:
         return jsonify({'message': f'查詢失敗：{str(e)}'}), 500
