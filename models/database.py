@@ -349,27 +349,30 @@ class DatabaseManager:
         return data
     
     # ===== 建立訪客預約 =====
-    # 回傳 執行結果, 預約碼
+    # 輸入 使用者名稱、驗證碼
+    # 回傳 執行結果(T,F) 訊息
     # =====================  
     def create_visitor_booking(self, username, booking_code):
         try:
+            # ---連接資料庫--
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # 檢查預約碼是否已存在
+            # ---檢查預約碼是否已存在---
+            # 查詢符合指定驗證碼的欄位，只回傳id編號
             cursor.execute("SELECT id FROM visitor_bookings WHERE booking_code = ?", (booking_code,))
-            if cursor.fetchone():
+            if cursor.fetchone(): # 取得第一筆資料看是否有值，找不到為None
                 conn.close()
                 return False, "預約碼已存在，請重新生成"
             
-            # 插入新預約
+            # ---插入新預約---
             cursor.execute("INSERT INTO visitor_bookings (username, booking_code) VALUES (?, ?)",
                            (username, booking_code))
             
-            conn.commit()
-            conn.close()
+            conn.commit() # 更新資料庫
+            conn.close()  # 關閉資料庫
             return True, "預約成功"
-
+        # 
         except Exception as e:
             return False, f"預約失敗: {str(e)}"
 

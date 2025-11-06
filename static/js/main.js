@@ -277,52 +277,67 @@ document.addEventListener('DOMContentLoaded', () => {
         modalLogTableBody.innerHTML = '';
     };
 
+    // ***********
+    // 訪客預約
+    // ***********
     // ===== 訪客預約彈出視窗元素 =====
-    const visitorBookingModal = document.getElementById('visitorBookingModal');
-    const closeVisitorBookingModal = document.getElementById('closeVisitorBookingModal');
-    const visitorBookingForm = document.getElementById('visitorBookingForm');
-    const bookingCodeInput = document.getElementById('bookingCodeInput');
-    const bookingResult = document.getElementById('bookingResult');
+    const visitorBookingModal = document.getElementById('visitorBookingModal'); // 訪客預約的 modal 容器
+    const closeVisitorBookingModal = document.getElementById('closeVisitorBookingModal'); // 關閉按鈕
+    const visitorBookingForm = document.getElementById('visitorBookingForm'); // 驗證碼輸入表單
+    const bookingCodeInput = document.getElementById('bookingCodeInput');     // 使用者輸入的驗證碼欄位
+    const bookingResult = document.getElementById('bookingResult');           // 顯示驗證和拍照結果的區塊
 
     // ===== 訪客預約彈出視窗 =====
+    // 查該元素是否存在再綁定事件，避免在「網頁執行這個賦值操作時」，沒有該元素的頁面會發生錯誤
     if (visitorBookingBtn) {
+        // 當按下 id = visitorBookingBtn 的按鈕時，顯示彈出視窗
+        // 箭頭函式
         visitorBookingBtn.onclick = () => {
-            visitorBookingModal.style.display = 'block';
-            setTimeout(() => centerModal(visitorBookingModal), 0);
+            // 顯示視窗(CSS)
+            visitorBookingModal.style.display = 'block'; 
+            // 延遲執行此函式，瀏覽器渲染好，此函式會使 modal 置中。
+            setTimeout(() => centerModal(visitorBookingModal), 0); 
         };
     }
-
     // ===== 關閉訪客預約彈出視窗 =====
+    // 查該元素是否存在再綁定事件
     if (closeVisitorBookingModal) {
+        // 當按下 id = closeVisitorBookingModal 的按鈕時，關閉彈出視窗
         closeVisitorBookingModal.onclick = () => {
-            visitorBookingModal.style.display = 'none';
-            visitorBookingForm.reset();
-            bookingResult.textContent = '';
+            visitorBookingModal.style.display = 'none'; // 隱藏視窗(CSS)
+            visitorBookingForm.reset(); // 清空表單避免資料殘留
+            bookingResult.textContent = ''; // 清空在視窗上顯示的文字
         };
     }
-
     // ===== 訪客預約驗證表單提交 =====
     if (visitorBookingForm) {
+        // 當 id = visitorBookingForm 的表單被提交，執行下面程式 
         visitorBookingForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const formData = new FormData();
+            e.preventDefault(); // 阻止預設提交，避免頁面被重新整理中斷後續操作
+            const formData = new FormData(); // 建立表單
+            // 將使用者輸入的「6位數字」加入表單，欄位 'booking_code'
             formData.append('booking_code', bookingCodeInput.value);
             
             try {
+                // 把表單提交到後端，目的: '/verify_booking_code'，等待回應
                 const response = await fetch('/verify_booking_code', {
-                    method: 'POST',
-                    body: formData
+                    method: 'POST', // POST 請求
+                    body: formData // 要傳送的資料
                 });
                 
+                // 後端回應後，把回傳的資料轉 JSON 格式
                 const result = await response.json();
                 
+                // 檢查回傳的狀態碼，判斷是否有成功執行(True, False)
+                // response.ok => HTTP狀態碼介於200~299，在網頁可視為成功
                 if (response.ok) {
-                    bookingResult.textContent = result.message;
-                    bookingResult.style.color = 'green';
-                    visitorBookingForm.reset();
+                    bookingResult.textContent = result.message; // 顯示訊息
+                    bookingResult.style.color = 'green'; // 設定顏色綠色(成功)
+                    visitorBookingForm.reset(); // 清空表單
                     
-                    // 如果驗證成功且需要開始倒數
+                    // 如果驗證成功且需要開始倒數，準備拍照
                     if (result.start_countdown) {
+                        // 呼叫函式，輸入: 使用者名稱, 驗證碼
                         startVisitorPhotoCountdown(result.username, result.booking_code);
                     }
                 } else {
@@ -335,13 +350,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
-
-    // ===== 訪客拍照倒數功能 =====
+    // ===== 訪客拍照倒數功能函式 =====
+    // 輸入: 使用者名稱, 驗證碼；輸出: 
+    // ==============================
     function startVisitorPhotoCountdown(username, bookingCode) {
-        let countdown = 3;
-        const originalContent = bookingResult.innerHTML;
+        let countdown = 3; // 秒數
+        //const originalContent = bookingResult.innerHTML;
         
+        // 每秒執行的程式碼
+        // setInterval({...}, 1000) => 會每隔 1000 毫秒（1 秒）重複執行傳入的函式
         const countdownInterval = setInterval(() => {
+            // 顯示在網頁上的內容
             bookingResult.innerHTML = `
                 <div style="text-align: center;">
                     <h4>準備為 ${username} 的訪客拍照</h4>
@@ -350,16 +369,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             
-            countdown--;
+            countdown--; // 減一秒
             
+            // 如果 3 秒數完
             if (countdown < 0) {
-                clearInterval(countdownInterval);
-                captureVisitorPhoto(username, bookingCode);
+                clearInterval(countdownInterval); // 恢復計時器
+                captureVisitorPhoto(username, bookingCode); // 呼叫函式，執行拍照
             }
         }, 1000);
     }
 
-    // ===== 擷取訪客照片 =====
+    // ===== 擷取訪客照片函式 =====
     async function captureVisitorPhoto(username, bookingCode) {
         try {
             bookingResult.innerHTML = `

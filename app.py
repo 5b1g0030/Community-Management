@@ -297,16 +297,23 @@ def residents():
 # ===== 生成訪客預約碼 =====
 @app.route('/generate_booking_code', methods=['POST'])
 def generate_booking_code():
+    # ---取得表單'username'欄位的資料---
     username = request.form.get('username')
-    if not username:
+
+    # ---檢查是否有使用者名稱---
+    if not username: # 如果沒有資料(None)
+        # 回傳400狀態(請求錯誤)+訊息
         return jsonify({'message': '請提供使用者名稱'}), 400
     
-    # 生成6位數隨機數字
+    # ---生成6位數隨機數字，轉為字串，作為驗證碼---
     booking_code = str(random.randint(100000, 999999))
     
-    # 儲存到資料庫
-    success, message = db_manager.create_visitor_booking(username, booking_code)  # 修改引用
+    # ---儲存到資料庫(包含使用者名稱, 驗證碼)---
+    # success => 函式執行結果(T,F)
+    # message => 成功/錯誤訊息 
+    success, message = db_manager.create_visitor_booking(username, booking_code)
     
+    # ---如果函式有執行成功，則回傳(訊息+驗證碼)，沒有則只回傳(訊息)---
     if success:
         return jsonify({'message': message, 'booking_code': booking_code}), 200
     else:
