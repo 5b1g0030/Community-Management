@@ -377,25 +377,32 @@ class DatabaseManager:
             return False, f"預約失敗: {str(e)}"
 
     # ===== 驗證並使用訪客預約碼 =====
+    # 輸入 驗證碼 
     # 回傳 執行結果, 住戶名稱
     # ==============================  
     def verify_visitor_booking(self, booking_code):
         try:
+            # 連接資料庫
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # 查詢未使用的預約碼
+            # 查詢未使用的預約碼(根據 used 判斷有沒有被使用)
             cursor.execute("SELECT username FROM visitor_bookings WHERE booking_code = ? AND used = FALSE", 
                            (booking_code,))
+            
+            # 只取一筆資料
             row = cursor.fetchone()
             
+            # 如果有查到使用者
             if row:
-                username = row[0]
-                # 標記為已使用
+                username = row[0] # 把查到的使用者名稱取出來
+
+                # 將該驗證碼所在欄位標記為已使用
                 cursor.execute("UPDATE visitor_bookings SET used = TRUE, used_date = CURRENT_TIMESTAMP WHERE booking_code = ?",
                                (booking_code,))
-                conn.commit()
-                conn.close()
+                
+                conn.commit() # 更新資料庫
+                conn.close() # 關閉資料庫
                 return True, username
             else:
                 conn.close()
@@ -410,10 +417,11 @@ class DatabaseManager:
     # =====================  
     def save_visitor_message(self, username, visitor_image_path, booking_code=None):
         try:
+            # 開啟資料庫，建立游標
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            # 插入訪客留言資料
+            # 插入訪客留言資料(使用者名稱、訪客照片、驗證碼)
             cursor.execute("""
                 INSERT INTO user_message (username, visitor_image_path, booking_code) 
                 VALUES (?, ?, ?)
@@ -421,9 +429,10 @@ class DatabaseManager:
             
             message_id = cursor.lastrowid  # 取得新插入資料的ID
             
-            conn.commit()
-            conn.close()
+            conn.commit() # 更新資料庫
+            conn.close() # 關閉資料庫
             
+            # 顯示訊息
             print(f"成功儲存訪客留言 (ID: {message_id}) for {username}")
             return True, f"訪客留言已儲存 (ID: {message_id})"
 

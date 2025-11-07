@@ -311,7 +311,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // ===== 訪客預約驗證表單提交 =====
     if (visitorBookingForm) {
-        // 當 id = visitorBookingForm 的表單被提交，執行下面程式 
+        // 當 id = visitorBookingForm 的表單被提交，執行下面程式
+        // async => 宣告「非同步函式」的語法，不會使網頁停住 
         visitorBookingForm.onsubmit = async (e) => {
             e.preventDefault(); // 阻止預設提交，避免頁面被重新整理中斷後續操作
             const formData = new FormData(); // 建立表單
@@ -351,11 +352,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
     // ===== 訪客拍照倒數功能函式 =====
-    // 輸入: 使用者名稱, 驗證碼；輸出: 
+    // 輸入: 使用者名稱, 驗證碼
+    // 輸出: HTML
     // ==============================
     function startVisitorPhotoCountdown(username, bookingCode) {
         let countdown = 3; // 秒數
-        //const originalContent = bookingResult.innerHTML;
+        //const originalContent = bookingResult.innerHTML; // 如果需要還原畫面可用
         
         // 每秒執行的程式碼
         // setInterval({...}, 1000) => 會每隔 1000 毫秒（1 秒）重複執行傳入的函式
@@ -373,15 +375,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 如果 3 秒數完
             if (countdown < 0) {
-                clearInterval(countdownInterval); // 恢復計時器
-                captureVisitorPhoto(username, bookingCode); // 呼叫函式，執行拍照
+                // 恢復計時器，防止倒數結束後定時器繼續每秒執行，造成重複拍照
+                clearInterval(countdownInterval); 
+                // 呼叫函式，執行拍照
+                captureVisitorPhoto(username, bookingCode); 
             }
         }, 1000);
     }
 
     // ===== 擷取訪客照片函式 =====
+    // 輸入: 使用者名稱、驗證碼
+    // 輸出: HTML
+    // ========================== 
+    // async => 宣告「非同步函式」的語法，不會使網頁停住 
     async function captureVisitorPhoto(username, bookingCode) {
         try {
+            // 顯示拍照提示
             bookingResult.innerHTML = `
                 <div style="text-align: center;">
                     <h4>正在拍照...</h4>
@@ -389,20 +398,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             
-            const formData = new FormData();
+            // 建立表單
+            const formData = new FormData(); 
+
+            // 在表單裡加入:
+            // 使用者名稱，欄位'username'
+            // 驗證碼，欄位'booking_code'
             formData.append('username', username);
+            // 如果有驗證碼
             if (bookingCode) {
                 formData.append('booking_code', bookingCode);
             }
             
+            // 把表單提交到後端，目的'/capture_visitor_photo'，等待回應
             const response = await fetch('/capture_visitor_photo', {
                 method: 'POST',
-                body: formData
+                body: formData  // 要傳送的資料
             });
             
+            // 把回傳的資料轉 JSON
             const result = await response.json();
             
+            // 如果網頁狀態碼正常(200~299)，執行以下程式
             if (response.ok) {
+                // 顯示成功訊息
                 bookingResult.innerHTML = `
                     <div style="text-align: center;">
                         <h4>✅ 拍照成功！</h4>
@@ -411,9 +430,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${result.db_message ? `<p>資料庫：${result.db_message}</p>` : ''}
                     </div>
                 `;
+                // 訊息顏色
                 bookingResult.style.color = 'green';
                 
                 // 3秒後關閉彈出視窗
+                // setTimeout() => 在 n 秒後執行裡面的程式
                 setTimeout(() => {
                     visitorBookingModal.style.display = 'none';
                     bookingResult.textContent = '';
@@ -421,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 3000);
                 
             } else {
+                // 錯誤訊息
                 bookingResult.innerHTML = `
                     <div style="text-align: center;">
                         <h4>❌ 拍照失敗</h4>
@@ -428,15 +450,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${result.db_error ? `<p style="color: orange;">資料庫錯誤：${result.db_error}</p>` : ''}
                     </div>
                 `;
+                // 訊息顏色
                 bookingResult.style.color = 'red';
             }
         } catch (error) {
+            // 例外錯誤訊息
             bookingResult.innerHTML = `
                 <div style="text-align: center;">
                     <h4>❌ 拍照失敗</h4>
                     <p>錯誤：${error.message}</p>
                 </div>
             `;
+            // 訊息顏色
             bookingResult.style.color = 'red';
         }
     }

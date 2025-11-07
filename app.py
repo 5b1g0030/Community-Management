@@ -322,18 +322,24 @@ def generate_booking_code():
 # ===== 驗證訪客預約碼 =====
 @app.route('/verify_booking_code', methods=['POST'])
 def verify_booking_code():
+    # 從表單獲取驗證碼
     booking_code = request.form.get('booking_code')
+    
+    # 如果沒有驗證碼
     if not booking_code:
         return jsonify({'message': '請輸入預約碼'}), 400
     
-    success, result = db_manager.verify_visitor_booking(booking_code)  # 修改引用
+    # 紀錄執行結果、回傳訊息或資料
+    success, result = db_manager.verify_visitor_booking(booking_code)  # 呼叫函式
     
+    # 如果有查詢到住戶名稱，代表此驗證碼有效
     if success:
-        # 推送辨識訊息
+        # 推送辨識訊息(以後可以改成在住戶批准後顯示)
         socketio.emit('recognition', {
             'type': 'recognition', 
             'message': f'偵測到{result}住戶的訪客已到大門'
         })
+        # 回傳資料
         return jsonify({
             'message': f'驗證成功，{result}住戶的訪客', 
             'username': result, 
@@ -346,40 +352,48 @@ def verify_booking_code():
 # ===== 擷取訪客照片 =====
 @app.route('/capture_visitor_photo', methods=['POST'])
 def capture_visitor_photo():
-    global latest_frame
+    global latest_frame # 最新影像(全域變數，影像串流中固定紀錄)
     
+    # 如果沒有最新影像
     if latest_frame is None:
         return jsonify({'message': '無法取得鏡頭影像'}), 400
     
-    # 從請求中取得住戶名稱和預約碼
-    username = request.form.get('username')
-    booking_code = request.form.get('booking_code')
+    # 從提交過來的表單取得住戶名稱和預約碼
+    username = request.form.get('username') # 使用者名稱
+    booking_code = request.form.get('booking_code') # 驗證碼
     
+    #　如果沒有使用者名稱
     if not username:
         return jsonify({'message': '缺少住戶名稱'}), 400
     
     try:
+        # 用來存訪客照片的資料夾
+        visitors_dir = os.path.join('static', 'visitors') 
+
         # 檢查 visitors 資料夾是否存在，若無則建立
-        visitors_dir = os.path.join('static', 'visitors')
+        # 檢查該資料夾路徑，找不到會回傳 True
         if not os.path.exists(visitors_dir):
-            os.makedirs(visitors_dir)
+            os.makedirs(visitors_dir) # 建立資料夾
         
         # 產生檔案名稱（包含時間戳記）
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f'visitor_{timestamp}.jpg'
-        file_path = os.path.join(visitors_dir, filename)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") # 時間戳記
+        filename = f'visitor_{timestamp}.jpg' # 檔案名稱+副檔名
+        file_path = os.path.join(visitors_dir, filename) # 合成一個「完整路徑」字串(資料夾+檔案)
         
         # 儲存影像
+        # 將 OpenCV 的影像資料（通常為 numpy 陣列）寫入磁碟成為圖片檔，路徑為 file_path 
         success = cv2.imwrite(file_path, latest_frame)
         
+        # 如果儲存成功
         if success:
             # 將資料存入 user_message 資料表
-            db_success, db_message = db_manager.save_visitor_message(  # 修改引用
+            db_success, db_message = db_manager.save_visitor_message(  # 呼叫函式
                 username=username,
                 visitor_image_path=file_path,
                 booking_code=booking_code
             )
             
+            # 如果成功儲存到資料庫
             if db_success:
                 return jsonify({
                     'message': '訪客照片已成功儲存並記錄到資料庫',
