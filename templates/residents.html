@@ -22,6 +22,16 @@
     .message-item h4 { margin: 0 0 10px 0; color: #333; }
     .message-item p { margin: 5px 0; }
     .no-messages { text-align: center; color: #666; padding: 50px; }
+    .visitor-image { max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0; }
+    .review-buttons { margin: 15px 0; }
+    .review-buttons button { padding: 8px 15px; margin: 0 5px; border: none; border-radius: 5px; cursor: pointer; }
+    .approve-btn { background: #28a745; color: white; }
+    .approve-btn:hover { background: #218838; }
+    .reject-btn { background: #dc3545; color: white; }
+    .reject-btn:hover { background: #c82333; }
+    .status-pending { color: #ffc107; font-weight: bold; }
+    .status-approved { color: #28a745; font-weight: bold; }
+    .status-rejected { color: #dc3545; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -122,9 +132,14 @@
       mailboxContent.innerHTML = '<p>載入中...</p>';
       
       try {
+        // 使用查詢字串 (query string)把使用者名稱傳到後端，等待回應
+        // 例如：GET /get_user_messages?username=Gina → username 會是 "Gina"
         const response = await fetch(`/get_user_messages?username=${encodeURIComponent(username)}`);
+
+        // 把回傳的資料轉 JSON
         const result = await response.json();
         
+        // 如果網頁狀態碼正常(200~299)
         if (response.ok) {
           displayMessages(result.messages);
         } else {
@@ -147,26 +162,98 @@
       }
     });
 
-    // 顯示訊息內容
+    // ===顯示信箱訊息內容===
+    // 輸入 訪客留言訊息
+    // 輸出 HTML
     function displayMessages(messages) {
+      // 如果沒有訊息且訊息長度=0
       if (!messages || messages.length === 0) {
         mailboxContent.innerHTML = '<div class="no-messages">📭 目前沒有訪客留言</div>';
-        return;
+        return; // 結束函式
       }
       
+      // 顯示訊息(HTML) 
       let html = '';
       messages.forEach((message, index) => {
+        // 狀態顯示文字和顏色
+        let statusText = '';
+        let statusClass = '';
+        let reviewButtons = '';
+        
+        switch(message.status) {
+          case 'pending':
+            statusText = '待審核';
+            statusClass = 'status-pending';
+            reviewButtons = `
+              <div class="review-buttons">
+                <p><strong>🤔 此圖片中是否為您邀請的訪客？</strong></p>
+                <button class="approve-btn" onclick="reviewVisitor(${message.id}, 'approved')">✅ 是本人</button>
+                <button class="reject-btn" onclick="reviewVisitor(${message.id}, 'rejected')">❌ 不是本人</button>
+              </div>
+            `;
+            break;
+          case 'approved':
+            statusText = '已同意進入';
+            statusClass = 'status-approved';
+            break;
+          case 'rejected':
+            statusText = '已拒絕進入';
+            statusClass = 'status-rejected';
+            break;
+        }
+        
         html += `
           <div class="message-item">
             <h4>訪客留言 #${message.id}</h4>
             <p><strong>📅 時間：</strong>${message.created_date}</p>
-            <p><strong>📂 照片路徑：</strong>${message.visitor_image_path}</p>
+            <p><strong>📋 狀態：</strong><span class="${statusClass}">${statusText}</span></p>
             ${message.booking_code ? `<p><strong>🎫 預約碼：</strong>${message.booking_code}</p>` : ''}
+            ${message.reviewed_date ? `<p><strong>📝 審核時間：</strong>${message.reviewed_date}</p>` : ''}
+            <div>
+              <strong>📸 訪客照片：</strong><br>
+              <img src="/${message.visitor_image_path}" alt="訪客照片" class="visitor-image">
+            </div>
+            ${reviewButtons}
           </div>
         `;
       });
       
       mailboxContent.innerHTML = html;
+    }
+
+    // ===== 訪客審核功能 =====
+    // 輸入 留言ID、審核結果
+    async function reviewVisitor(messageId, status) {
+      const username = document.getElementById('username').value.trim();
+      
+      if (!username) {
+        alert('請先輸入使用者名稱');
+        return;
+      }
+      
+      try {
+        const formData = new FormData();
+        formData.append('message_id', messageId);
+        formData.append('status', status);
+        formData.append('username', username);
+        
+        const response = await fetch('/review_visitor', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert(result.message);
+          // 重新載入信箱內容
+          mailboxBtn.click();
+        } else {
+          alert('審核失敗：' + result.message);
+        }
+      } catch (error) {
+        alert('審核失敗：' + error.message);
+      }
     }
   </script>
 </body>

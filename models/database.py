@@ -105,6 +105,8 @@ class DatabaseManager:
         # visitor_image_path: 訪客照片路徑、文字、不可為空
         # created_date: 留言建立時間
         # booking_code: 對應的預約碼（選填）
+        # status: 審核狀態 (pending, approved, rejected)
+        # reviewed_date: 審核時間
         # -----------------------------
         cursor.execute('''
                 CREATE TABLE IF NOT EXISTS user_message (
@@ -112,9 +114,23 @@ class DatabaseManager:
                     username TEXT NOT NULL,
                     visitor_image_path TEXT NOT NULL,
                     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    booking_code TEXT
+                    booking_code TEXT,
+                    status TEXT DEFAULT 'pending',
+                    reviewed_date TIMESTAMP
                 )    
         ''')
+
+        # 如果已有舊的 user_message 表但沒有 status 和 reviewed_date 欄位，嘗試加入欄位
+        try:
+            cursor.execute("PRAGMA table_info(user_message)")
+            cols = [row[1] for row in cursor.fetchall()]
+            if 'status' not in cols:
+                cursor.execute("ALTER TABLE user_message ADD COLUMN status TEXT DEFAULT 'pending'")
+            if 'reviewed_date' not in cols:
+                cursor.execute("ALTER TABLE user_message ADD COLUMN reviewed_date TIMESTAMP")
+        except Exception:
+            # 若 ALTER 失敗則忽略（不致命）
+            pass
 
         conn.commit() # 確認變更(寫入磁碟)
         conn.close() # 關閉連接
@@ -472,36 +488,78 @@ class DatabaseManager:
             print(f"查詢訪客留言失敗: {str(e)}")
             return []
 
+    # ===== 更新訪客留言審核狀態 =====
+    # 傳入 留言ID、審核狀態、住戶名稱
+    # 回傳 執行結果, 訊息
+    # ===============================
+    def update_visitor_message_status(self, message_id, status, username):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # 驗證該留言是否屬於該住戶
+            cursor.execute("SELECT username FROM user_message WHERE id = ?", (message_id,))
+            row = cursor.fetchone()
+            
+            if not row:
+                conn.close()
+                return False, "留言不存在"
+            
+            if row[0] != username:
+                conn.close()
+                return False, "無權限審核此留言"
+
+            # 更新審核狀態
+            cursor.execute("""
+                UPDATE user_message 
+                SET status = ?, reviewed_date = CURRENT_TIMESTAMP 
+                WHERE id = ?
+            """, (status, message_id))
+            
+            conn.commit()
+            conn.close()
+            
+            return True, f"審核狀態已更新為: {status}"
+
+        except Exception as e:
+            return False, f"更新失敗: {str(e)}"
+
     # ===== 取得特定使用者的訪客留言 =====
     # 傳入 使用者名稱
     # 回傳 字典格式資料列表
     # ===================================
     def get_user_visitor_messages(self, username):
         try:
+            # 連結資料庫
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            # 查詢特定使用者的訪客留言，按時間倒序排列
+            # 查詢特定使用者的訪客留言，按時間倒序排列(以使用者名稱搜尋)
             cursor.execute("""
-                SELECT id, username, visitor_image_path, created_date, booking_code
+                SELECT id, username, visitor_image_path, created_date, booking_code, status, reviewed_date
                 FROM user_message 
                 WHERE username = ?
                 ORDER BY created_date DESC
             """, (username,))
             
+            # 訪客留言訊息
             messages = []
+
+            # 紀錄從資料庫查詢到的資料
             for row in cursor.fetchall():
                 messages.append({
                     'id': row[0],
                     'username': row[1],
                     'visitor_image_path': row[2],
                     'created_date': row[3],
-                    'booking_code': row[4]
+                    'booking_code': row[4],
+                    'status': row[5],
+                    'reviewed_date': row[6]
                 })
             
-            conn.close()
+            conn.close() # 關閉資料庫
             return messages
-            
+        # 例外處理    
         except Exception as e:
             print(f"查詢使用者訪客留言失敗: {str(e)}")
-            return []
+            return [] # 回傳空列表防止程式報錯

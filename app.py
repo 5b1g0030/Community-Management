@@ -423,15 +423,57 @@ def get_visitor_messages():
 # ===== 取得特定使用者的訪客留言 =====
 @app.route('/get_user_messages')
 def get_user_messages():
+    # 從 HTTP 請求的查詢字串 (query string) 取得名為 username 的參數值
+    # 例如：GET /get_user_messages?username=Gina → username 會是 "Gina"
     username = request.args.get('username')
     if not username:
         return jsonify({'message': '缺少使用者名稱'}), 400
     
     try:
-        messages = db_manager.get_user_visitor_messages(username)  # 修改引用
+        messages = db_manager.get_user_visitor_messages(username)  # 呼叫函式
         return jsonify({'messages': messages}), 200
     except Exception as e:
         return jsonify({'message': f'查詢失敗：{str(e)}'}), 500
+
+# ===== 審核訪客留言 =====
+@app.route('/review_visitor', methods=['POST'])
+def review_visitor():
+    # 取得表單資料
+    message_id = request.form.get('message_id')
+    status = request.form.get('status')
+    username = request.form.get('username')
+    
+    # 驗證必要參數
+    if not all([message_id, status, username]):
+        return jsonify({'message': '缺少必要參數'}), 400
+    
+    # 驗證狀態值
+    if status not in ['approved', 'rejected']:
+        return jsonify({'message': '無效的審核狀態'}), 400
+    
+    try:
+        # 更新資料庫
+        success, message = db_manager.update_visitor_message_status(message_id, status, username)
+        
+        if success:
+            # 推送辨識訊息到管理員端
+            if status == 'approved':
+                socketio.emit('recognition', {
+                    'type': 'recognition', 
+                    'message': f'{username}已允許訪客進入'
+                })
+            else:
+                socketio.emit('recognition', {
+                    'type': 'recognition', 
+                    'message': f'{username}不允許訪客進入'
+                })
+            
+            return jsonify({'message': message}), 200
+        else:
+            return jsonify({'message': message}), 400
+            
+    except Exception as e:
+        return jsonify({'message': f'審核失敗：{str(e)}'}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
