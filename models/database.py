@@ -304,7 +304,7 @@ class DatabaseManager:
         # ----- 顯示成功訊息 -----
         print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id}) by database")
     
-    # ===== recognize_face 辨識紀錄儲存部分 ======
+    # ===== 辨識紀錄儲存 ======
     # 傳入 人臉id、信心度
     # 回傳 無 
     # =========================================== 
@@ -323,7 +323,7 @@ class DatabaseManager:
             ''', (face_id, recognition_date, confidence))
             
             conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-            # print("辨識紀錄已儲存 by database") # 成功訊息
+            print("辨識紀錄已儲存 by database") # 成功訊息
         
         # 例外錯誤處理
         except Exception as e:
@@ -336,7 +336,7 @@ class DatabaseManager:
                 conn.close() # 關閉資料庫
 
     # ===== 透過id從資料庫查詢人名 =====
-    # 傳入 
+    # 傳入 人臉 id
     # 傳出 人臉資料
     # =========================== 
     def search_face(self, face_id):

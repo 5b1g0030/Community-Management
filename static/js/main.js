@@ -514,7 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const entry = document.createElement('div'); // 建立 div 標籤
         entry.className = 'log-entry'; // CSS 設定(字體、顏色...)
 
-        // 根據訊息變換顏色
+        // ---根據訊息變換顏色---
         // entry.classList.add() => 動態添加樣式(類似添加字串來改變class類別的方式)
         // message.includes('字串') => message 是否包含此字串? 回傳 true, false 
         if (message.includes('住戶來到大門')){ // 已知人物 - 綠色(.log-entry.know-face)
@@ -532,54 +532,54 @@ document.addEventListener('DOMContentLoaded', () => {
         recognitionLog.insertBefore(entry, recognitionLog.firstChild); // 將新紀錄插入最上方
     }
 
-    // ===== 人工審核區塊 =====
-    // 未知人臉處理
-    socket.on('unknown_face', function(data) {
-        showReviewPanel(data.image_url);
-    });
-    function showReviewPanel(imageUrl) {
-        const panel = document.getElementById('reviewPanel');
-        if (!panel) return;
-        panel.innerHTML = `
-            <div style="border:2px solid #222; border-radius:8px; background:#fff; padding:16px; margin-bottom:10px; max-width:400px;">
-                <h2 style="margin-top:0;">認識的人？</h2>
-                <img id="reviewImage" src="${imageUrl}" style="width:100%;max-width:350px; border:1px solid #222;"><br><br>
-                <input type="text" id="reviewPersonName" placeholder="請輸入人名" style="width:90%;"><br><br>
-                <button id="reviewYesBtn">是</button>
-                <button id="reviewNoBtn">否</button>
-                <button id="reviewRetakeBtn">再拍一張</button>
-            </div>
-        `;
-        document.getElementById('reviewYesBtn').onclick = async () => {
-            const name = document.getElementById('reviewPersonName').value;
-            if (!name) {
-                alert('請輸入人名');
-                return;
-            }
-            const formData = new FormData();
-            const imgBlob = await fetch(document.getElementById('reviewImage').src).then(r => r.blob());
-            formData.append('image', imgBlob);
-            formData.append('name', name);
-            await fetch('/add_face', { method: 'POST', body: formData });
-            panel.innerHTML = '';
-        };
-        document.getElementById('reviewNoBtn').onclick = () => {
-            panel.innerHTML = '';
-        };
-        document.getElementById('reviewRetakeBtn').onclick = async () => {
-            try {
-                const response = await fetch('/latest_unknown_face');
-                const data = await response.json();
-                if (data.image_url) {
-                    document.getElementById('reviewImage').src = data.image_url;
-                } else {
-                    alert('目前沒有新的未知人物影像');
-                }
-            } catch (error) {
-                alert('取得最新影像失敗');
-            }
-        };
-    }
+    // // ===== 人工審核區塊 =====
+    // // 未知人臉處理
+    // socket.on('unknown_face', function(data) {
+    //     showReviewPanel(data.image_url);
+    // });
+    // function showReviewPanel(imageUrl) {
+    //     const panel = document.getElementById('reviewPanel');
+    //     if (!panel) return;
+    //     panel.innerHTML = `
+    //         <div style="border:2px solid #222; border-radius:8px; background:#fff; padding:16px; margin-bottom:10px; max-width:400px;">
+    //             <h2 style="margin-top:0;">認識的人？</h2>
+    //             <img id="reviewImage" src="${imageUrl}" style="width:100%;max-width:350px; border:1px solid #222;"><br><br>
+    //             <input type="text" id="reviewPersonName" placeholder="請輸入人名" style="width:90%;"><br><br>
+    //             <button id="reviewYesBtn">是</button>
+    //             <button id="reviewNoBtn">否</button>
+    //             <button id="reviewRetakeBtn">再拍一張</button>
+    //         </div>
+    //     `;
+    //     document.getElementById('reviewYesBtn').onclick = async () => {
+    //         const name = document.getElementById('reviewPersonName').value;
+    //         if (!name) {
+    //             alert('請輸入人名');
+    //             return;
+    //         }
+    //         const formData = new FormData();
+    //         const imgBlob = await fetch(document.getElementById('reviewImage').src).then(r => r.blob());
+    //         formData.append('image', imgBlob);
+    //         formData.append('name', name);
+    //         await fetch('/add_face', { method: 'POST', body: formData });
+    //         panel.innerHTML = '';
+    //     };
+    //     document.getElementById('reviewNoBtn').onclick = () => {
+    //         panel.innerHTML = '';
+    //     };
+    //     document.getElementById('reviewRetakeBtn').onclick = async () => {
+    //         try {
+    //             const response = await fetch('/latest_unknown_face');
+    //             const data = await response.json();
+    //             if (data.image_url) {
+    //                 document.getElementById('reviewImage').src = data.image_url;
+    //             } else {
+    //                 alert('目前沒有新的未知人物影像');
+    //             }
+    //         } catch (error) {
+    //             alert('取得最新影像失敗');
+    //         }
+    //     };
+    // }
 
     // ===== Modal 浮空視窗拖曳與置中功能 =====
     function centerModal(modal) {

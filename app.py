@@ -92,13 +92,13 @@ def gen_frames():
         for result in results:
             name = result['name']  # 名字欄位
 
-            # ----- 如果不是「未知」，則顯示名字 -----
-            if name != '未知':
+            # ----- 如果不是「未知」且 name 不為空，則顯示名字 -----
+            if name and name != '未知':
                 # 辨識紀錄訊息「偵測到xxx住戶來到大門」，包含「事件名稱, 資料(資料類型, 訊息內容)」
                 socketio.emit('recognition', {
                               'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
             # ----- 如果是「未知」，顯示未知人物 -----
-            else:
+            elif name == '未知':
                 # ------ 辨識紀錄訊息「偵測到未知人物」 -----
                 socketio.emit('recognition', {
                               'type': 'recognition', 'message': '偵測到未知人物'})
@@ -109,30 +109,22 @@ def gen_frames():
                     os.makedirs(temp_dir)
 
                 # ----- 儲存暫存圖片(請確保路徑存在) -----
+                img_path = None
+                # 儲存整個畫面
                 img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
                 cv2.imwrite(img_path, frame)
-                # 推送未知人臉的圖片路徑
-                # replace('\\', '/') => 確保在 Windows 系統上路徑分隔符號正確
-                socketio.emit('unknown_face', {
-                    'image_url': '/' + img_path.replace('\\', '/')
-                })
     
     global last_names, latest_frame # 本次辨識到的人臉, 紀錄最新影像
 
     # ----- 攝影機自動搜尋 -----
-    # print("正在尋找攝影機...")
-    # camera_index, backend = face_system.camera_type() # 呼叫「決定鏡頭所用參數函式」
-    backends = CameraManager.get_camera_config()        # 取得系統後端
+    backends = CameraManager.get_camera_config() # 取得系統後端
     camera_index, backend = CameraManager.find_camera(backends) # 取得可用的相機設定
-    
     # ----- 檢查是否有找到攝影機 -----
     if camera_index and backend is None:
         print("無法找到可用的攝影機")
         return
-    
     # ----- 使用找到的最佳攝影機設定開啟攝影機 -----
     cap = CameraManager.open_camera(camera_index, backend)
-    
     # ----- 檢查攝影機有沒有打開 -----
     if not cap.isOpened():
         print("攝影機開啟失敗")
@@ -168,22 +160,25 @@ def gen_frames():
                                 'type': 'recognition', 'message': '未偵測到人臉'})
                 else:
                     face_message() # 呼叫「根據辨識情況推送訊息函式」
+                    # ----- 儲存辨識紀錄 -----
+                    # 直接用 results 裡的 id 與 confidence 儲存：只存「新出現且為已知」的人
+                    try:
+                        for r in results:
+                            name = r.get('name')
+                            if name and name != '未知' and (last_names is None or name not in last_names):
+                                face_id = r.get('id')
+                                conf = float(r.get('confidence', 0.0))
+                                if face_id is not None:
+                                    db_manager.save_recognition_log(face_id, conf)
+                    except Exception as e:
+                        print(f"儲存辨識紀錄失敗: {e} by app")
+
                 last_names = current_names  # 更新偵測結果(名字或 null)
 
             # ----- 在影像上繪製辨識結果 -----
-            for result in results: # 遍歷每個人臉
-                x, y, w, h = result['position']     # 人臉位置與大小
-                name = result['name']               # 人臉名稱
-                confidence = result['confidence']   # 人臉辨識信心度()
+            face_detector.draw_frame(results, frame) # 呼叫函式
 
-                color = (0, 255, 0) if name != '未知' else (0, 0, 255)
-                cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-
-                label = f"{name} ({confidence:.1f})"
-                cv2.putText(frame, label, (x, y-10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-
-            # 將影像轉換為 JPEG 格式
+            # ----- 將影像轉換為 JPEG 格式，輸出到網頁 -----
             ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
 
@@ -231,7 +226,7 @@ def add_face():
     except Exception as e:
         return jsonify({'message': f'加入失敗：{str(e)}'}), 500
 
-# ===== 測試辨識人臉
+# ===== 測試辨識人臉 =====
 @app.route('/test_face', methods=['POST'])
 def test_face():
     if 'image' not in request.files:
@@ -270,19 +265,19 @@ def get_recognition_logs():
     logs = db_manager.get_all_recognition_logs()  # 修改引用
     return jsonify(logs)                          # 轉 json 格式
 
-# ===== 再拍一張功能-獲取最新人物影像 =====
-@app.route('/latest_unknown_face')
-def latest_unknown_face():
-    global latest_frame
-    if latest_frame is None:
-        return jsonify({'image_url': None})
-    temp_dir = os.path.join('static', 'temp')
-    if not os.path.exists(temp_dir):
-        os.makedirs(temp_dir)
-    img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
-    cv2.imwrite(img_path, latest_frame)
-    image_url = '/' + img_path.replace('\\', '/')
-    return jsonify({'image_url': image_url})
+# # ===== 再拍一張功能-獲取最新人物影像 =====
+# @app.route('/latest_unknown_face')
+# def latest_unknown_face():
+#     global latest_frame
+#     if latest_frame is None:
+#         return jsonify({'image_url': None})
+#     temp_dir = os.path.join('static', 'temp')
+#     if not os.path.exists(temp_dir):
+#         os.makedirs(temp_dir)
+#     img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
+#     cv2.imwrite(img_path, latest_frame)
+#     image_url = '/' + img_path.replace('\\', '/')
+#     return jsonify({'image_url': image_url})
 
 # ===== 新增住戶頁面路由 =====
 @app.route('/residents')
@@ -334,7 +329,7 @@ def verify_booking_code():
     
     # 如果有查詢到住戶名稱，代表此驗證碼有效
     if success:
-        # 推送辨識訊息(以後可以改成在住戶批准後顯示)
+        # 推送辨識訊息
         socketio.emit('recognition', {
             'type': 'recognition', 
             'message': f'偵測到{result}住戶的訪客已到大門'

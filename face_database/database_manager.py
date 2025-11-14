@@ -81,8 +81,20 @@ class DatabaseManager:
             if rows:
                 # 取得欄位名稱
                 columns = [description[0] for description in cursor.description]
-                # 將資料轉換為列表格式
-                data = [list(row) for row in rows]
+                # 將資料轉換為列表格式，並處理 bytes 資料
+                data = []
+                for row in rows:
+                    processed_row = []
+                    for item in row:
+                        if isinstance(item, bytes):
+                            # 將 bytes 轉換為可顯示的格式
+                            if len(item) > 50:
+                                processed_row.append(f"<BINARY DATA: {len(item)} bytes>")
+                            else:
+                                processed_row.append(f"<BINARY: {item.hex()[:20]}...>")
+                        else:
+                            processed_row.append(item)
+                    data.append(processed_row)
                 # 使用 tabulate 美化表格顯示
                 print(f"\n📋 資料表: {table_name}")
                 print("=" * 50)
