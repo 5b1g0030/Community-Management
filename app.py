@@ -41,6 +41,7 @@ def login():
     role = db_manager.login_user(username, password)  # 修改引用
     print(f"login_user returned role: {repr(role)}")
     if role:
+        # --- 根據身分導向不同頁面 ---
         if role == '管理員':
             return jsonify({'message': '登入成功', 'redirect': '/manager'}), 200
         else:
@@ -82,6 +83,12 @@ def register():
     else:
         return jsonify({'message': message}), 400
 
+
+'''
+===== 影像辨識與串流播放 =====
+'''
+
+# 本次辨識到的人臉(集合)
 last_names = set()
 
 # ===== 影像串流&推送辨識訊息 =====
@@ -114,8 +121,9 @@ def gen_frames():
                 img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
                 cv2.imwrite(img_path, frame)
     
-    global last_names, latest_frame # 本次辨識到的人臉, 紀錄最新影像
+    global last_names, latest_frame # 本次辨識到的人臉, 紀錄最新影像 
 
+    """ 相機設定&開啟 """
     # ----- 攝影機自動搜尋 -----
     backends = CameraManager.get_camera_config() # 取得系統後端
     camera_index, backend = CameraManager.find_camera(backends) # 取得可用的相機設定
@@ -130,6 +138,8 @@ def gen_frames():
         print("攝影機開啟失敗")
         return
 
+
+    """ 開始讀取影像&播放 """
     try:
         while True:
             ret, frame = cap.read() # 讀取影像
@@ -146,22 +156,22 @@ def gen_frames():
 
             # ----- 第一次啟動時，主動推送辨識紀錄 -----
             if last_names is None:
-                # 如果辨識結果為 None，表示沒有偵測到人臉
-                if not results:
-                    socketio.emit('recognition', {
-                                'type': 'recognition', 'message': '未偵測到人臉'})
-                else:
-                    face_message() # 呼叫「根據辨識情況推送訊息函式」
+                face_message() # 呼叫「根據辨識情況推送訊息函式」
                 last_names = current_names # 紀錄本次辨識到的人臉 
+
             # ----- 在新住戶或未知人物出現時推送 -----
             elif current_names != last_names:
                 if not results:
                     socketio.emit('recognition', {
                                 'type': 'recognition', 'message': '未偵測到人臉'})
+                    # 【辨識紀錄-未知人物事件儲存】
+                    db_manager.save_recognition_log("未知", "未偵測到人臉")
                 else:
                     face_message() # 呼叫「根據辨識情況推送訊息函式」
                     # ----- 儲存辨識紀錄 -----
                     # 直接用 results 裡的 id 與 confidence 儲存：只存「新出現且為已知」的人
+
+                    # 【辨識紀錄-已知人物事件儲存】
                     try:
                         for r in results:
                             name = r.get('name')
@@ -169,7 +179,9 @@ def gen_frames():
                                 face_id = r.get('id')
                                 conf = float(r.get('confidence', 0.0))
                                 if face_id is not None:
-                                    db_manager.save_recognition_log(face_id, conf)
+                                    db_manager.save_recognition_log("住戶", f"{name}住戶已來到大門", face_id, conf)
+                            elif name == '未知':
+                                db_manager.save_recognition_log("未知", "未知人物")
                     except Exception as e:
                         print(f"儲存辨識紀錄失敗: {e} by app")
 
@@ -334,6 +346,7 @@ def verify_booking_code():
             'type': 'recognition', 
             'message': f'偵測到{result}住戶的訪客已到大門'
         })
+
         # 回傳資料
         return jsonify({
             'message': f'驗證成功，{result}住戶的訪客', 
@@ -457,11 +470,15 @@ def review_visitor():
                     'type': 'recognition', 
                     'message': f'{username}已允許訪客進入'
                 })
+                # 【辨識紀錄-xxx住戶訪客允許進入事件儲存】
+                db_manager.save_recognition_log("訪客", f"{username}住戶的訪客允許進入")
             else:
                 socketio.emit('recognition', {
                     'type': 'recognition', 
                     'message': f'{username}不允許訪客進入'
                 })
+                # 【辨識紀錄-xxx住戶訣客不允許進入事件儲存】
+                db_manager.save_recognition_log("訪客", f"{username}住戶的訪客不允許進入")
             
             return jsonify({'message': message}), 200
         else:

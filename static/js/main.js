@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(result.message);
                     if(result.redirect) {
                         setTimeout(() => {
-                            window.location.href = result.redirect;
+                            window.location.href = result.redirect; // 導向網頁
                         }, 100);
                     }
                 } else {
@@ -258,16 +258,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             logs.forEach(log => {
                 const row = document.createElement('tr');
+                // 增加人臉ID和信心度的顯示，沒有資料時顯示"無"
+                const faceId = log.face_id ? log.face_id : '無';
+                const confidence = log.confidence ? log.confidence.toFixed(1) : '無';
+                
                 row.innerHTML = `
                     <td>${log.id}</td>
-                    <td>${log.name || '未知'}</td>
-                    <td>${log.recognition_date}</td>
-                    <td>${log.confidence ? log.confidence.toFixed(1) : 'N/A'}</td>
+                    <td>${log.created_date}</td>
+                    <td>${log.event_type}</td>
+                    <td>${log.event_message}</td>
+                    <td>${faceId}</td>
+                    <td>${confidence}</td>
                 `;
                 modalLogTableBody.appendChild(row);
             });
         } catch (error) {
-            modalLogTableBody.innerHTML = `<tr><td colspan="4">獲取資料失敗: ${error.message}</td></tr>`;
+            modalLogTableBody.innerHTML = `<tr><td colspan="6">獲取資料失敗: ${error.message}</td></tr>`;
         }
     };
 

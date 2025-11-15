@@ -35,24 +35,64 @@ class DatabaseManager:
         
         # ------ 創建辨識記錄表(recognition_log) -----
         # id: 主鍵、自動遞增、不可重複
-        # face_id: 參照faces表格id
-        # recognition_date: 辨識發生日期時間
-        # confidence: 信心度，REAL => 小數點 
-        # 補充:
-        # IF NOT EXISTS: 只有在表格不存在時才建立，避免重複建立錯誤
-        # 資料關聯性: 透過外鍵建立兩個表格間的關聯，確保資料完整性
-        # FOREIGN KEY: 建立與 faces 表格的關聯性
-        # REFERENCES faces (id): 參照表格欄位  
+        # created_date: 事件發生日期時間
+        # event_type: 事件類型 (住戶、未知、訪客)
+        # event_message: 事件訊息描述
+        # face_id: 參照faces表格id (選填，未知人物時為NULL)
+        # confidence: 信心度，REAL => 小數點 (選填)
         # -------------------------------------------- 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS recognition_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_date TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                event_message TEXT NOT NULL,
                 face_id INTEGER,
-                recognition_date TEXT,
                 confidence REAL,
                 FOREIGN KEY (face_id) REFERENCES faces (id)
             )
         ''')
+
+        # 檢查並升級舊的 recognition_log 表格
+        try:
+            cursor.execute("PRAGMA table_info(recognition_log)")
+            cols = [row[1] for row in cursor.fetchall()]
+            
+            # 如果是舊版本的表格，需要重新建構
+            if 'event_type' not in cols or 'event_message' not in cols:
+                # 備份舊資料
+                cursor.execute("ALTER TABLE recognition_log RENAME TO recognition_log_old")
+                
+                # 建立新表格
+                cursor.execute('''
+                    CREATE TABLE recognition_log (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        created_date TEXT NOT NULL,
+                        event_type TEXT NOT NULL,
+                        event_message TEXT NOT NULL,
+                        face_id INTEGER,
+                        confidence REAL,
+                        FOREIGN KEY (face_id) REFERENCES faces (id)
+                    )
+                ''')
+                
+                # 遷移舊資料 (將舊的 recognition_date 轉為 created_date，設定預設事件類型)
+                cursor.execute('''
+                    INSERT INTO recognition_log (created_date, event_type, event_message, face_id, confidence)
+                    SELECT 
+                        recognition_date,
+                        '住戶',
+                        '舊版本辨識紀錄',
+                        face_id,
+                        confidence
+                    FROM recognition_log_old
+                ''')
+                
+                # 刪除舊表格
+                cursor.execute("DROP TABLE recognition_log_old")
+                print("辨識紀錄表格已升級至新版本")
+        except Exception as e:
+            print(f"升級辨識紀錄表格時發生錯誤: {e}")
 
         # ----- 建立使用者資料表格 -----
         # id: 主鍵、自動遞增、不可重複
@@ -244,12 +284,12 @@ class DatabaseManager:
             conn = sqlite3.connect(self.db_path) # 連接資料庫
             cursor = conn.cursor()               # 建立物件執行 SQL 指令
             
-            # 查詢辨識紀錄，並與人臉表格做關聯以取得人名(人臉id => 人臉資料庫 => 查詢人名)
+            # 查詢辨識紀錄，並與人臉表格做關聯以取得人名，同時包含face_id和confidence
             cursor.execute('''
-                SELECT rl.id, f.name, rl.recognition_date, rl.confidence
+                SELECT rl.id, rl.created_date, rl.event_type, rl.event_message, f.name, rl.confidence, rl.face_id
                 FROM recognition_log rl
                 LEFT JOIN faces f ON rl.face_id = f.id
-                ORDER BY rl.recognition_date DESC
+                ORDER BY rl.created_date DESC
             ''')
             
             # 資料轉換為字典格式
@@ -257,9 +297,12 @@ class DatabaseManager:
             for row in cursor.fetchall():
                 logs.append({
                     'id': row[0],
-                    'name': row[1],
-                    'recognition_date': row[2],
-                    'confidence': row[3]
+                    'created_date': row[1],
+                    'event_type': row[2],
+                    'event_message': row[3],
+                    'name': row[4],
+                    'confidence': row[5],
+                    'face_id': row[6]
                 })
             
             conn.close() # 關閉連接
@@ -305,29 +348,29 @@ class DatabaseManager:
         print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id}) by database")
     
     # ===== 辨識紀錄儲存 ======
-    # 傳入 人臉id、信心度
+    # 傳入 事件類型、事件訊息、人臉id(選填)、信心度(選填)
     # 回傳 無 
     # =========================================== 
-    def save_recognition_log(self, face_id, confidence):
+    def save_recognition_log(self, event_type, event_message, face_id=None, confidence=None):
         try:
             conn = sqlite3.connect(self.db_path) # 連結資料庫
             cursor = conn.cursor()               # 建立 SQL 游標
 
-            # 記錄辨識發生時間
-            recognition_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S") # 取得目前的日期和時間，並格式化成字串
+            # 記錄事件發生時間
+            created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
-            # SQL 指令，寫入人臉ID、辨識時間、信心度
+            # SQL 指令，寫入事件類型、事件訊息、人臉ID、信心度
             cursor.execute('''
-                INSERT INTO recognition_log (face_id, recognition_date, confidence)
-                VALUES (?, ?, ?)
-            ''', (face_id, recognition_date, confidence))
+                INSERT INTO recognition_log (created_date, event_type, event_message, face_id, confidence)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (created_date, event_type, event_message, face_id, confidence))
             
             conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-            print("辨識紀錄已儲存 by database") # 成功訊息
+            print(f"事件紀錄已儲存: {event_type} - {event_message} by database") # 成功訊息
         
         # 例外錯誤處理
         except Exception as e:
-            print(f"儲存辨識紀錄失敗 by database: {e}")
+            print(f"儲存事件紀錄失敗 by database: {e}")
             raise   # 重新拋出相同的例外，讓上層程式碼也能處理
         
         # 無論如何都會執行的程式碼

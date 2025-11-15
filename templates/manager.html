@@ -140,7 +140,7 @@
     <!-- 查看辨識紀錄 Modal(彈出視窗) -->
     <div id="viewLogDbModal" class="modal" style="display:none;">
             <div class="modal-content"
-                style="position:fixed; left:50vw; top:10vh; z-index:2000; min-width:450px; min-height:250px; max-height:85vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+                style="position:fixed; left:50vw; top:10vh; z-index:2000; min-width:550px; min-height:250px; max-height:85vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
                 <span class="close" id="closeViewLogDbModal">&times;</span>
                 <h2>辨識紀錄資料庫</h2>
                 <div style="max-height:70vh; overflow-y:auto;">
@@ -148,9 +148,11 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>辨識姓名</th>
-                                <th>辨識時間</th>
-                                <th>辨識結果</th>
+                                <th>發生時間</th>
+                                <th>事件類型</th>
+                                <th>事件訊息</th>
+                                <th>人臉ID</th>
+                                <th>信心度</th>
                             </tr>
                         </thead>
                         <tbody id="modalLogTableBody"></tbody>
