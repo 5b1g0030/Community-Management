@@ -277,6 +277,32 @@ def get_recognition_logs():
     logs = db_manager.get_all_recognition_logs()  # 修改引用
     return jsonify(logs)                          # 轉 json 格式
 
+# ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
+@app.route('/api/recognition_logs')
+def get_recognition_logs_datatables():
+    """提供給 DataTables 讀取的 JSON 格式辨識紀錄資料"""
+    logs = db_manager.get_all_recognition_logs()  # 修改引用
+    
+    # 轉換為 DataTables 期望的格式 (陣列的陣列)
+    data = []
+    for log in logs:
+        # 處理 None 值，顯示為 "無"
+        face_id = log['face_id'] if log['face_id'] is not None else '無'
+        confidence = f"{log['confidence']:.1f}" if log['confidence'] is not None else '無'
+        
+        # 加入資料
+        data.append([
+            log['id'],            # id編號
+            log['created_date'],  # 資料建立時間
+            log['event_type'],    # 事件類型
+            log['event_message'], # 事件訊息
+            face_id,              # 辨識到的人臉id
+            confidence            # 信心值
+        ])
+    
+    return jsonify({'data': data})
+
+
 # # ===== 再拍一張功能-獲取最新人物影像 =====
 # @app.route('/latest_unknown_face')
 # def latest_unknown_face():

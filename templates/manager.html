@@ -9,19 +9,23 @@
     <title>社區人臉辨識系統 管理者端</title>
     <!-- 引入CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- 引入 DataTables CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+    
 </head>
 <body>
     <!-- 顯示在網頁上的區域(start) -->
     <div class="container"> 
         <div class="main-content">
-            <h1>社區人臉辨識系統</h1> <!-- 標題 -->
+            <!-- 標題 -->
+            <h1>社區人臉辨識系統</h1> 
             
             <!-- 功能按鈕區 -->
             <div class="function-buttons">
                 <button type="button" id="addFaceBtn">加入人臉</button>
                 <button type="button" id="testFaceBtn">測試辨識</button>
                 <button type="button" id="viewFaceDbBtn">查看已登錄人臉</button>
-                <button type="button" id="viewLogDbBtn">查看辨識紀錄資料庫</button>
+                <button type="button" id="viewLogDbBtn">查看辨識紀錄</button>
                 <button type="button" id="visitorBookingBtn">訪客預約</button>
             </div>
 
@@ -62,7 +66,7 @@
                 <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="即時影像">
             </div>
 
-            <!-- 辨識紀錄清單 -->
+            <!-- 辨識紀錄清單(即時顯示) -->
             <div class="log-container">
                 <h3>辨識紀錄</h3>
                 <div id="recognitionLog"></div> <!-- 清單內容放這裡 -->
@@ -76,6 +80,9 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <!-- 引入 Flask SocketIO -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- 引入 jQuery 和 DataTables -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
 
     <!-- 加入人臉 Modal(彈出視窗) -->
     <!--
@@ -123,7 +130,7 @@
             <div class="modal-content"
                 style="position:fixed; left:60vw; top:15vh; z-index:2000; min-width:350px; min-height:200px; max-height:80vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
                 <span class="close" id="closeViewDbModal">&times;</span>
-                <h2>資料庫資料</h2>
+                <h2>人臉資料庫</h2>
                 <table style="width:100%;">
                     <thead>
                         <tr>
@@ -139,26 +146,51 @@
     
     <!-- 查看辨識紀錄 Modal(彈出視窗) -->
     <div id="viewLogDbModal" class="modal" style="display:none;">
-            <div class="modal-content"
-                style="position:fixed; left:50vw; top:10vh; z-index:2000; min-width:550px; min-height:250px; max-height:85vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
-                <span class="close" id="closeViewLogDbModal">&times;</span>
-                <h2>辨識紀錄資料庫</h2>
-                <div style="max-height:70vh; overflow-y:auto;">
-                    <table style="width:100%;">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>發生時間</th>
-                                <th>事件類型</th>
-                                <th>事件訊息</th>
-                                <th>人臉ID</th>
-                                <th>信心度</th>
-                            </tr>
-                        </thead>
-                        <tbody id="modalLogTableBody"></tbody>
-                    </table>
-                </div>
+        <div class="modal-content"
+            style="position:fixed; left:50vw; top:5vh; z-index:2000; min-width:900px; min-height:400px; max-height:90vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+            <span class="close" id="closeViewLogDbModal">&times;</span>
+            <h2>辨識紀錄資料庫</h2>
+
+            <div class="filter-container">
+                <h4>欄位篩選區</h4>
+                <!--data-column => JavaScript 會讀取 data-column 屬性，知道要對表格的第幾欄進行篩選-->
+                <!--下拉篩選框-->
+                <select data-column="2">
+                    <option value="">全部事件</option>
+                    <option value="住戶">住戶</option>
+                    <option value="未知">未知</option>
+                    <option value="訪客">訪客</option>
+                </select>
+                
+                <!-- 文字輸入篩選框-->
+                <input type="text" data-column="3" placeholder="篩選 事件訊息">
+                <input type="text" data-column="4" placeholder="篩選 人臉ID">
+                <input type="text" data-column="5" placeholder="篩選 信心度">
+                
+                <!-- 日期篩選框 -->
+                <br>
+                <input type="number" id="filter-year" placeholder="年份 (如: 2024)" min="2020" max="2030" style="width: 120px;">
+                <input type="number" id="filter-month" placeholder="月份 (1-12)" min="1" max="12" style="width: 100px;">
+                <input type="number" id="filter-day" placeholder="日期 (1-31)" min="1" max="31" style="width: 100px;">
+                <button id="clear-date-filter" style="margin-left: 10px; padding: 8px 12px;">清除日期篩選</button>
             </div>
+
+            <div style="max-height:70vh; overflow-y:auto;">
+                <table id="recognition_logs_table" class="display" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>         <!-- data-column="0" -->
+                            <th>發生時間</th>    <!-- data-column="1" -->
+                            <th>事件類型</th>    <!-- data-column="2" -->
+                            <th>事件訊息</th>    <!-- data-column="3" -->
+                            <th>人臉ID</th>      <!-- data-column="4" -->
+                            <th>信心度</th>      <!-- data-column="5" -->
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
     </div>
     
     <!-- 訪客預約驗證 Modal(彈出視窗) -->

@@ -247,45 +247,174 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ===== 查看辨識紀錄資料庫彈出視窗 =====
-    viewLogDbBtn.onclick = async () => {
-        viewLogDbModal.style.display = 'block';
-        setTimeout(()=>centerModal(viewLogDbModal), 0);
-        
-        try {
-            const response = await fetch('/get_recognition_logs');
-            const logs = await response.json();
-            modalLogTableBody.innerHTML = '';
-            
-            logs.forEach(log => {
-                const row = document.createElement('tr');
-                // 增加人臉ID和信心度的顯示，沒有資料時顯示"無"
-                const faceId = log.face_id ? log.face_id : '無';
-                const confidence = log.confidence ? log.confidence.toFixed(1) : '無';
-                
-                row.innerHTML = `
-                    <td>${log.id}</td>
-                    <td>${log.created_date}</td>
-                    <td>${log.event_type}</td>
-                    <td>${log.event_message}</td>
-                    <td>${faceId}</td>
-                    <td>${confidence}</td>
-                `;
-                modalLogTableBody.appendChild(row);
-            });
-        } catch (error) {
-            modalLogTableBody.innerHTML = `<tr><td colspan="6">獲取資料失敗: ${error.message}</td></tr>`;
+    var recognitionLogsTable = null; // DataTables 實例變數
+
+    // ****************
+    // 辨識紀錄篩選
+    // ****************
+    // 核心函數：初始化辨識紀錄 DataTable
+    function initializeRecognitionLogsTable() {
+        // 檢查 DataTables 是否已初始化，避免重複綁定
+        if ($.fn.DataTable.isDataTable('#recognition_logs_table')) {
+            console.log("辨識紀錄 DataTables 已經初始化，調整欄位寬度。");
+            recognitionLogsTable.columns.adjust().draw(); // 自動調整 DataTables 的欄位寬度，確保表格內容能正確顯示
+            return;
         }
+        
+        console.log("辨識紀錄 DataTables 正在初始化...");
+
+        // ===== 初始化 DataTables =====
+        recognitionLogsTable = $('#recognition_logs_table').DataTable({
+            // 資料來源設定
+            ajax: {
+                url: '/api/recognition_logs', // 後端獲取資料的 API 路徑(路由名稱)，會向此路徑自動發送請求
+                dataSrc: 'data'  // 後端回應的 JSON 資料中，哪個欄位包含表格的資料
+            },
+            // ---定義表格的每一欄如何對應後端回應的資料--
+            // 跟網頁設定的篩選編號有關
+            // ----------------------------------------
+            columns: [
+                { data: 0 }, // ID
+                { data: 1 }, // 發生時間
+                { data: 2 }, // 事件類型
+                { data: 3 }, // 事件訊息
+                { data: 4 }, // 人臉ID
+                { data: 5 }  // 信心度
+            ],
+            // ---預設排序：按發生時間降序（最新的在前）---
+            // 'asc'：升序（由小到大）。
+            // 'desc'：降序（由大到小）。
+            // -----------------------------------------
+            order: [[ 1, 'desc' ]], // [指定要排序的欄位索引（從 0 開始）, 排序方向]
+            // 載入中文語言包
+            language: {
+                url: '//cdn.datatables.net/plug-ins/2.0.8/i18n/zh-Hant.json'
+            },
+            // 每頁顯示數量選項
+            lengthMenu: [10, 25, 50, 100],
+            // 啟用搜尋
+            searching: true,
+            // 啟用分頁
+            paging: true
+        });
+
+        // ===== 綁定篩選事件 (只綁定一次) =====
+        // 選取有 filter-container input, filter-container select class的元素
+        // keyup=> 文字框輸入, change=> 下拉選單的值改變
+        // .on()=> 綁定事件, .off()=> 解除綁定事件
+        // ===================================
+        $('.filter-container input[data-column], .filter-container select[data-column]').off('keyup change').on('keyup change', function() {
+            // 取得欄位索引(有 data-column 變數的元素)
+            var column_index = $(this).attr('data-column'); // this=> 觸發事件的元素
+            // 取得篩選器的值
+            var value = this.value;
+
+            // 如果是 <select> 標籤，執行下列程式(處理下拉選單與文字輸入)
+            if (this.tagName === 'SELECT') {
+                // 對於下拉選單，使用正規表達式精確匹配
+                recognitionLogsTable.column(column_index).search(value ? '^' + value + '$' : '', true, false).draw();
+            } else {
+                // 對於文字輸入框，執行標準模糊搜索
+                recognitionLogsTable.column(column_index).search(value).draw();
+            }
+        });
+
+        // ===== 日期篩選功能 =====
+        // 使用 jQuery 選擇器來確保正確綁定事件
+        $('#filter-year, #filter-month, #filter-day').off('input change keyup').on('input change keyup', function() {
+            console.log('日期輸入事件觸發:', $(this).attr('id'), '值:', this.value);
+            applyDateFilter();
+        });
+
+        // 清除日期篩選按鈕
+        $('#clear-date-filter').off('click').on('click', function() {
+            console.log('清除日期篩選按鈕被點擊');
+            $('#filter-year, #filter-month, #filter-day').val('');
+            applyDateFilter();
+        });
+
+        // 日期篩選函數
+        function applyDateFilter() {
+            console.log('applyDateFilter 函數被呼叫');
+            var year = $('#filter-year').val();
+            var month = $('#filter-month').val();
+            var day = $('#filter-day').val();
+            
+            console.log('日期值:', { year: year, month: month, day: day });
+            
+            // 建立日期篩選的正規表達式
+            var datePattern = '';
+            
+            if (year || month || day) {
+                // 格式: YYYY-MM-DD HH:MM:SS
+                datePattern = '^';
+                
+                // 年份部分
+                if (year) {
+                    datePattern += year;
+                } else {
+                    datePattern += '\\d{4}'; // 任意4位數字
+                }
+                
+                datePattern += '-';
+                
+                // 月份部分 - 使用更可靠的補零方法
+                if (month) {
+                    var monthStr = month.toString().length === 1 ? '0' + month : month.toString();
+                    datePattern += monthStr;
+                } else {
+                    datePattern += '\\d{2}'; // 任意2位數字
+                }
+                
+                datePattern += '-';
+                
+                // 日期部分 - 使用更可靠的補零方法
+                if (day) {
+                    var dayStr = day.toString().length === 1 ? '0' + day : day.toString();
+                    datePattern += dayStr;
+                } else {
+                    datePattern += '\\d{2}'; // 任意2位數字
+                }
+                
+                datePattern += '.*$'; // 後面的時間部分任意匹配，加上結尾錨點
+                
+                console.log('日期篩選正規表達式:', datePattern); // 除錯用
+                
+                // 對發生時間欄位(索引1)進行篩選
+                recognitionLogsTable.column(1).search(datePattern, true, false).draw();
+            } else {
+                console.log('清空日期篩選');
+                // 如果所有日期欄位都是空的，清空篩選
+                recognitionLogsTable.column(1).search('').draw();
+            }
+        }
+
+        console.log("辨識紀錄 DataTables 初始化與事件綁定完成。");
+    }
+    // 點擊「查看辨識紀錄資料庫」按鈕時，顯示對應的彈出視窗，並初始化或更新辨識紀錄的 DataTables 表格
+    viewLogDbBtn.onclick = async () => {
+        viewLogDbModal.style.display = 'block'; // 顯示彈窗
+        setTimeout(()=>centerModal(viewLogDbModal), 0); // 視窗置中
+        
+        // 在彈窗顯示後，呼叫初始化函數
+        initializeRecognitionLogsTable();
     };
 
     // ===== 關閉辨識紀錄資料庫彈出視窗 =====
     closeViewLogDbModal.onclick = () => {
         viewLogDbModal.style.display = 'none';
-        modalLogTableBody.innerHTML = '';
+        // 清空篩選器
+        $('.filter-container input, .filter-container select').val('');
+        $('#filter-year, #filter-month, #filter-day').val(''); // 清空日期篩選
+        // 如果 DataTable 存在，清空搜尋
+        if (recognitionLogsTable) {
+            recognitionLogsTable.search('').columns().search('').draw();
+        }
     };
 
-    // ***********
+    // **************
     // 訪客預約
-    // ***********
+    // **************
     // ===== 訪客預約彈出視窗元素 =====
     const visitorBookingModal = document.getElementById('visitorBookingModal'); // 訪客預約的 modal 容器
     const closeVisitorBookingModal = document.getElementById('closeVisitorBookingModal'); // 關閉按鈕
@@ -494,7 +623,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // 查看辨識紀錄視窗
         if (event.target === viewLogDbModal) {
             viewLogDbModal.style.display = 'none';
-            modalLogTableBody.innerHTML = '';
+            // 清空篩選器
+            $('.filter-container input, .filter-container select').val('');
+            $('#filter-year, #filter-month, #filter-day').val(''); // 清空日期篩選
+            // 如果 DataTable 存在，清空搜尋
+            if (recognitionLogsTable) {
+                recognitionLogsTable.search('').columns().search('').draw();
+            }
         }
         // 訪客預約視窗
         if (event.target === visitorBookingModal) {

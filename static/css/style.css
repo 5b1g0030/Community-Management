@@ -139,3 +139,40 @@ th {
     cursor: pointer;
     z-index: 2100;
 }
+
+  /* 篩選器樣式 */
+.filter-container { 
+    margin-bottom: 20px; 
+    padding: 15px; 
+    border: 1px solid #eee; 
+    border-radius: 5px; 
+    background-color: #f9f9f9;
+}
+.filter-container input, .filter-container select {
+    padding: 8px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    width: 150px; 
+}
+
+/* 日期篩選框特殊樣式 */
+.filter-container input[type="number"] {
+    width: 120px;
+}
+
+#clear-date-filter {
+    background-color: #6c757d;
+    font-size: 12px;
+}
+
+#clear-date-filter:hover {
+    background-color: #545b62;
+}
+
+.filter-container h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
