@@ -21,20 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalPersonName = document.getElementById('modalPersonName');     // 表單中人名
 
     // ===== 測試辨識彈出視窗 =====
-    const testFaceModal = document.getElementById('testFaceModal');           // 彈出視窗容器
-    const closeTestFaceModal = document.getElementById('closeTestFaceModal'); // 關閉視窗按鈕
-    const modalTestForm = document.getElementById('modalTestForm');           // 處理表單提交
-    const modalTestImage = document.getElementById('modalTestImage');         // 顯示內容(在 testResult)
-    const testResult = document.getElementById('testResult');                 // 清空顯示內容
+    const testFaceModal = document.getElementById('testFaceModal');           // 測試辨識-彈出視窗容器
+    const closeTestFaceModal = document.getElementById('closeTestFaceModal'); // 測試辨識-關閉視窗按鈕
+    const modalTestForm = document.getElementById('modalTestForm');           // 測試辨識-處理表單提交
+    const modalTestImage = document.getElementById('modalTestImage');         // 測試辨識-顯示內容(在 testResult)
+    const testResult = document.getElementById('testResult');                 // 測試辨識-清空顯示內容
 
     // ===== 查看系統中已註冊的所有人臉資料 =====
-    const viewDbModal = document.getElementById('viewDbModal');             // 彈出視窗容器
-    const closeViewDbModal = document.getElementById('closeViewDbModal');   // 關閉按鈕
+    const viewDbModal = document.getElementById('viewDbModal');             // 人臉資料庫彈出視窗容器
+    const closeViewDbModal = document.getElementById('closeViewDbModal');   // 關閉按鈕(人臉資料庫)
     const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
 
-    const viewLogDbModal = document.getElementById('viewLogDbModal');
-    const closeViewLogDbModal = document.getElementById('closeViewLogDbModal');
-    const modalLogTableBody = document.getElementById('modalLogTableBody'); // 辨識紀錄查詢表格
+    // ====== 查看辨識紀錄的所有資料 =====
+    const viewLogDbModal = document.getElementById('viewLogDbModal');       // 辨識紀錄 Modal(彈出視窗)
+    const closeViewLogDbModal = document.getElementById('closeViewLogDbModal'); // 關閉按鈕(辨識紀錄)
+    // const modalLogTableBody = document.getElementById('modalLogTableBody'); // 辨識紀錄查詢表格
 
     const registerForm = document.getElementById('registerForm');
     const username = document.getElementById('username');
@@ -245,14 +246,13 @@ document.addEventListener('DOMContentLoaded', () => {
         viewDbModal.style.display = 'none'; // 隱藏彈出視窗
         modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
     };
-
     // ===== 查看辨識紀錄資料庫彈出視窗 =====
     var recognitionLogsTable = null; // DataTables 實例變數
 
-    // ****************
-    // 辨識紀錄篩選
-    // ****************
-    // 核心函數：初始化辨識紀錄 DataTable
+    // *************************
+    // 辨識紀錄篩選-初始化函式
+    // *************************
+    // ===== 初始化辨識紀錄 DataTable =====
     function initializeRecognitionLogsTable() {
         // 檢查 DataTables 是否已初始化，避免重複綁定
         if ($.fn.DataTable.isDataTable('#recognition_logs_table')) {
@@ -320,10 +320,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // ===== 日期篩選功能 =====
-        // 使用 jQuery 選擇器來確保正確綁定事件
+        // 使用 jQuery 選擇器來確保正確綁定事件，先解除再綁定
+        // 避免多次執行（例如，當彈窗多次打開時），導致同一事件被多次綁定，從而造成重複執行
         $('#filter-year, #filter-month, #filter-day').off('input change keyup').on('input change keyup', function() {
             console.log('日期輸入事件觸發:', $(this).attr('id'), '值:', this.value);
-            applyDateFilter();
+            applyDateFilter(); // 呼叫「日期篩選函數」
         });
 
         // 清除日期篩選按鈕
@@ -333,9 +334,16 @@ document.addEventListener('DOMContentLoaded', () => {
             applyDateFilter();
         });
 
-        // 日期篩選函數
+        // ===== 日期篩選函數 =====
         function applyDateFilter() {
             console.log('applyDateFilter 函數被呼叫');
+
+            // --- 正規表達式 ---
+            // 2023-\d{2}-\d{2} = 限2023-都可以-都可以
+            // \d{4}-\d{2}-\d{2} = 都可以-都可以-都可以 
+            // -----------------
+
+            // --- 取得年、月、日欄位的值(輸入框) ---
             var year = $('#filter-year').val();
             var month = $('#filter-month').val();
             var day = $('#filter-day').val();
@@ -345,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 建立日期篩選的正規表達式
             var datePattern = '';
             
+            // --- 當年、月、日其中之一有數值時，執行下列程式 ---
             if (year || month || day) {
                 // 格式: YYYY-MM-DD HH:MM:SS
                 datePattern = '^';
@@ -353,6 +362,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (year) {
                     datePattern += year;
                 } else {
+                    // \\d{4} => 匹配一個由 4 個數字組成的字串，例如 2023、1234 等
+                    // 確保正規表達式仍然有效，而不會因為部分為空而導致正規表達式無法匹配
                     datePattern += '\\d{4}'; // 任意4位數字
                 }
                 
@@ -381,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('日期篩選正規表達式:', datePattern); // 除錯用
                 
                 // 對發生時間欄位(索引1)進行篩選
+                // 正規表達式, 啟用正規表達式匹配, 
                 recognitionLogsTable.column(1).search(datePattern, true, false).draw();
             } else {
                 console.log('清空日期篩選');
@@ -391,15 +403,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log("辨識紀錄 DataTables 初始化與事件綁定完成。");
     }
+    // ************************
+    // 辨識紀錄篩選-按鈕觸發
+    // ************************
     // 點擊「查看辨識紀錄資料庫」按鈕時，顯示對應的彈出視窗，並初始化或更新辨識紀錄的 DataTables 表格
     viewLogDbBtn.onclick = async () => {
         viewLogDbModal.style.display = 'block'; // 顯示彈窗
         setTimeout(()=>centerModal(viewLogDbModal), 0); // 視窗置中
         
         // 在彈窗顯示後，呼叫初始化函數
-        initializeRecognitionLogsTable();
+        initializeRecognitionLogsTable(); // 呼叫「初始化辨識紀錄 DataTable」
     };
-
     // ===== 關閉辨識紀錄資料庫彈出視窗 =====
     closeViewLogDbModal.onclick = () => {
         viewLogDbModal.style.display = 'none';
