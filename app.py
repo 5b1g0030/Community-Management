@@ -39,9 +39,10 @@ def login():
         return jsonify({'message': '請輸入使用者名稱和密碼'}), 400
     
     role = db_manager.login_user(username, password)  # 修改引用
-    print(f"login_user returned role: {repr(role)}")
+    print(f"login_user returned role: {repr(role)} By app") # 除錯
     if role:
         # --- 根據身分導向不同頁面 ---
+        print('根據身分導向不同頁面 By app') # 除錯
         if role == '管理員':
             return jsonify({'message': '登入成功', 'redirect': '/manager'}), 200
         else:
@@ -76,10 +77,12 @@ def register():
     if password != confirm_password:
         return jsonify({'message': '兩次密碼不相同'}), 400
     
+    # 嘗試將使用者加入資料庫
     success, message = db_manager.register_user(username, password, role)  # 修改引用
 
+    # 如果加入成功，則顯示成功訊息並跳轉到登入介面
     if success:
-        return jsonify({'message': message}), 200
+        return jsonify({'message': message, 'redirect': '/login'}), 200
     else:
         return jsonify({'message': message}), 400
 
