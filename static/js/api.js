@@ -35,3 +35,34 @@ export async function register(formData) {
 
     return result
 }
+
+// =====加入人臉api =====
+export async function addFace(formData) {
+    const response = await fetch('/add_face', {
+        method: 'POST',
+        body: formData
+    });
+    const result = await response.json()
+
+    // 如果發生錯誤則回傳錯誤訊息
+    if (!response.ok){
+        throw new Error(result.message || "加入人臉失敗")
+    }
+
+    return result
+}
+
+// ===== 測試人臉api ====
+export async function testFace(formData) {
+    const response = await fetch('/test_face', {
+                method: 'POST',
+                body: formData
+            });
+    const result = await response.json();
+
+    if (!response.ok){
+        throw new Error(result.message || "測試人臉失敗")
+    }
+
+    return result
+}

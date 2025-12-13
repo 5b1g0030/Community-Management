@@ -4,7 +4,7 @@
 // 否則會在解析階段丟出語法錯誤，整個檔案就不會執行。
 
 import * as DOM from "./dom.js" // 引入網頁元素
-import { login, register } from "./api.js"; // 引入後端api溝通函式
+import { login, register, addFace, testFace } from "./api.js"; // 引入後端api溝通函式
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -54,12 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // 表單提交處理
         DOM.registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
+            // 清空所有錯誤訊息
             if (DOM.usernameError) DOM.usernameError.textContent = '';
             if (DOM.passwordError) DOM.passwordError.textContent = '';
             if (DOM.confirmPasswordError) DOM.confirmPasswordError.textContent = '';
             if (DOM.submitMessage) DOM.submitMessage.textContent = '';
 
+            // 驗證欄位
             if (DOM.username.value.trim().length < 3) {
                 alert('使用者名稱至少需要3個字元');
                 DOM.username.focus();
@@ -97,25 +98,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 加入人臉彈出視窗 =====  
     DOM.addFaceBtn.onclick = () => DOM.addFaceModal.style.display = 'block'; // 顯示視窗
-
     // ===== 關閉加入人臉彈出視窗 =====
     DOM.closeAddFaceModal.onclick = () => {
         DOM.addFaceModal.style.display = 'none';
         DOM.modalUploadForm.reset();
     };
-
+    // ===== 加入人臉 =====
     DOM.modalUploadForm.onsubmit = async (e) => {
         e.preventDefault();
+        // 建立表單&加入資料
         const formData = new FormData();
         formData.append('image', DOM.modalFaceImage.files[0]);
         formData.append('name', DOM.modalPersonName.value);
         
         try {
-            const response = await fetch('/add_face', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
+            result = await addFace(formData) // 呼叫api函式
             alert(result.message);
             DOM.addFaceModal.style.display = 'none';
             DOM.modalUploadForm.reset();
@@ -135,17 +132,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     DOM.modalTestForm.onsubmit = async (e) => {
         e.preventDefault();
+        // 建立表單&加入資料
         const formData = new FormData();
         formData.append('image', DOM.modalTestImage.files[0]);
         try {
-            const response = await fetch('/test_face', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
+            const result = await testFace(formData) // 呼叫 api 函式
             DOM.testResult.textContent = result.message;
         } catch (error) {
-            DOM.testResult.textContent = '辨識失敗';
+            DOM.testResult.textContent = '辨識失敗: ' + error;
         }
     };
 

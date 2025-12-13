@@ -274,11 +274,11 @@ def get_faces():
     faces = db_manager.get_all_faces()  # 修改引用
     return jsonify(faces)               # 轉 json 格式
 
-# ===== 取得辨識紀錄資料 =====
-@app.route('/get_recognition_logs')
-def get_recognition_logs():
-    logs = db_manager.get_all_recognition_logs()  # 修改引用
-    return jsonify(logs)                          # 轉 json 格式
+# # ===== 取得辨識紀錄資料 =====
+# @app.route('/get_recognition_logs')
+# def get_recognition_logs():
+#     logs = db_manager.get_all_recognition_logs()  # 修改引用
+#     return jsonify(logs)                          # 轉 json 格式
 
 # ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
 @app.route('/api/recognition_logs')
