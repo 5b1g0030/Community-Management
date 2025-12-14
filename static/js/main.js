@@ -148,8 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.viewDbModal.style.display = 'block';
         setTimeout(()=>centerModal(DOM.viewDbModal), 0);
         try {
-            const response = await fetch('/get_faces');
-            const faces = await response.json();
+            // const response = await fetch('/get_faces');
+            // const faces = await response.json();
             DOM.modalTableBody.innerHTML = '';
             faces.forEach(face => {
                 const row = document.createElement('tr');

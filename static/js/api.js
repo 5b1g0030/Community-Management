@@ -66,3 +66,16 @@ export async function testFace(formData) {
 
     return result
 }
+
+// ===== 查看人臉資料庫 =====
+export async function getFace(formData) {
+    // 不需要上傳資料給後端，所以不需要 method 和 body
+    const response = await fetch('/get_faces'); 
+    const faces = await response.json();
+    
+    if (!response.ok) {
+        throw new Error(faces.message || "查看人臉資料庫失敗")
+    }
+
+    return faces
+}

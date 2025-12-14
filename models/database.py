@@ -1,6 +1,6 @@
 import sqlite3
-import hashlib
 from datetime import datetime
+from .user import UserManager
 
 # ===== 資料庫存取類別 =====
 class DatabaseManager:
@@ -8,6 +8,8 @@ class DatabaseManager:
     def __init__(self, db_path='face_database/face_database.db'):
         self.db_path = db_path # 設定路徑
         self.init_database()
+        # 建立 user manager 以維持舊有 API 的轉發
+        self.user_manager = UserManager(self.db_path)
     
     # ===== 初始化資料庫 =====
     # 建立資料庫表格(已存在則不建立)
@@ -176,70 +178,18 @@ class DatabaseManager:
         conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
     
-    # ===== 註冊使用者 =====
-    # 回傳 執行結果, 訊息
-    # =====================  
-    def register_user(self, username, password, role='住戶'):
-        try:
-            conn = sqlite3.connect(self.db_path) # 連接資料庫
-            cursor = conn.cursor() # 建立游標執行 SQL 指令
+    # # ===== 註冊使用者 =====
+    # # 回傳 執行結果, 訊息
+    # # =====================  
+    # def register_user(self, username, password, role='住戶'):
+    #     return self.user_manager.register_user(username, password, role)
+	
+    # # ===== 使用者登入 =====
+    # # 回傳 執行結果
+    # # =====================  
+    # def login_user(self, username, password):
+    #     return self.user_manager.login_user(username, password)
 
-            # 檢查使用者是否已存在
-            cursor.execute("SELECT id FROM users WHERE username= ?", (username,))
-            # 檢查第一筆資料，如果重複則結束函式並告訴使用者「此名稱已存在」
-            if cursor.fetchone():
-                conn.close() # 關閉資料庫連接
-                return False, "使用者名稱已被使用 by database"
-            
-            # 驗證 role
-            if role not in ('住戶', '管理員'):
-                conn.close()
-                return False, "不支援的身分 by database"
-            
-            # 密碼加密
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
-
-            # 插入新使用者（包含 role）
-            cursor.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                           (username, password_hash, role)
-                           )
-            
-            conn.commit() # 更新資料庫
-            conn.close() # 關閉連接
-
-            return True, "註冊成功 by database"
-
-        # 例外錯誤處理
-        except Exception as e:
-            return False, f"註冊失敗 by database: {str(e)}"
-    
-    # ===== 使用者登入 =====
-    # 回傳 執行結果
-    # =====================  
-    def login_user(self, username, password):
-        try:
-            conn = sqlite3.connect(self.db_path) # 連接資料庫
-            cursor = conn.cursor() # 建立游標執行 SQL 指令
-
-            # 把使用者輸入的密碼加密
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
-
-            # 查詢使用者與密碼
-            cursor.execute("SELECT role FROM users WHERE username = ? AND password_hash = ?",
-                           (username, password_hash)
-                           )
-            
-            row = cursor.fetchone()
-            conn.close()
-            if row:
-                return row[0]  # 回傳 role
-            else:
-                return None
-
-        # 例外錯誤處理
-        except Exception as e:
-            return None
-    
     # ===== 列出資料庫中的所有人臉資料 =====
     # 回傳 字典格式資料
     # ==================================== 
@@ -389,7 +339,6 @@ class DatabaseManager:
         result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
         return result
     
-
     # ===== 訓練模型-取得訓練資料 =====
     # 傳入 無
     # 回傳 人臉id、人臉二進位資訊
@@ -407,202 +356,43 @@ class DatabaseManager:
         conn.close() # 關閉資料庫連接
         return data
     
-    # ===== 建立訪客預約 =====
-    # 輸入 使用者名稱、驗證碼
-    # 回傳 執行結果(T,F) 訊息
-    # =====================  
-    def create_visitor_booking(self, username, booking_code):
-        try:
-            # ---連接資料庫--
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+    # # ===== 建立訪客預約 =====
+    # # 輸入 使用者名稱、驗證碼
+    # # 回傳 執行結果(T,F) 訊息
+    # # =====================  
+    # def create_visitor_booking(self, username, booking_code):
+    #     return self.user_manager.create_visitor_booking(username, booking_code)
 
-            # ---檢查預約碼是否已存在---
-            # 查詢符合指定驗證碼的欄位，只回傳id編號
-            cursor.execute("SELECT id FROM visitor_bookings WHERE booking_code = ?", (booking_code,))
-            if cursor.fetchone(): # 取得第一筆資料看是否有值，找不到為None
-                conn.close()
-                return False, "預約碼已存在，請重新生成"
-            
-            # ---插入新預約---
-            cursor.execute("INSERT INTO visitor_bookings (username, booking_code) VALUES (?, ?)",
-                           (username, booking_code))
-            
-            conn.commit() # 更新資料庫
-            conn.close()  # 關閉資料庫
-            return True, "預約成功"
-        # 
-        except Exception as e:
-            return False, f"預約失敗: {str(e)}"
+    # # ===== 驗證並使用訪客預約碼 =====
+    # # 輸入 驗證碼 
+    # # 回傳 執行結果, 住戶名稱
+    # # ==============================  
+    # def verify_visitor_booking(self, booking_code):
+    #     return self.user_manager.verify_visitor_booking(booking_code)
 
-    # ===== 驗證並使用訪客預約碼 =====
-    # 輸入 驗證碼 
-    # 回傳 執行結果, 住戶名稱
-    # ==============================  
-    def verify_visitor_booking(self, booking_code):
-        try:
-            # 連接資料庫
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+    # # ===== 儲存訪客留言 =====
+    # # 傳入 住戶名稱、訪客照片路徑、預約碼（選填）
+    # # 回傳 執行結果, 訊息
+    # # =====================  
+    # def save_visitor_message(self, username, visitor_image_path, booking_code=None):
+    #     return self.user_manager.save_visitor_message(username, visitor_image_path, booking_code)
 
-            # 查詢未使用的預約碼(根據 used 判斷有沒有被使用)
-            cursor.execute("SELECT username FROM visitor_bookings WHERE booking_code = ? AND used = FALSE", 
-                           (booking_code,))
-            
-            # 只取一筆資料
-            row = cursor.fetchone()
-            
-            # 如果有查到使用者
-            if row:
-                username = row[0] # 把查到的使用者名稱取出來
+    # # ===== 取得所有訪客留言 =====
+    # # 回傳 字典格式資料列表
+    # # ===========================
+    # def get_all_visitor_messages(self):
+    #     return self.user_manager.get_all_visitor_messages()
 
-                # 將該驗證碼所在欄位標記為已使用
-                cursor.execute("UPDATE visitor_bookings SET used = TRUE, used_date = CURRENT_TIMESTAMP WHERE booking_code = ?",
-                               (booking_code,))
-                
-                conn.commit() # 更新資料庫
-                conn.close() # 關閉資料庫
-                return True, username
-            else:
-                conn.close()
-                return False, "無效或已使用的預約碼"
+    # # ===== 更新訪客留言審核狀態 =====
+    # # 傳入 留言ID、審核狀態、住戶名稱
+    # # 回傳 執行結果, 訊息
+    # # ===============================
+    # def update_visitor_message_status(self, message_id, status, username):
+    #     return self.user_manager.update_visitor_message_status(message_id, status, username)
 
-        except Exception as e:
-            return False, f"驗證失敗: {str(e)}"
-
-    # ===== 儲存訪客留言 =====
-    # 傳入 住戶名稱、訪客照片路徑、預約碼（選填）
-    # 回傳 執行結果, 訊息
-    # =====================  
-    def save_visitor_message(self, username, visitor_image_path, booking_code=None):
-        try:
-            # 開啟資料庫，建立游標
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            # 插入訪客留言資料(使用者名稱、訪客照片、驗證碼)
-            cursor.execute("""
-                INSERT INTO user_message (username, visitor_image_path, booking_code) 
-                VALUES (?, ?, ?)
-            """, (username, visitor_image_path, booking_code))
-            
-            message_id = cursor.lastrowid  # 取得新插入資料的ID
-            
-            conn.commit() # 更新資料庫
-            conn.close() # 關閉資料庫
-            
-            # 顯示訊息
-            print(f"成功儲存訪客留言 (ID: {message_id}) for {username}")
-            return True, f"訪客留言已儲存 (ID: {message_id})"
-
-        except Exception as e:
-            print(f"儲存訪客留言失敗: {str(e)}")
-            return False, f"儲存失敗: {str(e)}"
-
-    # ===== 取得所有訪客留言 =====
-    # 回傳 字典格式資料列表
-    # ===========================
-    def get_all_visitor_messages(self):
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # 查詢所有訪客留言，按時間倒序排列
-            cursor.execute("""
-                SELECT id, username, visitor_image_path, created_date, booking_code
-                FROM user_message 
-                ORDER BY created_date DESC
-            """)
-            
-            messages = []
-            for row in cursor.fetchall():
-                messages.append({
-                    'id': row[0],
-                    'username': row[1],
-                    'visitor_image_path': row[2],
-                    'created_date': row[3],
-                    'booking_code': row[4]
-                })
-            
-            conn.close()
-            return messages
-            
-        except Exception as e:
-            print(f"查詢訪客留言失敗: {str(e)}")
-            return []
-
-    # ===== 更新訪客留言審核狀態 =====
-    # 傳入 留言ID、審核狀態、住戶名稱
-    # 回傳 執行結果, 訊息
-    # ===============================
-    def update_visitor_message_status(self, message_id, status, username):
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-
-            # 驗證該留言是否屬於該住戶
-            cursor.execute("SELECT username FROM user_message WHERE id = ?", (message_id,))
-            row = cursor.fetchone()
-            
-            if not row:
-                conn.close()
-                return False, "留言不存在"
-            
-            if row[0] != username:
-                conn.close()
-                return False, "無權限審核此留言"
-
-            # 更新審核狀態
-            cursor.execute("""
-                UPDATE user_message 
-                SET status = ?, reviewed_date = CURRENT_TIMESTAMP 
-                WHERE id = ?
-            """, (status, message_id))
-            
-            conn.commit()
-            conn.close()
-            
-            return True, f"審核狀態已更新為: {status}"
-
-        except Exception as e:
-            return False, f"更新失敗: {str(e)}"
-
-    # ===== 取得特定使用者的訪客留言 =====
-    # 傳入 使用者名稱
-    # 回傳 字典格式資料列表
-    # ===================================
-    def get_user_visitor_messages(self, username):
-        try:
-            # 連結資料庫
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # 查詢特定使用者的訪客留言，按時間倒序排列(以使用者名稱搜尋)
-            cursor.execute("""
-                SELECT id, username, visitor_image_path, created_date, booking_code, status, reviewed_date
-                FROM user_message 
-                WHERE username = ?
-                ORDER BY created_date DESC
-            """, (username,))
-            
-            # 訪客留言訊息
-            messages = []
-
-            # 紀錄從資料庫查詢到的資料
-            for row in cursor.fetchall():
-                messages.append({
-                    'id': row[0],
-                    'username': row[1],
-                    'visitor_image_path': row[2],
-                    'created_date': row[3],
-                    'booking_code': row[4],
-                    'status': row[5],
-                    'reviewed_date': row[6]
-                })
-            
-            conn.close() # 關閉資料庫
-            return messages
-        # 例外處理    
-        except Exception as e:
-            print(f"查詢使用者訪客留言失敗: {str(e)}")
-            return [] # 回傳空列表防止程式報錯
+    # # ===== 取得特定使用者的訪客留言 =====
+    # # 傳入 使用者名稱
+    # # 回傳 字典格式資料列表
+    # # ===================================
+    # def get_user_visitor_messages(self, username):
+    #     return self.user_manager.get_user_visitor_messages(username)

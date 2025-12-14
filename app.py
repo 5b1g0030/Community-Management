@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from models.face_detector import FaceDetector  # 修改引用
 from models.database import DatabaseManager    # 修改引用
+from models.user import UserManager
 from utils.camera_utils import CameraManager
 import os
 from datetime import datetime
@@ -17,6 +18,7 @@ socketio = SocketIO(app)
 # 初始化系統組件
 face_detector = FaceDetector()      # 人臉偵測器
 db_manager = DatabaseManager()      # 資料庫管理器
+user = UserManager()
 
 latest_frame = None
 
@@ -38,7 +40,7 @@ def login():
     if not username or not password:
         return jsonify({'message': '請輸入使用者名稱和密碼'}), 400
     
-    role = db_manager.login_user(username, password)  # 修改引用
+    role = user.login_user(username, password)  # 修改引用
     print(f"login_user returned role: {repr(role)} By app") # 除錯
     if role:
         # --- 根據身分導向不同頁面 ---
@@ -78,7 +80,7 @@ def register():
         return jsonify({'message': '兩次密碼不相同'}), 400
     
     # 嘗試將使用者加入資料庫
-    success, message = db_manager.register_user(username, password, role)  # 修改引用
+    success, message = user.register_user(username, password, role)  # 修改引用
 
     # 如果加入成功，則顯示成功訊息並跳轉到登入介面
     if success:
@@ -347,7 +349,7 @@ def generate_booking_code():
     # ---儲存到資料庫(包含使用者名稱, 驗證碼)---
     # success => 函式執行結果(T,F)
     # message => 成功/錯誤訊息 
-    success, message = db_manager.create_visitor_booking(username, booking_code)
+    success, message = user.create_visitor_booking(username, booking_code)
     
     # ---如果函式有執行成功，則回傳(訊息+驗證碼)，沒有則只回傳(訊息)---
     if success:
@@ -366,7 +368,7 @@ def verify_booking_code():
         return jsonify({'message': '請輸入預約碼'}), 400
     
     # 紀錄執行結果、回傳訊息或資料
-    success, result = db_manager.verify_visitor_booking(booking_code)  # 呼叫函式
+    success, result = user.verify_visitor_booking(booking_code)  # 呼叫函式
     
     # 如果有查詢到住戶名稱，代表此驗證碼有效
     if success:
@@ -424,7 +426,7 @@ def capture_visitor_photo():
         # 如果儲存成功
         if success:
             # 將資料存入 user_message 資料表
-            db_success, db_message = db_manager.save_visitor_message(  # 呼叫函式
+            db_success, db_message = user.save_visitor_message(  # 呼叫函式
                 username=username,
                 visitor_image_path=file_path,
                 booking_code=booking_code
@@ -454,7 +456,7 @@ def capture_visitor_photo():
 # ===== 取得訪客留言記錄 =====
 @app.route('/get_visitor_messages')
 def get_visitor_messages():
-    messages = db_manager.get_all_visitor_messages()  # 修改引用
+    messages = user.get_all_visitor_messages()  # 修改引用
     return jsonify(messages)
 
 # ===== 取得特定使用者的訪客留言 =====
@@ -467,7 +469,7 @@ def get_user_messages():
         return jsonify({'message': '缺少使用者名稱'}), 400
     
     try:
-        messages = db_manager.get_user_visitor_messages(username)  # 呼叫函式
+        messages = user.get_user_visitor_messages(username)  # 呼叫函式
         return jsonify({'messages': messages}), 200
     except Exception as e:
         return jsonify({'message': f'查詢失敗：{str(e)}'}), 500
@@ -490,7 +492,7 @@ def review_visitor():
     
     try:
         # 更新資料庫
-        success, message = db_manager.update_visitor_message_status(message_id, status, username)
+        success, message = user.update_visitor_message_status(message_id, status, username)
         
         if success:
             # 推送辨識訊息到管理員端
