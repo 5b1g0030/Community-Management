@@ -249,26 +249,36 @@ def test_face():
     if 'image' not in request.files:
         return jsonify({'message': '未選擇圖片'}), 400
 
-    file = request.files['image']
+    try:
 
-    # 讀取並處理圖片
-    image_bytes = file.read()
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        # 讀取並處理圖片
+        file = request.files['image']
+        image_bytes = file.read()
+        if not image_bytes:
+            return jsonify({'message': '上傳圖片為空'}), 400
+        
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if image is None:
+            app.logger.error('cv2.imdecode returned None for uploaded file: %s', file.filename)
+            return jsonify({'message': '無法解析圖片，請上傳有效的圖片檔案'}), 400
 
-    # 進行人臉辨識
-    results = face_detector.recognize_face(image)  # 修改引用
+        # 進行人臉辨識
+        results = face_detector.recognize_face(image)  # 修改引用
 
-    if not results:
-        return jsonify({'message': '未偵測到人臉'})
+        if not results:
+            return jsonify({'message': '未偵測到人臉'}), 200
 
-    messages = []
-    for result in results:
-        name = result['name']
-        confidence = result['confidence']
-        messages.append(f"{name} (信心度: {confidence:.1f})")
+        messages = []
+        for result in results:
+            name = result['name']
+            confidence = result['confidence']
+            messages.append(f"{name} (信心度: {confidence:.1f})")
 
-    return jsonify({'message': '辨識結果：' + '、'.join(messages)})
+        return jsonify({'message': '辨識結果：' + '、'.join(messages)})
+    except Exception as e:
+        app.logger.exception('test_face failed')
+        return jsonify({'massage': f'伺服器錯誤: {str(e)}'}), 500
 
 # ===== 取得人臉資料 =====
 @app.route('/get_faces')

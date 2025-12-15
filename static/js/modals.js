@@ -45,6 +45,10 @@ export async function testFaceModal() {
         };
         DOM.modalTestForm.onsubmit = async (e) => {
             e.preventDefault();
+            if (!DOM.modalTestImage.files || DOM.modalTestImage.files.length === 0) {
+                alert('請選擇圖片');
+                return;
+            }
             // 建立表單&加入資料
             const formData = new FormData();
             formData.append('image', DOM.modalTestImage.files[0]);
