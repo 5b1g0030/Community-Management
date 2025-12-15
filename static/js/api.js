@@ -68,7 +68,7 @@ export async function testFace(formData) {
 }
 
 // ===== 查看人臉資料庫 =====
-export async function getFace(formData) {
+export async function getFace() {
     // 不需要上傳資料給後端，所以不需要 method 和 body
     const response = await fetch('/get_faces'); 
     const faces = await response.json();

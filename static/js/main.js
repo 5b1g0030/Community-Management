@@ -4,7 +4,8 @@
 // 否則會在解析階段丟出語法錯誤，整個檔案就不會執行。
 
 import * as DOM from "./dom.js" // 引入網頁元素
-import { login, register, addFace, testFace } from "./api.js"; // 引入後端api溝通函式
+import { login, register, addFace, testFace, getFace } from "./api.js"; // 引入後端api溝通函式
+import { addFaceModal, testFaceModal } from "./modals.js";
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -96,60 +97,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===== 加入人臉彈出視窗 =====  
-    DOM.addFaceBtn.onclick = () => DOM.addFaceModal.style.display = 'block'; // 顯示視窗
-    // ===== 關閉加入人臉彈出視窗 =====
-    DOM.closeAddFaceModal.onclick = () => {
-        DOM.addFaceModal.style.display = 'none';
-        DOM.modalUploadForm.reset();
-    };
-    // ===== 加入人臉 =====
-    DOM.modalUploadForm.onsubmit = async (e) => {
-        e.preventDefault();
-        // 建立表單&加入資料
-        const formData = new FormData();
-        formData.append('image', DOM.modalFaceImage.files[0]);
-        formData.append('name', DOM.modalPersonName.value);
-        
-        try {
-            result = await addFace(formData) // 呼叫api函式
-            alert(result.message);
-            DOM.addFaceModal.style.display = 'none';
-            DOM.modalUploadForm.reset();
-        } catch (error) {
-            alert('上傳失敗：' + error.message);
-        }
-    };
+    // ===== 加入人臉彈出視窗 =====
+    if (DOM.addFaceBtn){
+        addFaceModal()
+    }
 
     // ===== 測試辨識彈出視窗 =====
-    DOM.testFaceBtn.onclick = () => DOM.testFaceModal.style.display = 'block';
-
-    // ===== 關閉測試辨識彈出視窗 =====
-    DOM.closeTestFaceModal.onclick = () => {
-        DOM.testFaceModal.style.display = 'none';
-        DOM.modalTestForm.reset();
-        DOM.testResult.textContent = '';
-    };
-    DOM.modalTestForm.onsubmit = async (e) => {
-        e.preventDefault();
-        // 建立表單&加入資料
-        const formData = new FormData();
-        formData.append('image', DOM.modalTestImage.files[0]);
-        try {
-            const result = await testFace(formData) // 呼叫 api 函式
-            DOM.testResult.textContent = result.message;
-        } catch (error) {
-            DOM.testResult.textContent = '辨識失敗: ' + error;
-        }
-    };
+    if (DOM.testFaceBtn){
+        testFaceModal()
+    }
 
     // ===== 查看資料庫彈出視窗 =====
     DOM.viewFaceDbBtn.onclick = async () => {
         DOM.viewDbModal.style.display = 'block';
         setTimeout(()=>centerModal(DOM.viewDbModal), 0);
         try {
-            // const response = await fetch('/get_faces');
-            // const faces = await response.json();
+            const faces = await getFace(); // 呼叫 api 程式
             DOM.modalTableBody.innerHTML = '';
             faces.forEach(face => {
                 const row = document.createElement('tr');
@@ -169,13 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
         viewDbModal.style.display = 'none'; // 隱藏彈出視窗
         modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
     };
-    // ===== 查看辨識紀錄資料庫彈出視窗 =====
-    var recognitionLogsTable = null; // DataTables 實例變數
+
 
     // *************************
     // 辨識紀錄篩選-初始化函式
     // *************************
     // ===== 初始化辨識紀錄 DataTable =====
+    var recognitionLogsTable = null; // DataTables 實例變數
     function initializeRecognitionLogsTable() {
         // 檢查 DataTables 是否已初始化，避免重複綁定
         if ($.fn.DataTable.isDataTable('#recognition_logs_table')) {
@@ -241,7 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 recognitionLogsTable.column(column_index).search(value).draw();
             }
         });
-
         // ===== 日期篩選功能 =====
         // 使用 jQuery 選擇器來確保正確綁定事件，先解除再綁定
         // 避免多次執行（例如，當彈窗多次打開時），導致同一事件被多次綁定，從而造成重複執行
@@ -249,14 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('日期輸入事件觸發:', $(this).attr('id'), '值:', this.value);
             applyDateFilter(); // 呼叫「日期篩選函數」
         });
-
         // 清除日期篩選按鈕
         $('#clear-date-filter').off('click').on('click', function() {
             console.log('清除日期篩選按鈕被點擊');
             $('#filter-year, #filter-month, #filter-day').val('');
             applyDateFilter();
         });
-
         // ===== 日期篩選函數 =====
         function applyDateFilter() {
             console.log('applyDateFilter 函數被呼叫');
@@ -536,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 辨識紀錄
+    // 辨識紀錄CSS
     const socket = io();
     socket.on('recognition', function(data) {
         if (data.type === 'recognition') {
