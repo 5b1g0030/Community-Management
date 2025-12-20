@@ -22,7 +22,7 @@ export async function addFaceModal() {
         formData.append('name', DOM.modalPersonName.value);
         
         try {
-            result = await addFace(formData) // 呼叫api函式
+            const result = await addFace(formData) // 呼叫api函式
             alert(result.message);
             DOM.addFaceModal.style.display = 'none';
             DOM.modalUploadForm.reset();

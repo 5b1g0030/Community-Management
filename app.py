@@ -4,9 +4,9 @@ from flask import Flask, render_template, request, jsonify, Response
 from flask_socketio import SocketIO
 import cv2
 import numpy as np
-from models.face_detector import FaceDetector  # 修改引用
-from models.database import DatabaseManager    # 修改引用
-from models.user import UserManager
+from modules.face_detector import FaceDetector  # 修改引用
+from modules.database import DatabaseManager    # 修改引用
+from modules.user import UserManager
 from utils.camera_utils import CameraManager
 import os
 from datetime import datetime

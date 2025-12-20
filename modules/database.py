@@ -177,18 +177,6 @@ class DatabaseManager:
         conn.commit() # 確認變更(寫入磁碟)
         conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
-    
-    # # ===== 註冊使用者 =====
-    # # 回傳 執行結果, 訊息
-    # # =====================  
-    # def register_user(self, username, password, role='住戶'):
-    #     return self.user_manager.register_user(username, password, role)
-	
-    # # ===== 使用者登入 =====
-    # # 回傳 執行結果
-    # # =====================  
-    # def login_user(self, username, password):
-    #     return self.user_manager.login_user(username, password)
 
     # ===== 列出資料庫中的所有人臉資料 =====
     # 回傳 字典格式資料
@@ -339,60 +327,4 @@ class DatabaseManager:
         result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
         return result
     
-    # ===== 訓練模型-取得訓練資料 =====
-    # 傳入 無
-    # 回傳 人臉id、人臉二進位資訊
-    # =======================
-    def train_model_faces(self):
-        '''
-            訓練模型真正需要的只有「特徵向量」(face_encoding) 和對應的「類別標籤」(id)
-            其他的欄位不影響結果，如果要知道是哪一個人可以透過id查詢
-        '''
-        # ------ 連接資料庫取得人臉資料 ----- 
-        conn = sqlite3.connect(self.db_path) # 連接 SQLite
-        cursor = conn.cursor() # 建立游標物件來執行 SQL 指令
-        cursor.execute("SELECT id, face_encoding FROM faces") # 資料查詢(所有人臉資料)
-        data = cursor.fetchall() # 取得查詢結果
-        conn.close() # 關閉資料庫連接
-        return data
-    
-    # # ===== 建立訪客預約 =====
-    # # 輸入 使用者名稱、驗證碼
-    # # 回傳 執行結果(T,F) 訊息
-    # # =====================  
-    # def create_visitor_booking(self, username, booking_code):
-    #     return self.user_manager.create_visitor_booking(username, booking_code)
 
-    # # ===== 驗證並使用訪客預約碼 =====
-    # # 輸入 驗證碼 
-    # # 回傳 執行結果, 住戶名稱
-    # # ==============================  
-    # def verify_visitor_booking(self, booking_code):
-    #     return self.user_manager.verify_visitor_booking(booking_code)
-
-    # # ===== 儲存訪客留言 =====
-    # # 傳入 住戶名稱、訪客照片路徑、預約碼（選填）
-    # # 回傳 執行結果, 訊息
-    # # =====================  
-    # def save_visitor_message(self, username, visitor_image_path, booking_code=None):
-    #     return self.user_manager.save_visitor_message(username, visitor_image_path, booking_code)
-
-    # # ===== 取得所有訪客留言 =====
-    # # 回傳 字典格式資料列表
-    # # ===========================
-    # def get_all_visitor_messages(self):
-    #     return self.user_manager.get_all_visitor_messages()
-
-    # # ===== 更新訪客留言審核狀態 =====
-    # # 傳入 留言ID、審核狀態、住戶名稱
-    # # 回傳 執行結果, 訊息
-    # # ===============================
-    # def update_visitor_message_status(self, message_id, status, username):
-    #     return self.user_manager.update_visitor_message_status(message_id, status, username)
-
-    # # ===== 取得特定使用者的訪客留言 =====
-    # # 傳入 使用者名稱
-    # # 回傳 字典格式資料列表
-    # # ===================================
-    # def get_user_visitor_messages(self, username):
-    #     return self.user_manager.get_user_visitor_messages(username)

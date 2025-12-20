@@ -1,10 +1,7 @@
 import cv2
-import numpy as np
 import pickle
-import os
-import platform
-import datetime
-from models.database import DatabaseManager
+from modules.database import DatabaseManager
+from modules.model import ModelManager
 
 # ===== 影像處理類別 =====
 class FaceDetector:
@@ -12,6 +9,9 @@ class FaceDetector:
     def __init__(self, model_path='face_database/face_model.pkl', db_path='face_database/face_database.db'):
         # 訓練模型路徑
         self.model_path = model_path
+
+        # 資料庫路徑
+        self.db_path = db_path
 
         # OpenCV 的 Haar cascade 人臉偵測模型檔案，用於偵測影像中的人臉位置
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -22,12 +22,40 @@ class FaceDetector:
         # 資料庫路徑
         self.db_manager = DatabaseManager(db_path)
         
-        # 載入模型
-        self.load_model()
+        # 建立 ModelManager
+        self.model_manager = ModelManager(self.recognizer, self.model_path, self.db_path, self.db_manager)
     
+    # ===== 將影像轉灰階 =====
+    # 傳入 影像
+    # 輸出 灰階影像or空值
+    # ======================= 
+    def to_gray(self, image):
+        # 是彩圖，典型的 BGR 彩色圖像形狀為 (H, W, 3)，image.ndim => n維列(灰色是2，彩色是3)
+        if image.ndim == 3 and image.shape[2] == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # 把影像轉為灰階
+            return image
+        # 已經是灰階圖，直接輸出
+        elif image.ndim == 2:
+            return image
+        else:
+            return None
+
+    # ===== 載入圖片 =====
+    def load_image(self, image):
+        # 檢查是否有圖片
+        if image is None:
+            return None
+        # 如果傳入的是檔案路徑字串（不確定情況），嘗試讀檔
+        if isinstance(image, str):
+            image = cv2.imread(image)
+            if image is None:
+                return None
+        
+        return image
+
     # ===== 偵測圖像中的人臉 =====
     # 傳入 圖片
-    # 回傳 灰階影像、人臉座標
+    # 回傳 人臉座標、灰階影像
     # ===========================   
     def detect_faces(self, image):
         # ...existing detect_faces code...
@@ -40,10 +68,51 @@ class FaceDetector:
             影像尺寸縮小比例 => 每次影像縮小到原本的 1/1.3，有些人臉可能比較大或比較小，
             偵測器會在不同尺寸的影像中都嘗試偵測，增加找到人臉的機會。
         '''
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) # 的影像轉灰階（因為人臉偵測只需灰階資訊）
-        faces = self.face_cascade.detectMultiScale(gray, 1.3, 5) # Haar 級聯分類器偵測人臉，回傳所有人臉的座標（x, y, w, h）
-        return faces, gray # 兩者皆為 NumPy 陣列
+        # ----- 載入圖片 -----
+        image = self.load_image(image)
+        # 如果未載入成功，則回傳空值
+        if image is None:
+            print("image 為空 by face_detector")
+            return (), None
+
+        # ----- 影像轉灰階 -----
+        gray = self.to_gray(image)
+        # 如果轉換不成功，則輸出空值
+        if gray is None:
+            print("gray 為空 by face_detector")
+            return (), None
+
+        # 保證 dtype 為 uint8
+        if gray.dtype != 'uint8':
+            gray = (gray.astype('float32')).astype('uint8')
+
+        h, w = gray.shape[:2]
+        if h == 0 or w == 0:
+            return (), gray
+
+        # 呼叫偵測時加上保護與較保守參數
+        try:
+            faces = self.face_cascade.detectMultiScale(
+                gray,   # 輸入的灰階影像
+                scaleFactor=1.1, # 每次縮放影像的比例: 從臉占比大的圖片找起，慢慢到小的
+                minNeighbors=5,  # 偵測過程中會產生很多候選框，至少 5 個框都指向同一區域
+                minSize=(30, 30) # 比這標準小的人臉一律忽略(30px*30px)
+            )
+        except cv2.error as e:
+            print(f"detectMultiScale 發生錯誤: {e}")
+            return (), gray
+
+        return faces, gray
     
+    # ===== 裁切&縮小影像 =====
+    # 傳入 灰階影像、人臉座標
+    # 輸出 已縮小的影像
+    # ======================== 
+    def crop_and_resize(self, gray, bbox, size=(100,100)):
+        x, y, w, h = bbox
+        face_roi = gray[y:y+h, x:x+w]
+        return cv2.resize(face_roi, size)
+
     # ===== 將人臉加入資料庫 =====
     # 傳入 圖片、名稱、圖片路徑
     # 回傳 成功與否
@@ -57,106 +126,18 @@ class FaceDetector:
                 return False
             
             (x, y, w, h) = faces[0]
-            face_roi = gray[y:y+h, x:x+w]
-            face_resized = cv2.resize(face_roi, (100, 100))
+            # face_roi = gray[y:y+h, x:x+w]
+            # face_resized = cv2.resize(face_roi, (100, 100))
+            face_resized = self.crop_and_resize(gray, (x,y,w,h))
             face_blob = pickle.dumps(face_resized)
             
-            self.db_manager.save_face_to_db(name, face_blob, image_path)
-            self.train_model()
+            self.db_manager.save_face_to_db(name, face_blob, image_path) # 儲存人臉到資料庫
+            self.model_manager.train_model() # 訓練模型
             return True
         
         except Exception as e:
             print(f'加入人臉資料失敗: {str(e)}')
             raise e
-
-    # ===== 訓練人臉辨識模型 =====
-    def train_model(self):
-        data = self.db_manager.train_model_faces()
-        # self.train_model_processing(data)
-        # ----- 檢查資料庫是否有資料 -----
-        if len(data) == 0:
-            print("資料庫中沒有人臉資料")
-            return # 結束此函式
-        
-        faces = [] # 存放人臉影像
-        labels = [] # 每張人臉對應的 ID (主鍵)
-        
-        # ----- 資料反序列化 ----- 
-        for face_id, face_blob in data: # 遍歷資料
-            face_array = pickle.loads(face_blob) # 把 BLOB 格式的人臉影像還原成 NumPy 陣列
-            faces.append(face_array) # 把還原後的影像加入 faces 列表
-            labels.append(face_id) # 把人臉的 ID 加入 labels 列表，作為模型訓練的標籤
-        
-        # ----- 訓練模型 -----
-        # 使用 LBPH 人臉辨識器（OpenCV 提供）
-        # 參數 => (有人臉影像的 NumPy 陣列列表 , 每張人臉對應的 ID) 
-        self.recognizer.train(faces, np.array(labels))
-        
-        # ----- 儲存模型 -----
-        # 把目前訓練好的模型儲存成檔案 
-        self.recognizer.save(self.model_path)
-
-        # ----- 輸出成功訊息 -----
-        print(f"模型訓練完成，已儲存至 {self.model_path} by face_detector")
-
-    # # ====== 訓練模型-資料處理 =====
-    # # 傳入 人臉資料(id, 二進位資訊)
-    # # 回傳 無
-    # # ====================   
-    # def train_model_processing(self, faces_data):
-    #     # ...existing train_model code...
-    #     '''
-    #         1. 連接資料庫取得人臉資料
-    #         2. 檢查資料庫是否有資料
-    #         3. 資料反序列化
-    #         4. 訓練模型
-    #         5. 儲存模型
-    #     '''
-    #     self.db_manager.train_model_faces()
-
-    #     # ----- 檢查資料庫是否有資料 -----
-    #     if len(faces_data) == 0:
-    #         print("資料庫中沒有人臉資料")
-    #         return # 結束此函式
-        
-    #     faces = [] # 存放人臉影像
-    #     labels = [] # 每張人臉對應的 ID (主鍵)
-        
-    #     # ----- 資料反序列化 ----- 
-    #     for face_id, face_blob in faces_data: # 遍歷資料
-    #         face_array = pickle.loads(face_blob) # 把 BLOB 格式的人臉影像還原成 NumPy 陣列
-    #         faces.append(face_array) # 把還原後的影像加入 faces 列表
-    #         labels.append(face_id) # 把人臉的 ID 加入 labels 列表，作為模型訓練的標籤
-        
-    #     # ----- 訓練模型 -----
-    #     # 使用 LBPH 人臉辨識器（OpenCV 提供）
-    #     # 參數 => (有人臉影像的 NumPy 陣列列表 , 每張人臉對應的 ID) 
-    #     self.recognizer.train(faces, np.array(labels))
-        
-    #     # ----- 儲存模型 -----
-    #     # 把目前訓練好的模型儲存成檔案 
-    #     self.recognizer.save(self.model_path)
-
-    #     # ----- 輸出成功訊息 -----
-    #     print(f"模型訓練完成，已儲存至 {self.model_path} by face_detector")
-
-    # ===== 載入已訓練模型 =====
-    def load_model(self):
-        # ...existing load_model code...
-        '''
-            1. 檢查模型檔案是否存在
-            2. 載入模型(如果有檔案)
-            3. 顯示載入結果 
-        '''
-        # 檢查模型檔案是否存在
-        if os.path.exists(self.model_path):
-            # 載入模型
-            self.recognizer.read(self.model_path)
-            # 成功訊息
-            print("模型載入成功 by face_detector")
-        else:
-            # 失敗訊息
-            print("未找到已訓練的模型 by face_detector")
     
     # ===== 辨識人臉 =====
     # 輸入 圖片
@@ -173,8 +154,10 @@ class FaceDetector:
         # 對 detect_faces 回傳的每個人臉 bbox (x,y,w,h) 逐一處理並產生辨識結果列表
         # 包括: 裁切影像、取得座標 
         for (x, y, w, h) in faces:
-            face_roi = gray[y:y+h, x:x+w] # 從影像中切出人臉部分
-            face_resized = cv2.resize(face_roi, (100, 100)) # 影像裁切成100*100
+            # face_roi = gray[y:y+h, x:x+w] # 從影像中切出人臉部分
+            # face_resized = cv2.resize(face_roi, (100, 100)) # 影像裁切成100*100
+            # ----- 影像裁切成100*100 -----
+            face_resized = self.crop_and_resize(gray, (x,y,w,h))
 
             # ----- 安全裁切：夾取邊界，並跳過過小的 bbox（避免誤偵測）-----
             h_img, w_img = gray.shape[:2]
