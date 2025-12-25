@@ -4,14 +4,16 @@
 // 否則會在解析階段丟出語法錯誤，整個檔案就不會執行。
 
 import * as DOM from "./dom.js" // 引入網頁元素
-import { login, register, addFace, testFace, getFace } from "./api.js"; // 引入後端api溝通函式
-import { addFaceModal, testFaceModal } from "./modals.js";
+import { login, register } from "./api.js"; // 引入後端api溝通函式
+import { addFaceModal, testFaceModal, viewFace, visitorBooking } from "./modals.js";
+import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
+import { initVisitorBooking } from "./visitor.js";
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 登入功能（只在登入頁面執行） =====
     if (DOM.loginForm) {
-        
+        console.log("登入")
         DOM.loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (DOM.loginMessage) DOM.loginMessage.textContent = '';
@@ -108,31 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== 查看資料庫彈出視窗 =====
-    DOM.viewFaceDbBtn.onclick = async () => {
-        DOM.viewDbModal.style.display = 'block';
-        setTimeout(()=>centerModal(DOM.viewDbModal), 0);
-        try {
-            const faces = await getFace(); // 呼叫 api 程式
-            DOM.modalTableBody.innerHTML = '';
-            faces.forEach(face => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${face.id}</td><td>${face.name}</td><td>${face.created_date}</td>`;
-                DOM.modalTableBody.appendChild(row);
-            });
-        } catch (error) {
-            DOM.modalTableBody.innerHTML = `<tr><td colspan="3">獲取資料失敗: ${error.message}</td></tr>`;
-        }
-    };
-    DOM.closeViewDbModal.onclick = () => {
-        DOM.viewDbModal.style.display = 'none';
-        DOM.modalTableBody.innerHTML = '';
-    };
-    // ===== 關閉資料庫彈出視窗 =====
-    closeViewDbModal.onclick = () => {
-        viewDbModal.style.display = 'none'; // 隱藏彈出視窗
-        modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
-    };
-
+    if (DOM.viewFaceDbBtn){
+        viewFace()
+    }
 
     // *************************
     // 辨識紀錄篩選-初始化函式
@@ -286,10 +266,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log("辨識紀錄 DataTables 初始化與事件綁定完成。");
     }
+    // 辨識紀錄CSS
+    const socket = io();
+    socket.on('recognition', function(data) {
+        if (data.type === 'recognition') {
+            addLogEntry(data.message);
+        }
+    });
+    function addLogEntry(message) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+
+        if (message.includes('住戶來到大門')){
+            entry.classList.add('know-face')
+        }
+        else if(message.includes('未偵測到人臉')){
+            entry.classList.add('no-face')
+        }
+        else if(message.includes('偵測到未知人物')){
+            entry.classList.add('unknow-face')
+        }
+
+        entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+        DOM.recognitionLog.insertBefore(entry, DOM.recognitionLog.firstChild);
+    }
+
     // ************************
     // 辨識紀錄篩選-按鈕觸發
     // ************************
     // 點擊「查看辨識紀錄資料庫」按鈕時，顯示對應的彈出視窗，並初始化或更新辨識紀錄的 DataTables 表格
+    if (DOM.viewLogDbBtn){
     DOM.viewLogDbBtn.onclick = async () => {
         DOM.viewLogDbModal.style.display = 'block';
         setTimeout(()=>centerModal(DOM.viewLogDbModal), 0);
@@ -307,164 +313,18 @@ document.addEventListener('DOMContentLoaded', () => {
             recognitionLogsTable.search('').columns().search('').draw();
         }
     };
+    };
 
     // **************
     // 訪客預約
     // **************
-    
-
     // ===== 訪客預約彈出視窗 =====
     // 查該元素是否存在再綁定事件，避免在「網頁執行這個賦值操作時」，沒有該元素的頁面會發生錯誤
     if (DOM.visitorBookingBtn) {
-        // 當按下 id = visitorBookingBtn 的按鈕時，顯示彈出視窗
-        // 箭頭函式
-        DOM.visitorBookingBtn.onclick = () => {
-            // 顯示視窗(CSS)
-            DOM.visitorBookingModal.style.display = 'block'; 
-            // 延遲執行此函式，瀏覽器渲染好，此函式會使 modal 置中。
-            setTimeout(() => centerModal(DOM.visitorBookingModal), 0); 
-        };
-    }
-    // ===== 關閉訪客預約彈出視窗 =====
-    // 查該元素是否存在再綁定事件
-    if (DOM.closeVisitorBookingModal) {
-        // 當按下 id = closeVisitorBookingModal 的按鈕時，關閉彈出視窗
-        DOM.closeVisitorBookingModal.onclick = () => {
-            DOM.visitorBookingModal.style.display = 'none'; // 隱藏視窗(CSS)
-            DOM.visitorBookingForm.reset(); // 清空表單避免資料殘留
-            DOM.bookingResult.textContent = ''; // 清空在視窗上顯示的文字
-        };
+        visitorBooking()
     }
     // ===== 訪客預約驗證表單提交 =====
-    if (DOM.visitorBookingForm) {
-        // 當 id = visitorBookingForm 的表單被提交，執行下面程式
-        // async => 宣告「非同步函式」的語法，不會使網頁停住 
-        DOM.visitorBookingForm.onsubmit = async (e) => {
-            e.preventDefault(); // 阻止預設提交，避免頁面被重新整理中斷後續操作
-            const formData = new FormData(); // 建立表單
-            // 將使用者輸入的「6位數字」加入表單，欄位 'booking_code'
-            formData.append('booking_code', DOM.bookingCodeInput.value);
-            
-            try {
-                // 把表單提交到後端，目的: '/verify_booking_code'，等待回應
-                const response = await fetch('/verify_booking_code', {
-                    method: 'POST', // POST 請求
-                    body: formData // 要傳送的資料
-                });
-                
-                // 後端回應後，把回傳的資料轉 JSON 格式
-                const result = await response.json();
-                
-                // 檢查回傳的狀態碼，判斷是否有成功執行(True, False)
-                // response.ok => HTTP狀態碼介於200~299，在網頁可視為成功
-                if (response.ok) {
-                    DOM.bookingResult.textContent = result.message; // 顯示訊息
-                    DOM.bookingResult.style.color = 'green'; // 設定顏色綠色(成功)
-                    DOM.visitorBookingForm.reset(); // 清空表單
-                    
-                    // 如果驗證成功且需要開始倒數，準備拍照
-                    if (result.start_countdown) {
-                        // 呼叫函式，輸入: 使用者名稱, 驗證碼
-                        startVisitorPhotoCountdown(result.username, result.booking_code);
-                    }
-                } else {
-                    DOM.bookingResult.textContent = result.message;
-                    DOM.bookingResult.style.color = 'red';
-                }
-            } catch (error) {
-                DOM.bookingResult.textContent = '驗證失敗：' + error.message;
-                DOM.bookingResult.style.color = 'red';
-            }
-        };
-    }
-    // ===== 訪客拍照倒數功能函式 =====
-    // 輸入: 使用者名稱, 驗證碼
-    // 輸出: HTML
-    // ==============================
-    function startVisitorPhotoCountdown(username, bookingCode) {
-        let countdown = 3;
-        const countdownInterval = setInterval(() => {
-            DOM.bookingResult.innerHTML = `
-                <div style="text-align: center;">
-                    <h4>準備為 ${username} 的訪客拍照</h4>
-                    <div style="font-size: 48px; color: #007bff; font-weight: bold;">${countdown}</div>
-                    <p>請保持鏡頭前方有訪客身影</p>
-                </div>
-            `;
-            
-            countdown--;
-            
-            if (countdown < 0) {
-                clearInterval(countdownInterval); 
-                captureVisitorPhoto(username, bookingCode); 
-            }
-        }, 1000);
-    }
-
-    // ===== 擷取訪客照片函式 =====
-    // 輸入: 使用者名稱、驗證碼
-    // 輸出: HTML
-    // ========================== 
-    // async => 宣告「非同步函式」的語法，不會使網頁停住 
-    async function captureVisitorPhoto(username, bookingCode) {
-        try {
-            DOM.bookingResult.innerHTML = `
-                <div style="text-align: center;">
-                    <h4>正在拍照...</h4>
-                    <p>📸</p>
-                </div>
-            `;
-            
-            const formData = new FormData(); 
-            formData.append('username', username);
-            if (bookingCode) {
-                formData.append('booking_code', bookingCode);
-            }
-            
-            const response = await fetch('/capture_visitor_photo', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                DOM.bookingResult.innerHTML = `
-                    <div style="text-align: center;">
-                        <h4>✅ 拍照成功！</h4>
-                        <p>${result.message}</p>
-                        <p>檔案名稱：${result.filename}</p>
-                        ${result.db_message ? `<p>資料庫：${result.db_message}</p>` : ''}
-                    </div>
-                `;
-                DOM.bookingResult.style.color = 'green';
-                
-                setTimeout(() => {
-                    DOM.visitorBookingModal.style.display = 'none';
-                    DOM.bookingResult.textContent = '';
-                    DOM.visitorBookingForm.reset();
-                }, 3000);
-                
-            } else {
-                DOM.bookingResult.innerHTML = `
-                    <div style="text-align: center;">
-                        <h4>❌ 拍照失敗</h4>
-                        <p>${result.message}</p>
-                        ${result.db_error ? `<p style="color: orange;">資料庫錯誤：${result.db_error}</p>` : ''}
-                    </div>
-                `;
-                DOM.bookingResult.style.color = 'red';
-            }
-        } catch (error) {
-            DOM.bookingResult.innerHTML = `
-                <div style="text-align: center;">
-                    <h4>❌ 拍照失敗</h4>
-                    <p>錯誤：${error.message}</p>
-                </div>
-            `;
-            DOM.bookingResult.style.color = 'red';
-        }
-    }
+    initVisitorBooking()
 
     // 點擊外部關閉
     window.onclick = (event) => {
@@ -493,92 +353,6 @@ document.addEventListener('DOMContentLoaded', () => {
             DOM.visitorBookingModal.style.display = 'none';
             DOM.visitorBookingForm.reset();
             DOM.bookingResult.textContent = '';
-        }
-    };
-
-    // 辨識紀錄CSS
-    const socket = io();
-    socket.on('recognition', function(data) {
-        if (data.type === 'recognition') {
-            addLogEntry(data.message);
-        }
-    });
-    function addLogEntry(message) {
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-
-        if (message.includes('住戶來到大門')){
-            entry.classList.add('know-face')
-        }
-        else if(message.includes('未偵測到人臉')){
-            entry.classList.add('no-face')
-        }
-        else if(message.includes('偵測到未知人物')){
-            entry.classList.add('unknow-face')
-        }
-
-        entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
-        DOM.recognitionLog.insertBefore(entry, DOM.recognitionLog.firstChild);
-    }
-
-    // Modal 拖曳與置中
-    function centerModal(modal) {
-        const content = modal.querySelector('.modal-content');
-        content.style.left = 'calc(50vw - ' + (content.offsetWidth/2) + 'px)';
-        content.style.top = 'calc(50vh - ' + (content.offsetHeight/2) + 'px)';
-        content.style.zIndex = 2000;
-    }
-    function makeModalDraggable(modal) {
-        const header = modal.querySelector('h2');
-        let isDragging = false, offsetX = 0, offsetY = 0;
-        header.style.cursor = 'move';
-        header.onmousedown = function(e) {
-            isDragging = true;
-            const content = modal.querySelector('.modal-content');
-            content.style.zIndex = 3000;
-            const rect = content.getBoundingClientRect();
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
-            document.onmousemove = function(e2) {
-                if (isDragging) {
-                    content.style.position = 'fixed';
-                    content.style.left = (e2.clientX - offsetX) + 'px';
-                    content.style.top = (e2.clientY - offsetY) + 'px';
-                }
-            };
-            document.onmouseup = function() {
-                isDragging = false;
-                content.style.zIndex = 2000;
-                document.onmousemove = null;
-                document.onmouseup = null;
-            };
-        };
-    }
-    [DOM.addFaceModal, DOM.testFaceModal, DOM.viewDbModal, DOM.viewLogDbModal, DOM.visitorBookingModal].forEach(makeModalDraggable);
-
-    // 彈窗打開時自動置中
-    DOM.addFaceBtn.onclick = () => {
-        DOM.addFaceModal.style.display = 'block';
-        setTimeout(()=>centerModal(DOM.addFaceModal), 0);
-    };
-    DOM.testFaceBtn.onclick = () => {
-        DOM.testFaceModal.style.display = 'block';
-        setTimeout(()=>centerModal(DOM.testFaceModal), 0);
-    };
-    DOM.viewFaceDbBtn.onclick = async () => {
-        DOM.viewDbModal.style.display = 'block';
-        setTimeout(()=>centerModal(DOM.viewDbModal), 0);
-        try {
-            const response = await fetch('/get_faces');
-            const faces = await response.json();
-            DOM.modalTableBody.innerHTML = '';
-            faces.forEach(face => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${face.id}</td><td>${face.name}</td><td>${face.created_date}</td>`;
-                DOM.modalTableBody.appendChild(row);
-            });
-        } catch (error) {
-            DOM.modalTableBody.innerHTML = '<tr><td colspan="3">獲取資料失敗</td></tr>';
         }
     };
 });

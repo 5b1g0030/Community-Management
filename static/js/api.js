@@ -58,3 +58,15 @@ export async function getFace() {
     const response = await fetch('/get_faces');
     return await parseJsonResponse(response);
 }
+
+// ===== 訪客驗證碼驗證 =====
+export async function verifyBookingCode(formData) {
+    // 把表單提交到後端，目的: '/verify_booking_code'，等待回應
+    const response = await fetch('/verify_booking_code', {
+        method: 'POST', // POST 請求
+        body: formData // 要傳送的資料
+    });            
+    // 後端回應後，把回傳的資料轉 JSON 格式
+    return await parseJsonResponse(response)
+
+}
