@@ -114,7 +114,24 @@ export async function visitorBooking() {
     };
 }
 
+// ===== 辨識紀錄 =====
+export function initViewLogDbModal({
+    onOpen,
+    onClose
+}) {
+    if (!DOM.viewLogDbBtn) return;
 
+    DOM.viewLogDbBtn.onclick = () => {
+        DOM.viewLogDbModal.style.display = 'block';
+        setTimeout(() => centerModal(DOM.viewLogDbModal), 0);
+        if (onOpen) onOpen();
+    };
+
+    DOM.closeViewLogDbModal.onclick = () => {
+        DOM.viewLogDbModal.style.display = 'none';
+        if (onClose) onClose();
+    };
+}
 
 // ===== Modal 拖曳與置中 =====
 function centerModal(modal) {

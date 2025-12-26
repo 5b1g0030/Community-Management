@@ -5,15 +5,16 @@
 
 import * as DOM from "./dom.js" // 引入網頁元素
 import { login, register } from "./api.js"; // 引入後端api溝通函式
-import { addFaceModal, testFaceModal, viewFace, visitorBooking } from "./modals.js";
+import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal } from "./modals.js";
 import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
 import { initVisitorBooking } from "./visitor.js";
+import { modalsClose } from "./modalController.js";
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 登入功能（只在登入頁面執行） =====
     if (DOM.loginForm) {
-        console.log("登入")
+        console.log("登入");
         DOM.loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (DOM.loginMessage) DOM.loginMessage.textContent = '';
@@ -24,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await login(formData) // 呼叫api函式
 
                 alert(result.message);
-                console.log('/login result: ', result)
+                console.log('/login result: ', result);
                 if(result.redirect) {
                     window.location.href = result.redirect;
                 }
@@ -101,17 +102,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 加入人臉彈出視窗 =====
     if (DOM.addFaceBtn){
-        addFaceModal()
+        addFaceModal();
     }
 
     // ===== 測試辨識彈出視窗 =====
     if (DOM.testFaceBtn){
-        testFaceModal()
+        testFaceModal();
     }
 
     // ===== 查看資料庫彈出視窗 =====
     if (DOM.viewFaceDbBtn){
-        viewFace()
+        viewFace();
     }
 
     // *************************
@@ -296,23 +297,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // ************************
     // 點擊「查看辨識紀錄資料庫」按鈕時，顯示對應的彈出視窗，並初始化或更新辨識紀錄的 DataTables 表格
     if (DOM.viewLogDbBtn){
-    DOM.viewLogDbBtn.onclick = async () => {
-        DOM.viewLogDbModal.style.display = 'block';
-        setTimeout(()=>centerModal(DOM.viewLogDbModal), 0);
-        
-        // 在彈窗顯示後，呼叫初始化函數
-        initializeRecognitionLogsTable(); // 呼叫「初始化辨識紀錄 DataTable」
-    };
-    DOM.closeViewLogDbModal.onclick = () => {
-        DOM.viewLogDbModal.style.display = 'none';
-        // 清空篩選器
-        $('.filter-container input, .filter-container select').val('');
-        $('#filter-year, #filter-month, #filter-day').val(''); // 清空日期篩選
-        // 如果 DataTable 存在，清空搜尋
-        if (recognitionLogsTable) {
-            recognitionLogsTable.search('').columns().search('').draw();
-        }
-    };
+        initViewLogDbModal({
+            onOpen: () => {
+                initializeRecognitionLogsTable(); // 呼叫「初始化辨識紀錄 DataTable」
+            },
+            onClose: () => {
+                // 清空篩選器
+                $('.filter-container input, .filter-container select').val('');
+                $('#filter-year, #filter-month, #filter-day').val(''); // 清空日期篩選
+                // 如果 DataTable 存在，清空搜尋
+                if (recognitionLogsTable) {
+                    recognitionLogsTable.search('').columns().search('').draw();
+                }
+            }
+        });
+        // DOM.viewLogDbBtn.onclick = async () => {
+        //     DOM.viewLogDbModal.style.display = 'block';
+        //     setTimeout(()=>centerModal(DOM.viewLogDbModal), 0);
+            
+        //     // 在彈窗顯示後，呼叫初始化函數
+        //     initializeRecognitionLogsTable(); // 呼叫「初始化辨識紀錄 DataTable」
+        // };
+        // DOM.closeViewLogDbModal.onclick = () => {
+        //     DOM.viewLogDbModal.style.display = 'none';
+        //     // 清空篩選器
+        //     $('.filter-container input, .filter-container select').val('');
+        //     $('#filter-year, #filter-month, #filter-day').val(''); // 清空日期篩選
+        //     // 如果 DataTable 存在，清空搜尋
+        //     if (recognitionLogsTable) {
+        //         recognitionLogsTable.search('').columns().search('').draw();
+        //     }
+        // };
     };
 
     // **************
@@ -321,38 +336,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== 訪客預約彈出視窗 =====
     // 查該元素是否存在再綁定事件，避免在「網頁執行這個賦值操作時」，沒有該元素的頁面會發生錯誤
     if (DOM.visitorBookingBtn) {
-        visitorBooking()
+        visitorBooking();
     }
     // ===== 訪客預約驗證表單提交 =====
-    initVisitorBooking()
+    initVisitorBooking();
 
-    // 點擊外部關閉
-    window.onclick = (event) => {
-        if (event.target === DOM.addFaceModal) {
-            DOM.addFaceModal.style.display = 'none';
-            DOM.modalUploadForm.reset();
-        }
-        if (event.target === DOM.testFaceModal) {
-            DOM.testFaceModal.style.display = 'none';
-            DOM.modalTestForm.reset();
-            DOM.testResult.textContent = '';
-        }
-        if (event.target === DOM.viewDbModal) {
-            DOM.viewDbModal.style.display = 'none';
-            DOM.modalTableBody.innerHTML = '';
-        }
-        if (event.target === DOM.viewLogDbModal) {
-            DOM.viewLogDbModal.style.display = 'none';
-            $('.filter-container input, .filter-container select').val('');
-            $('#filter-year, #filter-month, #filter-day').val('');
-            if (recognitionLogsTable) {
-                recognitionLogsTable.search('').columns().search('').draw();
-            }
-        }
-        if (event.target === DOM.visitorBookingModal) {
-            DOM.visitorBookingModal.style.display = 'none';
-            DOM.visitorBookingForm.reset();
-            DOM.bookingResult.textContent = '';
-        }
-    };
+    // 點擊外部關閉 modal
+    modalsClose();
+
 });
