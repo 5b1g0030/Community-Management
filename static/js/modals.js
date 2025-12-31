@@ -84,12 +84,8 @@ export async function viewFace() {
             DOM.modalTableBody.innerHTML = `<tr><td colspan="3">獲取資料失敗: ${error.message}</td></tr>`;
         }
     };
-    DOM.closeViewDbModal.onclick = () => {
-        DOM.viewDbModal.style.display = 'none';
-        DOM.modalTableBody.innerHTML = '';
-    };
     // ===== 關閉資料庫彈出視窗 =====
-    closeViewDbModal.onclick = () => {
+    DOM.closeViewDbModal.onclick = () => {
         viewDbModal.style.display = 'none'; // 隱藏彈出視窗
         modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
     };

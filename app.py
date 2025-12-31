@@ -318,20 +318,6 @@ def get_recognition_logs_datatables():
     return jsonify({'data': data})
 
 
-# # ===== 再拍一張功能-獲取最新人物影像 =====
-# @app.route('/latest_unknown_face')
-# def latest_unknown_face():
-#     global latest_frame
-#     if latest_frame is None:
-#         return jsonify({'image_url': None})
-#     temp_dir = os.path.join('static', 'temp')
-#     if not os.path.exists(temp_dir):
-#         os.makedirs(temp_dir)
-#     img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
-#     cv2.imwrite(img_path, latest_frame)
-#     image_url = '/' + img_path.replace('\\', '/')
-#     return jsonify({'image_url': image_url})
-
 # ===== 新增住戶頁面路由 =====
 @app.route('/residents')
 def residents():

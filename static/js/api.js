@@ -2,16 +2,28 @@
 // 後端溝通區
 // **************
 
+// ===== 判斷伺服器回傳是不是 JSON =====
+// 是 => 解析並檢查 HTTP 狀態
+// 不是 => 直接當錯誤處理
 async function parseJsonResponse(response) {
-    const contentType = response.headers.get('content-type') || '';
+    // 從 HTTP header 取得 Content-Type(後端回傳資料時留下的資料格式說明)
+    const contentType = response.headers.get('content-type') || ''; 
+
+    // 檢查是否包含 application/json (標準 JSON API 回應)
     if (contentType.includes('application/json')) {
-        const data = await response.json();
+        const data = await response.json(); // 把 body 轉成 JS 物件
+        // 檢查是否有錯誤碼
         if (!response.ok) {
-            throw new Error(data && data.message ? data.message : `伺服器錯誤 (status ${response.status})`);
+            // 如果後端有錯誤訊息，則直接輸出；沒有的話輸出錯誤碼(確認有data也有massage欄位)
+            throw new Error(
+                data && data.message
+                 ? data.message :
+                  `伺服器錯誤 (status ${response.status})`);
         }
         return data;
+    // 處理伺服器錯誤時的網頁錯誤訊息，立即傳錯避免後續程式誤用資料(非JSON)
     } else {
-        const text = await response.text();
+        const text = await response.text(); // 轉成文字
         console.error('非 JSON 回應：', response.status, text);
         throw new Error(`伺服器回傳非 JSON 回應 (status ${response.status})`);
     }

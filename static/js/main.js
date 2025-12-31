@@ -311,23 +311,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        // DOM.viewLogDbBtn.onclick = async () => {
-        //     DOM.viewLogDbModal.style.display = 'block';
-        //     setTimeout(()=>centerModal(DOM.viewLogDbModal), 0);
-            
-        //     // 在彈窗顯示後，呼叫初始化函數
-        //     initializeRecognitionLogsTable(); // 呼叫「初始化辨識紀錄 DataTable」
-        // };
-        // DOM.closeViewLogDbModal.onclick = () => {
-        //     DOM.viewLogDbModal.style.display = 'none';
-        //     // 清空篩選器
-        //     $('.filter-container input, .filter-container select').val('');
-        //     $('#filter-year, #filter-month, #filter-day').val(''); // 清空日期篩選
-        //     // 如果 DataTable 存在，清空搜尋
-        //     if (recognitionLogsTable) {
-        //         recognitionLogsTable.search('').columns().search('').draw();
-        //     }
-        // };
     };
 
     // **************
