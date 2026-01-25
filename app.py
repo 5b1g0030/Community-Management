@@ -7,10 +7,14 @@ import numpy as np
 from modules.face_detector import FaceDetector  # 修改引用
 from modules.database import DatabaseManager    # 修改引用
 from modules.user import UserManager
+from modules.face_recognition import recognize_face_from_frame, init_face_cache, refresh_face_cache  # 新增引用
 from utils.camera_utils import CameraManager
 import os
 from datetime import datetime
 import random
+import face_recognition
+from modules.config import FACE_RECOGNITION_TOLERANCE, FACE_RECOGNITION_FRAME_SKIP
+
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -19,6 +23,9 @@ socketio = SocketIO(app)
 face_detector = FaceDetector()      # 人臉偵測器
 db_manager = DatabaseManager()      # 資料庫管理器
 user = UserManager()
+
+# 初始化人臉辨識快取
+init_face_cache(db_manager)
 
 latest_frame = None
 
@@ -99,7 +106,7 @@ last_names = set()
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
     # ----- 推送辨識訊息(已知, 未知) -----
-    def face_message():
+    def face_message(results):
         # 查看每一筆資料
         for result in results:
             name = result['name']  # 名字欄位
@@ -145,6 +152,9 @@ def gen_frames():
 
 
     """ 開始讀取影像&播放 """
+    frame_count = 0  # 幀計數器
+    last_results = []  # 儲存上次辨識結果
+    
     try:
         while True:
             ret, frame = cap.read() # 讀取影像
@@ -154,14 +164,22 @@ def gen_frames():
             
             latest_frame = frame.copy() # 紀錄最新影像(給人工審核視窗更新照片)
 
-            # ----- 進行人臉辨識 -----
-            results = face_detector.recognize_face(frame)  # 修改引用
-            current_names = set([r['name']
-                                for r in results])  # 本次影像中所有被辨識到的人名（不重複）
+            # ----- 幀數控制：每 N 幀才執行一次辨識 -----
+            frame_count += 1
+            if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
+                # 進行人臉辨識
+                results = recognize_face_from_frame(db_manager, frame, use_cache=True)
+                last_results = results  # 儲存辨識結果
+                frame_count = 0  # 重置計數器
+            else:
+                # 使用上次的辨識結果
+                results = last_results
+
+            current_names = set([r['name'] for r in results])  # 本次影像中所有被辨識到的人名（不重複）
 
             # ----- 第一次啟動時，主動推送辨識紀錄 -----
             if last_names is None:
-                face_message() # 呼叫「根據辨識情況推送訊息函式」
+                face_message(results) # 呼叫「根據辨識情況推送訊息函式」
                 last_names = current_names # 紀錄本次辨識到的人臉 
 
             # ----- 在新住戶或未知人物出現時推送 -----
@@ -172,7 +190,7 @@ def gen_frames():
                     # 【辨識紀錄-未知人物事件儲存】
                     db_manager.save_recognition_log("未知", "未偵測到人臉")
                 else:
-                    face_message() # 呼叫「根據辨識情況推送訊息函式」
+                    face_message(results) # 呼叫「根據辨識情況推送訊息函式」
                     # ----- 儲存辨識紀錄 -----
                     # 直接用 results 裡的 id 與 confidence 儲存：只存「新出現且為已知」的人
 
@@ -199,6 +217,7 @@ def gen_frames():
             ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
 
+            # 把每一張即時攝影機畫面傳給前端網頁
             yield (b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
     finally:
@@ -216,81 +235,116 @@ def video_feed():
 # ===== 加入人臉到資料庫 =====
 @app.route('/add_face', methods=['POST'])
 def add_face():
-    # 檢查是否有圖片
-    if 'image' not in request.files:
-        return jsonify({'message': '未選擇圖片'}), 400 # flask 錯誤訊息回應語法轉json格式 , 網頁狀態碼
-
-    file = request.files['image']   # 上傳的圖片
-    name = request.form.get('name') # 上傳的姓名
-
-    # 檢查是否有姓名
-    if not name:
-        return jsonify({'message': '未輸入姓名'}), 400
-
-    # 讀取並處理圖片
-    image_bytes = file.read()                       # 讀取圖片資料(二進位)
-    nparr = np.frombuffer(image_bytes, np.uint8)    # 轉換為 numpy 陣列
-    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)   # 解碼為 opencv 可用的影像格式
-
-    # 加入人臉到資料庫(使用例外處理)
     try:
-        success = face_detector.add_face_to_database(image, name)  # 修改引用
-        # 當函式完整執行完的結果
-        if success:
-            return jsonify({'message': '成功加入人臉資料'}) # flask 錯誤訊息回應語法，狀態碼預設為 200
-        else:
-            return jsonify({'message': '加入失敗：未偵測到人臉'}), 400
+        name = request.form.get('name')
+        image_file = request.files.get('image')
+        
+        if not name or not image_file:
+            return jsonify({'success': False, 'message': '請提供姓名和照片'})
+        
+        # 讀取圖片
+        image = face_recognition.load_image_file(image_file)
+        face_encodings = face_recognition.face_encodings(image)
+        
+        if len(face_encodings) == 0:
+            return jsonify({'success': False, 'message': '照片中未檢測到人臉'})
+        
+        if len(face_encodings) > 1:
+            return jsonify({'success': False, 'message': '照片中檢測到多張人臉，請使用只有一張人臉的照片'})
+        
+        # 取得人臉編碼
+        face_encoding = face_encodings[0]
+        encoding_blob = face_encoding.tobytes()
+        
+        # 儲存到資料庫(需要包裝)
+        conn, cursor = db_manager.get_db_connection()
+        cursor.execute("INSERT INTO face_recognition (name, encoding) VALUES (?, ?)", (name, encoding_blob))
+        conn.commit()
+        conn.close()
+        
+        # 重新整理快取
+        refresh_face_cache(db_manager)
+        print(f"[系統] 已新增 {name} 並重新整理快取")
+        
+        return jsonify({'success': True, 'message': f'成功註冊 {name} 的人臉'})
+    
     except Exception as e:
-        return jsonify({'message': f'加入失敗：{str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
 
 # ===== 測試辨識人臉 =====
 @app.route('/test_face', methods=['POST'])
 def test_face():
-    if 'image' not in request.files:
-        return jsonify({'message': '未選擇圖片'}), 400
-
     try:
-
-        # 讀取並處理圖片
-        file = request.files['image']
-        image_bytes = file.read()
-        if not image_bytes:
-            return jsonify({'message': '上傳圖片為空'}), 400
+        image_file = request.files.get('image')
         
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if image is None:
-            app.logger.error('cv2.imdecode returned None for uploaded file: %s', file.filename)
-            return jsonify({'message': '無法解析圖片，請上傳有效的圖片檔案'}), 400
+        if not image_file:
+            return jsonify({'success': False, 'message': '請提供照片'})
+        
+        # 讀取圖片
+        image = face_recognition.load_image_file(image_file)
+        face_encodings = face_recognition.face_encodings(image)
+        
+        if len(face_encodings) == 0:
+            return jsonify({'success': False, 'message': '照片中未檢測到人臉'})
+        
+        # 從資料庫載入已知人臉(需要分裝)
+        conn, cursor = db_manager.get_db_connection()
+        cursor.execute("SELECT name, face_encoding FROM faces")
+        known_faces = cursor.fetchall()
+        conn.close()
 
-        # 進行人臉辨識
-        results = face_detector.recognize_face(image)  # 修改引用
-
-        if not results:
-            return jsonify({'message': '未偵測到人臉'}), 200
-
-        messages = []
-        for result in results:
-            name = result['name']
-            confidence = result['confidence']
-            messages.append(f"{name} (信心度: {confidence:.1f})")
-
-        return jsonify({'message': '辨識結果：' + '、'.join(messages)})
+        # 檢查是否有已註冊人臉(需要分裝)
+        if not known_faces:
+            return jsonify({'success': False, 'message': '資料庫中沒有已註冊的人臉'})
+        # 
+        known_face_encodings = []
+        known_face_names = []
+        for name, encoding_blob in known_faces:
+            known_face_encodings.append(np.frombuffer(encoding_blob, dtype=np.float64))
+            known_face_names.append(name)
+        
+        # 辨識人臉(需要分裝)
+        results = []
+        for face_encoding in face_encodings:
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=FACE_RECOGNITION_TOLERANCE)
+            
+            if True in matches:
+                face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+                best_match_index = np.argmin(face_distances)
+                if matches[best_match_index]:
+                    name = known_face_names[best_match_index]
+                    confidence = 1 - face_distances[best_match_index]
+                    results.append({'name': name, 'confidence': f'{confidence:.2%}'})
+                else:
+                    results.append({'name': 'Unknown', 'confidence': 'N/A'})
+            else:
+                results.append({'name': 'Unknown', 'confidence': 'N/A'})
+        
+        return jsonify({'success': True, 'results': results})
+    
     except Exception as e:
-        app.logger.exception('test_face failed')
-        return jsonify({'massage': f'伺服器錯誤: {str(e)}'}), 500
+        return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
 
 # ===== 取得人臉資料 =====
 @app.route('/get_faces')
 def get_faces():
-    faces = db_manager.get_all_faces()  # 修改引用
-    return jsonify(faces)               # 轉 json 格式
+    try:
+        conn = db_manager.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM faces")
+        faces = cursor.fetchall()
+        conn.close()
+        
+        face_list = [{'id': face[0], 'name': face[1]} for face in faces]
+        return jsonify({'success': True, 'faces': face_list})
+    
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
 
-# # ===== 取得辨識紀錄資料 =====
-# @app.route('/get_recognition_logs')
-# def get_recognition_logs():
-#     logs = db_manager.get_all_recognition_logs()  # 修改引用
-#     return jsonify(logs)                          # 轉 json 格式
+
+"""
+===== 訪客預約功能 ===== 
+"""
 
 # ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
 @app.route('/api/recognition_logs')
@@ -317,16 +371,10 @@ def get_recognition_logs_datatables():
     
     return jsonify({'data': data})
 
-
 # ===== 新增住戶頁面路由 =====
 @app.route('/residents')
 def residents():
     return render_template('residents.html')
-
-
-"""
-===== 訪客預約功能 ===== 
-"""
 
 # ===== 生成訪客預約碼 =====
 @app.route('/generate_booking_code', methods=['POST'])

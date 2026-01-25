@@ -1,9 +1,10 @@
 import sqlite3
 import hashlib
+from .config import DATABASE
 
 class UserManager:
 	# 資料庫路徑
-	def __init__(self, db_path='face_database/face_database.db'):
+	def __init__(self, db_path=DATABASE):
 		self.db_path = db_path
 
     # ===== 註冊使用者 =====

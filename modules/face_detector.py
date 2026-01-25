@@ -2,11 +2,12 @@ import cv2
 import pickle
 from modules.database import DatabaseManager
 from modules.model import ModelManager
+from .config import DATABASE
 
 # ===== 影像處理類別 =====
 class FaceDetector:
     # ===== 初始化 =====
-    def __init__(self, model_path='face_database/face_model.pkl', db_path='face_database/face_database.db'):
+    def __init__(self, model_path='face_database/face_model.pkl', db_path=DATABASE):
         # 訓練模型路徑
         self.model_path = model_path
 

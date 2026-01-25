@@ -1,22 +1,31 @@
 import sqlite3
 from datetime import datetime
 from .user import UserManager
+from .config import DATABASE
 
 # ===== 資料庫存取類別 =====
 class DatabaseManager:
     # ===== 初始化資料庫觸發函式 =====
-    def __init__(self, db_path='face_database/face_database.db'):
+    def __init__(self, db_path=DATABASE):
         self.db_path = db_path # 設定路徑
         self.init_database()
         # 建立 user manager 以維持舊有 API 的轉發
         self.user_manager = UserManager(self.db_path)
     
+    # ===== 建立資料庫連接與游標 =====
+    # 回傳 連接物件和游標物件
+    # ===============================
+    def get_db_connection(self):
+        """統一建立資料庫連接和游標"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        return conn, cursor
+    
     # ===== 初始化資料庫 =====
     # 建立資料庫表格(已存在則不建立)
     # =======================  
     def init_database(self):
-        conn = sqlite3.connect(self.db_path) # 連接到指定路徑的 SQLite 資料庫
-        cursor = conn.cursor() # 建立游標物件用於執行 SQL 指令
+        conn, cursor = self.get_db_connection() # 使用統一的連接方法
         
         # ----- 創建人臉資料表(faces) -----
         # id: 主鍵、自動遞增、不可重複
@@ -32,6 +41,20 @@ class DatabaseManager:
                 face_encoding BLOB,
                 image_path TEXT,
                 created_date TEXT
+            )
+        ''')
+
+        # ----- 新人臉識別(face_recognition) -----
+        # (儲存姓名與 128 維特徵向量；存成 text，內容為 json 格式)
+        # id(自動編號)
+        # 名稱
+        # 維特徵向量
+        # ---------------------------------------
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS face_recognition (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                encoding TEXT NOT NULL
             )
         ''')
         
@@ -55,48 +78,7 @@ class DatabaseManager:
             )
         ''')
 
-        # 檢查並升級舊的 recognition_log 表格
-        try:
-            cursor.execute("PRAGMA table_info(recognition_log)")
-            cols = [row[1] for row in cursor.fetchall()]
-            
-            # 如果是舊版本的表格，需要重新建構
-            if 'event_type' not in cols or 'event_message' not in cols:
-                # 備份舊資料
-                cursor.execute("ALTER TABLE recognition_log RENAME TO recognition_log_old")
-                
-                # 建立新表格
-                cursor.execute('''
-                    CREATE TABLE recognition_log (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        created_date TEXT NOT NULL,
-                        event_type TEXT NOT NULL,
-                        event_message TEXT NOT NULL,
-                        face_id INTEGER,
-                        confidence REAL,
-                        FOREIGN KEY (face_id) REFERENCES faces (id)
-                    )
-                ''')
-                
-                # 遷移舊資料 (將舊的 recognition_date 轉為 created_date，設定預設事件類型)
-                cursor.execute('''
-                    INSERT INTO recognition_log (created_date, event_type, event_message, face_id, confidence)
-                    SELECT 
-                        recognition_date,
-                        '住戶',
-                        '舊版本辨識紀錄',
-                        face_id,
-                        confidence
-                    FROM recognition_log_old
-                ''')
-                
-                # 刪除舊表格
-                cursor.execute("DROP TABLE recognition_log_old")
-                print("辨識紀錄表格已升級至新版本")
-        except Exception as e:
-            print(f"升級辨識紀錄表格時發生錯誤: {e}")
-
-        # ----- 建立使用者資料表格 -----
+        # ----- 建立使用者資料表格(users) -----
         # id: 主鍵、自動遞增、不可重複
         # username: 使用者名稱、文字、不可為空、不重複
         # password_hash: 密碼(加密後)、文字、不可為空
@@ -112,17 +94,8 @@ class DatabaseManager:
                 )    
         ''')
         
-        # 如果已有舊的 users 表但沒有 role 欄位，嘗試加入欄位（避免破壞既有資料）
-        try:
-            cursor.execute("PRAGMA table_info(users)")
-            cols = [row[1] for row in cursor.fetchall()]
-            if 'role' not in cols:
-                cursor.execute("ALTER TABLE users ADD COLUMN role TEXT DEFAULT '住戶'")
-        except Exception:
-            # 若 ALTER 失敗則忽略（不致命）
-            pass
 
-        # ----- 建立訪客預約資料表格 -----
+        # ----- 建立訪客預約資料表格(visitor_bookings) -----
         # id: 主鍵、自動遞增、不可重複
         # username: 住戶名稱、文字、不可為空
         # booking_code: 6位數預約碼、文字、不可為空、不重複
@@ -141,7 +114,7 @@ class DatabaseManager:
                 )    
         ''')
 
-        # ----- 建立訪客留言資料表格 -----
+        # ----- 建立訪客留言資料表格(user_message) -----
         # id: 主鍵、自動遞增、不可重複
         # username: 住戶名稱、文字、不可為空
         # visitor_image_path: 訪客照片路徑、文字、不可為空
@@ -162,18 +135,6 @@ class DatabaseManager:
                 )    
         ''')
 
-        # 如果已有舊的 user_message 表但沒有 status 和 reviewed_date 欄位，嘗試加入欄位
-        try:
-            cursor.execute("PRAGMA table_info(user_message)")
-            cols = [row[1] for row in cursor.fetchall()]
-            if 'status' not in cols:
-                cursor.execute("ALTER TABLE user_message ADD COLUMN status TEXT DEFAULT 'pending'")
-            if 'reviewed_date' not in cols:
-                cursor.execute("ALTER TABLE user_message ADD COLUMN reviewed_date TIMESTAMP")
-        except Exception:
-            # 若 ALTER 失敗則忽略（不致命）
-            pass
-
         conn.commit() # 確認變更(寫入磁碟)
         conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
@@ -183,8 +144,7 @@ class DatabaseManager:
     # ==================================== 
     def get_all_faces(self):
         try:
-            conn = sqlite3.connect(self.db_path) # 連接資料庫
-            cursor = conn.cursor()               # 建立物件執行 SQL 指令
+            conn, cursor = self.get_db_connection() # 使用統一的連接方法
             
             # 查詢資料(face 表格中的三個欄位(id, name, created_date))
             cursor.execute("SELECT id, name, created_date FROM faces")
@@ -219,8 +179,7 @@ class DatabaseManager:
     # =================================== 
     def get_all_recognition_logs(self):
         try:
-            conn = sqlite3.connect(self.db_path) # 連接資料庫
-            cursor = conn.cursor()               # 建立物件執行 SQL 指令
+            conn, cursor = self.get_db_connection() # 使用統一的連接方法
             
             # 查詢辨識紀錄，並與人臉表格做關聯以取得人名，同時包含face_id和confidence
             cursor.execute('''
@@ -263,8 +222,7 @@ class DatabaseManager:
     # 傳入 人臉名稱、人臉資訊(二進位)、圖片
     # ================================================ 
     def save_face_to_db(self, name, face_blob, image_path=None):
-        conn = sqlite3.connect(self.db_path)  # 連接SQLite
-        cursor = conn.cursor()  # 建立游標物件，用來執行 SQL 指令（查詢、插入、更新等）
+        conn, cursor = self.get_db_connection() # 使用統一的連接方法
 
         # 取得目前的日期和時間，並格式化成字串，記錄資料建立的時間
         created_date = datetime.now().strftime(
@@ -291,8 +249,7 @@ class DatabaseManager:
     # =========================================== 
     def save_recognition_log(self, event_type, event_message, face_id=None, confidence=None):
         try:
-            conn = sqlite3.connect(self.db_path) # 連結資料庫
-            cursor = conn.cursor()               # 建立 SQL 游標
+            conn, cursor = self.get_db_connection() # 使用統一的連接方法
 
             # 記錄事件發生時間
             created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -321,10 +278,10 @@ class DatabaseManager:
     # 傳出 人臉資料
     # =========================== 
     def search_face(self, face_id):
-        conn = sqlite3.connect(self.db_path) # 連接資料庫
-        cursor = conn.cursor() # 建立游標物件執行 SQL 指令
+        conn, cursor = self.get_db_connection() # 使用統一的連接方法
         cursor.execute("SELECT name FROM faces WHERE id = ?", (face_id,))# SQL 查詢，跟據 ID 查詢人名
         result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
+        conn.close() # 關閉連接
         return result
-    
+
 
