@@ -98,7 +98,8 @@ class DatabaseManager:
         # ----- 建立訪客預約資料表格(visitor_bookings) -----
         # id: 主鍵、自動遞增、不可重複
         # username: 住戶名稱、文字、不可為空
-        # booking_code: 6位數預約碼、文字、不可為空、不重複
+        # visitor_face_name: 訪客人臉識別名稱
+        # visitor_face_id: 關聯到 face_recognition 表格的 ID
         # created_date: 預約建立時間
         # used: 是否已使用、布林值、預設為False
         # used_date: 使用時間
@@ -107,10 +108,12 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS visitor_bookings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT NOT NULL,
-                    booking_code TEXT UNIQUE NOT NULL,
+                    visitor_face_name TEXT NOT NULL,
+                    visitor_face_id INTEGER,
                     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     used BOOLEAN DEFAULT FALSE,
-                    used_date TIMESTAMP       
+                    used_date TIMESTAMP,
+                    FOREIGN KEY (visitor_face_id) REFERENCES face_recognition (id)
                 )    
         ''')
 
@@ -283,5 +286,104 @@ class DatabaseManager:
         result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
         conn.close() # 關閉連接
         return result
+
+    # ===== 儲存訪客預約記錄 =====
+    def save_visitor_booking(self, username, visitor_face_name, visitor_face_id):
+        """
+        儲存訪客預約記錄
+        
+        參數:
+            username: 住戶名稱
+            visitor_face_name: 訪客人臉識別名稱 (如 visitor_20240101_123456)
+            visitor_face_id: 關聯到 face_recognition 表格的 ID
+        
+        返回:
+            tuple: (success, message)
+        """
+        try:
+            conn, cursor = self.get_db_connection()
+            
+            created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            cursor.execute('''
+                INSERT INTO visitor_bookings 
+                (username, visitor_face_name, visitor_face_id, created_date)
+                VALUES (?, ?, ?, ?)
+            ''', (username, visitor_face_name, visitor_face_id, created_date))
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"[資料庫] 成功儲存訪客預約: {username} -> {visitor_face_name}")
+            return True, f'訪客預約成功，訪客可直接到門口進行人臉辨識'
+        
+        except Exception as e:
+            print(f"[資料庫] 儲存訪客預約失敗: {e}")
+            return False, f'儲存失敗: {str(e)}'
+
+    # ===== 根據訪客人臉名稱查詢住戶名稱 =====
+    def get_visitor_by_face_name(self, visitor_face_name):
+        """
+        根據訪客人臉名稱查詢對應的住戶名稱
+        
+        參數:
+            visitor_face_name: 訪客人臉識別名稱 (如 visitor_20240101_123456)
+        
+        返回:
+            str: 住戶名稱，若查詢不到則回傳 None
+        """
+        try:
+            conn, cursor = self.get_db_connection()
+            
+            cursor.execute('''
+                SELECT username FROM visitor_bookings 
+                WHERE visitor_face_name = ? AND used = FALSE
+            ''', (visitor_face_name,))
+            
+            result = cursor.fetchone()
+            conn.close()
+            
+            if result:
+                return result[0]  # 回傳住戶名稱
+            return None
+        
+        except Exception as e:
+            print(f"[資料庫] 查詢訪客住戶失敗: {e}")
+            return None
+
+    # ===== 清除訪客人臉資料 =====
+    def clear_visitor_face_data(self, visitor_face_name):
+        """
+        清除訪客的人臉資料（完全刪除，不保留記錄）
+        
+        參數:
+            visitor_face_name: 訪客人臉識別名稱
+        
+        返回:
+            bool: 是否成功清除
+        """
+        try:
+            conn, cursor = self.get_db_connection()
+            
+            # 1. 從 face_recognition 表格刪除人臉資料
+            cursor.execute('DELETE FROM face_recognition WHERE name = ?', (visitor_face_name,))
+            
+            # 2. 更新 visitor_bookings 表格，標記為已使用
+            used_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor.execute('''
+                UPDATE visitor_bookings 
+                SET used = TRUE, used_date = ?
+                WHERE visitor_face_name = ?
+            ''', (used_date, visitor_face_name))
+            
+            conn.commit()
+            conn.close()
+            
+            print(f"[資料庫] 成功清除訪客人臉資料: {visitor_face_name}")
+            return True
+        
+        except Exception as e:
+            print(f"[資料庫] 清除訪客人臉資料失敗: {e}")
+            return False
 
 

@@ -176,3 +176,146 @@ th {
     margin-bottom: 10px;
     color: #333;
 }
+
+/* ==================== 
+   住戶頁面專屬樣式 
+   ==================== */
+
+/* 住戶頁面容器 */
+.residents-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* 住戶頁面按鈕 */
+.residents-btn {
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 10px 5px;
+}
+
+.residents-btn:hover {
+    background: #0056b3;
+}
+
+.residents-btn.mailbox {
+    background: #28a745;
+}
+
+.residents-btn.mailbox:hover {
+    background: #218838;
+}
+
+/* 預約結果顯示 */
+.booking-result {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #f9f9f9;
+}
+
+.booking-code {
+    font-size: 24px;
+    font-weight: bold;
+    color: #007bff;
+    text-align: center;
+    margin: 10px 0;
+}
+
+/* 住戶頁面的 Modal 樣式（覆蓋基本設定） */
+.residents-modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: none;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* 訊息列表項目 */
+.message-item {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    margin: 10px 0;
+    background: #f9f9f9;
+}
+
+.message-item h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.message-item p {
+    margin: 5px 0;
+}
+
+.no-messages {
+    text-align: center;
+    color: #666;
+    padding: 50px;
+}
+
+/* 訪客照片 */
+.visitor-image {
+    max-width: 200px;
+    max-height: 200px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+/* 審核按鈕區域 */
+.review-buttons {
+    margin: 15px 0;
+}
+
+.review-buttons button {
+    padding: 8px 15px;
+    margin: 0 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.approve-btn {
+    background: #28a745;
+    color: white;
+}
+
+.approve-btn:hover {
+    background: #218838;
+}
+
+.reject-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.reject-btn:hover {
+    background: #c82333;
+}
+
+/* 狀態標籤 */
+.status-pending {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.status-approved {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-rejected {
+    color: #dc3545;
+    font-weight: bold;
+}

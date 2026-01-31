@@ -7,7 +7,6 @@ import * as DOM from "./dom.js" // 引入網頁元素
 import { login, register } from "./api.js"; // 引入後端api溝通函式
 import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal } from "./modals.js";
 import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
-import { initVisitorBooking } from "./visitor.js";
 import { modalsClose } from "./modalController.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -317,13 +316,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 訪客預約
     // **************
     // ===== 訪客預約彈出視窗 =====
-    // 查該元素是否存在再綁定事件，避免在「網頁執行這個賦值操作時」，沒有該元素的頁面會發生錯誤
     if (DOM.visitorBookingBtn) {
         visitorBooking();
     }
-    // ===== 訪客預約驗證表單提交 =====
-    initVisitorBooking();
-
+    
     // 點擊外部關閉 modal
     modalsClose();
 

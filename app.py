@@ -7,7 +7,7 @@ import numpy as np
 from modules.face_detector import FaceDetector  # 修改引用
 from modules.database import DatabaseManager    # 修改引用
 from modules.user import UserManager
-from modules.face_recognition import recognize_face_from_frame, init_face_cache, refresh_face_cache  # 新增引用
+from modules.face_recognition import FaceRecognition, init_face_cache, refresh_face_cache  # 新增引用
 from utils.camera_utils import CameraManager
 import os
 from datetime import datetime
@@ -20,9 +20,10 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 # 初始化系統組件
-face_detector = FaceDetector()      # 人臉偵測器
-db_manager = DatabaseManager()      # 資料庫管理器
-user = UserManager()
+face_detector = FaceDetector()  # 人臉辨識器
+db_manager = DatabaseManager()  # 資料庫管理器
+user = UserManager()            # 使用者資料管理
+face_recognizer = FaceRecognition()  # 人臉註冊與辨識
 
 # 初始化人臉辨識快取
 init_face_cache(db_manager)
@@ -105,31 +106,58 @@ last_names = set()
 
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
-    # ----- 推送辨識訊息(已知, 未知) -----
+    # ----- 推送辨識訊息(已知, 未知, 訪客) -----
     def face_message(results):
-        # 查看每一筆資料
         for result in results:
-            name = result['name']  # 名字欄位
+            name = result['name']
 
+            # ----- 檢查是否為訪客 -----
+            if name and name.startswith('visitor_'):
+                # 查詢對應的住戶名稱
+                username = db_manager.get_visitor_by_face_name(name)
+                
+                if username:
+                    # 推送訊息
+                    socketio.emit('recognition', {
+                        'type': 'recognition',
+                        'message': f'偵測到{username}住戶的訪客已到大門'
+                    })
+                    
+                    # 儲存辨識紀錄
+                    face_id = result.get('id')
+                    conf = float(result.get('confidence', 0.0))
+                    if face_id:
+                        db_manager.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
+                    
+                    # 立即清除訪客人臉資料
+                    success = db_manager.clear_visitor_face_data(name)
+                    
+                    if success:
+                        # 重新整理快取
+                        refresh_face_cache(db_manager)
+                        print(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
+                    else:
+                        print(f"[系統] 訪客 {name} 人臉資料清除失敗")
+            
             # ----- 如果不是「未知」且 name 不為空，則顯示名字 -----
-            if name and name != '未知':
-                # 辨識紀錄訊息「偵測到xxx住戶來到大門」，包含「事件名稱, 資料(資料類型, 訊息內容)」
+            elif name and name != '未知':
                 socketio.emit('recognition', {
-                              'type': 'recognition', 'message': f'偵測到{name}住戶來到大門'})
+                    'type': 'recognition',
+                    'message': f'偵測到{name}住戶來到大門'
+                })
+            
             # ----- 如果是「未知」，顯示未知人物 -----
             elif name == '未知':
-                # ------ 辨識紀錄訊息「偵測到未知人物」 -----
                 socketio.emit('recognition', {
-                              'type': 'recognition', 'message': '偵測到未知人物'})
-
-                # ----- 檢查 static/temp 路徑是否存在，若無則建立 -----
+                    'type': 'recognition',
+                    'message': '偵測到未知人物'
+                })
+                
+                # 儲存暫存圖片
                 temp_dir = os.path.join('static', 'temp')
                 if not os.path.exists(temp_dir):
                     os.makedirs(temp_dir)
-
-                # ----- 儲存暫存圖片(請確保路徑存在) -----
-                img_path = None
-                # 儲存整個畫面
+                
                 img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
                 cv2.imwrite(img_path, frame)
     
@@ -167,8 +195,8 @@ def gen_frames():
             # ----- 幀數控制：每 N 幀才執行一次辨識 -----
             frame_count += 1
             if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
-                # 進行人臉辨識
-                results = recognize_face_from_frame(db_manager, frame, use_cache=True)
+                # 進行人臉辨識（使用實例方法）
+                results = face_recognizer.recognize_face_from_frame(db_manager, frame, use_cache=True)
                 last_results = results  # 儲存辨識結果
                 frame_count = 0  # 重置計數器
             else:
@@ -242,31 +270,27 @@ def add_face():
         if not name or not image_file:
             return jsonify({'success': False, 'message': '請提供姓名和照片'})
         
-        # 讀取圖片
-        image = face_recognition.load_image_file(image_file)
-        face_encodings = face_recognition.face_encodings(image)
+        # 建立臨時資料夾
+        temp_dir = os.path.join('static', 'temp_uploads')
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
         
-        if len(face_encodings) == 0:
-            return jsonify({'success': False, 'message': '照片中未檢測到人臉'})
+        # 儲存上傳的圖片到臨時資料夾
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f'{name}_{timestamp}.jpg'
+        temp_path = os.path.join(temp_dir, filename)
+        image_file.save(temp_path)
         
-        if len(face_encodings) > 1:
-            return jsonify({'success': False, 'message': '照片中檢測到多張人臉，請使用只有一張人臉的照片'})
+        # 呼叫 register_faces 函式（使用實例方法）
+        result = face_recognizer.register_faces(db_manager, name, temp_dir, [filename])
         
-        # 取得人臉編碼
-        face_encoding = face_encodings[0]
-        encoding_blob = face_encoding.tobytes()
-        
-        # 儲存到資料庫(需要包裝)
-        conn, cursor = db_manager.get_db_connection()
-        cursor.execute("INSERT INTO face_recognition (name, encoding) VALUES (?, ?)", (name, encoding_blob))
-        conn.commit()
-        conn.close()
-        
-        # 重新整理快取
-        refresh_face_cache(db_manager)
-        print(f"[系統] 已新增 {name} 並重新整理快取")
-        
-        return jsonify({'success': True, 'message': f'成功註冊 {name} 的人臉'})
+        if result['success']:
+            # 重新整理快取
+            refresh_face_cache(db_manager)
+            print(f"[系統] 已新增 {name} 並重新整理快取")
+            return jsonify({'success': True, 'message': result['message']})
+        else:
+            return jsonify({'success': False, 'message': result['message']})
     
     except Exception as e:
         return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
@@ -280,47 +304,24 @@ def test_face():
         if not image_file:
             return jsonify({'success': False, 'message': '請提供照片'})
         
-        # 讀取圖片
-        image = face_recognition.load_image_file(image_file)
-        face_encodings = face_recognition.face_encodings(image)
+        # 建立臨時資料夾
+        temp_dir = os.path.join('static', 'temp_uploads')
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
         
-        if len(face_encodings) == 0:
-            return jsonify({'success': False, 'message': '照片中未檢測到人臉'})
+        # 儲存上傳的圖片到臨時資料夾
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f'test_{timestamp}.jpg'
+        temp_path = os.path.join(temp_dir, filename)
+        image_file.save(temp_path)
         
-        # 從資料庫載入已知人臉(需要分裝)
-        conn, cursor = db_manager.get_db_connection()
-        cursor.execute("SELECT name, face_encoding FROM faces")
-        known_faces = cursor.fetchall()
-        conn.close()
-
-        # 檢查是否有已註冊人臉(需要分裝)
-        if not known_faces:
-            return jsonify({'success': False, 'message': '資料庫中沒有已註冊的人臉'})
-        # 
-        known_face_encodings = []
-        known_face_names = []
-        for name, encoding_blob in known_faces:
-            known_face_encodings.append(np.frombuffer(encoding_blob, dtype=np.float64))
-            known_face_names.append(name)
+        # 呼叫 recognize_face 函式（使用實例方法）
+        result = face_recognizer.recognize_face(db_manager, temp_path)
         
-        # 辨識人臉(需要分裝)
-        results = []
-        for face_encoding in face_encodings:
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding, tolerance=FACE_RECOGNITION_TOLERANCE)
-            
-            if True in matches:
-                face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-                best_match_index = np.argmin(face_distances)
-                if matches[best_match_index]:
-                    name = known_face_names[best_match_index]
-                    confidence = 1 - face_distances[best_match_index]
-                    results.append({'name': name, 'confidence': f'{confidence:.2%}'})
-                else:
-                    results.append({'name': 'Unknown', 'confidence': 'N/A'})
-            else:
-                results.append({'name': 'Unknown', 'confidence': 'N/A'})
-        
-        return jsonify({'success': True, 'results': results})
+        if result['success']:
+            return jsonify({'success': True, 'results': result['results'], 'message': result['message']})
+        else:
+            return jsonify({'success': False, 'message': result['message']})
     
     except Exception as e:
         return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
@@ -379,188 +380,83 @@ def residents():
 # ===== 生成訪客預約碼 =====
 @app.route('/generate_booking_code', methods=['POST'])
 def generate_booking_code():
-    # ---取得表單'username'欄位的資料---
-    username = request.form.get('username')
-
-    # ---檢查是否有使用者名稱---
-    if not username: # 如果沒有資料(None)
-        # 回傳400狀態(請求錯誤)+訊息
-        return jsonify({'message': '請提供使用者名稱'}), 400
-    
-    # ---生成6位數隨機數字，轉為字串，作為驗證碼---
-    booking_code = str(random.randint(100000, 999999))
-    
-    # ---儲存到資料庫(包含使用者名稱, 驗證碼)---
-    # success => 函式執行結果(T,F)
-    # message => 成功/錯誤訊息 
-    success, message = user.create_visitor_booking(username, booking_code)
-    
-    # ---如果函式有執行成功，則回傳(訊息+驗證碼)，沒有則只回傳(訊息)---
-    if success:
-        return jsonify({'message': message, 'booking_code': booking_code}), 200
-    else:
-        return jsonify({'message': message}), 400
-
-# ===== 驗證訪客預約碼 =====
-@app.route('/verify_booking_code', methods=['POST'])
-def verify_booking_code():
-    # 從表單獲取驗證碼
-    booking_code = request.form.get('booking_code')
-    
-    # 如果沒有驗證碼
-    if not booking_code:
-        return jsonify({'message': '請輸入預約碼'}), 400
-    
-    # 紀錄執行結果、回傳訊息或資料
-    success, result = user.verify_visitor_booking(booking_code)  # 呼叫函式
-    
-    # 如果有查詢到住戶名稱，代表此驗證碼有效
-    if success:
-        # 推送辨識訊息
-        socketio.emit('recognition', {
-            'type': 'recognition', 
-            'message': f'偵測到{result}住戶的訪客已到大門'
-        })
-
-        # 回傳資料
+    """
+    訪客預約（需上傳3張照片進行人臉註冊）
+    """
+    try:
+        # 取得住戶名稱
+        username = request.form.get('username')
+        
+        if not username:
+            return jsonify({'success': False, 'message': '請提供住戶名稱'}), 400
+        
+        # 取得3張照片
+        front_face = request.files.get('front_face')
+        left_face = request.files.get('left_face')
+        right_face = request.files.get('right_face')
+        
+        if not front_face or not left_face or not right_face:
+            return jsonify({'success': False, 'message': '請上傳三張照片（正面、左微側、右微側）'}), 400
+        
+        # 組織照片檔案
+        image_files = {
+            'front': front_face,
+            'left': left_face,
+            'right': right_face
+        }
+        
+        # 驗證照片是否能偵測到人臉
+        validation_result = face_recognizer.validate_face_images(image_files)
+        
+        if not validation_result['success']:
+            return jsonify({
+                'success': False,
+                'message': validation_result['message']
+            }), 400
+        
+        # 生成唯一的訪客識別名稱
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        random_suffix = random.randint(1000, 9999)
+        visitor_name = f"visitor_{timestamp}_{random_suffix}"
+        
+        # 註冊訪客人臉
+        register_result = face_recognizer.register_visitor_faces(
+            db_manager, 
+            visitor_name, 
+            image_files
+        )
+        
+        if not register_result['success']:
+            return jsonify({
+                'success': False,
+                'message': register_result['message']
+            }), 400
+        
+        # 儲存訪客預約記錄
+        success, message = db_manager.save_visitor_booking(
+            username, 
+            visitor_name, 
+            register_result['visitor_face_id']
+        )
+        
+        if not success:
+            return jsonify({'success': False, 'message': message}), 400
+        
+        # 重新整理人臉快取
+        refresh_face_cache(db_manager)
+        
         return jsonify({
-            'message': f'驗證成功，{result}住戶的訪客', 
-            'username': result, 
-            'booking_code': booking_code,
-            'start_countdown': True
+            'success': True,
+            'message': message
         }), 200
-    else:
-        return jsonify({'message': result}), 400
-
-# ===== 擷取訪客照片 =====
-@app.route('/capture_visitor_photo', methods=['POST'])
-def capture_visitor_photo():
-    global latest_frame # 最新影像(全域變數，影像串流中固定紀錄)
     
-    # 如果沒有最新影像
-    if latest_frame is None:
-        return jsonify({'message': '無法取得鏡頭影像'}), 400
-    
-    # 從提交過來的表單取得住戶名稱和預約碼
-    username = request.form.get('username') # 使用者名稱
-    booking_code = request.form.get('booking_code') # 驗證碼
-    
-    #　如果沒有使用者名稱
-    if not username:
-        return jsonify({'message': '缺少住戶名稱'}), 400
-    
-    try:
-        # 用來存訪客照片的資料夾
-        visitors_dir = os.path.join('static', 'visitors') 
-
-        # 檢查 visitors 資料夾是否存在，若無則建立
-        # 檢查該資料夾路徑，找不到會回傳 True
-        if not os.path.exists(visitors_dir):
-            os.makedirs(visitors_dir) # 建立資料夾
-        
-        # 產生檔案名稱（包含時間戳記）
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") # 時間戳記
-        filename = f'visitor_{timestamp}.jpg' # 檔案名稱+副檔名
-        file_path = os.path.join(visitors_dir, filename) # 合成一個「完整路徑」字串(資料夾+檔案)
-        
-        # 儲存影像
-        # 將 OpenCV 的影像資料（通常為 numpy 陣列）寫入磁碟成為圖片檔，路徑為 file_path 
-        success = cv2.imwrite(file_path, latest_frame)
-        
-        # 如果儲存成功
-        if success:
-            # 將資料存入 user_message 資料表
-            db_success, db_message = user.save_visitor_message(  # 呼叫函式
-                username=username,
-                visitor_image_path=file_path,
-                booking_code=booking_code
-            )
-            
-            # 如果成功儲存到資料庫
-            if db_success:
-                return jsonify({
-                    'message': '訪客照片已成功儲存並記錄到資料庫',
-                    'filename': filename,
-                    'file_path': file_path,
-                    'db_message': db_message
-                }), 200
-            else:
-                return jsonify({
-                    'message': '照片已儲存但資料庫記錄失敗',
-                    'filename': filename,
-                    'file_path': file_path,
-                    'db_error': db_message
-                }), 500
-        else:
-            return jsonify({'message': '照片儲存失敗'}), 500
-            
     except Exception as e:
-        return jsonify({'message': f'拍照失敗：{str(e)}'}), 500
+        print(f"[錯誤] 訪客預約失敗: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'預約失敗: {str(e)}'
+        }), 500
 
-# ===== 取得訪客留言記錄 =====
-@app.route('/get_visitor_messages')
-def get_visitor_messages():
-    messages = user.get_all_visitor_messages()  # 修改引用
-    return jsonify(messages)
-
-# ===== 取得特定使用者的訪客留言 =====
-@app.route('/get_user_messages')
-def get_user_messages():
-    # 從 HTTP 請求的查詢字串 (query string) 取得名為 username 的參數值
-    # 例如：GET /get_user_messages?username=Gina → username 會是 "Gina"
-    username = request.args.get('username')
-    if not username:
-        return jsonify({'message': '缺少使用者名稱'}), 400
-    
-    try:
-        messages = user.get_user_visitor_messages(username)  # 呼叫函式
-        return jsonify({'messages': messages}), 200
-    except Exception as e:
-        return jsonify({'message': f'查詢失敗：{str(e)}'}), 500
-
-# ===== 審核訪客留言 =====
-@app.route('/review_visitor', methods=['POST'])
-def review_visitor():
-    # 取得表單資料
-    message_id = request.form.get('message_id')
-    status = request.form.get('status')
-    username = request.form.get('username')
-    
-    # 驗證必要參數
-    if not all([message_id, status, username]):
-        return jsonify({'message': '缺少必要參數'}), 400
-    
-    # 驗證狀態值
-    if status not in ['approved', 'rejected']:
-        return jsonify({'message': '無效的審核狀態'}), 400
-    
-    try:
-        # 更新資料庫
-        success, message = user.update_visitor_message_status(message_id, status, username)
-        
-        if success:
-            # 推送辨識訊息到管理員端
-            if status == 'approved':
-                socketio.emit('recognition', {
-                    'type': 'recognition', 
-                    'message': f'{username}已允許訪客進入'
-                })
-                # 【辨識紀錄-xxx住戶訪客允許進入事件儲存】
-                db_manager.save_recognition_log("訪客", f"{username}住戶的訪客允許進入")
-            else:
-                socketio.emit('recognition', {
-                    'type': 'recognition', 
-                    'message': f'{username}不允許訪客進入'
-                })
-                # 【辨識紀錄-xxx住戶訣客不允許進入事件儲存】
-                db_manager.save_recognition_log("訪客", f"{username}住戶的訪客不允許進入")
-            
-            return jsonify({'message': message}), 200
-        else:
-            return jsonify({'message': message}), 400
-            
-    except Exception as e:
-        return jsonify({'message': f'審核失敗：{str(e)}'}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

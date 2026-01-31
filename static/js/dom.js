@@ -7,7 +7,7 @@ export const addFaceBtn = document.getElementById('addFaceBtn');           // �
 export const testFaceBtn = document.getElementById('testFaceBtn');         // 「測試辨識」功能按鈕
 export const viewFaceDbBtn = document.getElementById('viewFaceDbBtn');     // 「查看資料庫」功能按鈕
 export const viewLogDbBtn = document.getElementById('viewLogDbBtn');       // 「查看辨識紀錄資料庫」功能按鈕
-export const visitorBookingBtn = document.getElementById('visitorBookingBtn'); // 「訪客預約」功能按鈕
+export const visitorBookingBtn = document.getElementById('visitor-booking-btn'); // 「訪客預約」功能按鈕
 export const recognitionLog = document.getElementById('recognitionLog');       // 辨識紀錄清單
 
 // ===== 加入人臉彈出視窗 =====
@@ -32,7 +32,6 @@ export const modalTableBody = document.getElementById('modalTableBody');       /
 // ====== 查看辨識紀錄的所有資料 =====
 export const viewLogDbModal = document.getElementById('viewLogDbModal');       // 辨識紀錄 Modal(彈出視窗)
 export const closeViewLogDbModal = document.getElementById('closeViewLogDbModal'); // 關閉按鈕(辨識紀錄)
-// export const modalLogTableBody = document.getElementById('modalLogTableBody'); // 辨識紀錄查詢表格
 
 export const registerForm = document.getElementById('registerForm');
 export const username = document.getElementById('username');
@@ -46,10 +45,10 @@ export const submitMessage = document.getElementById('submitMessage');
 export const loginForm = document.getElementById('loginForm');
 export const loginMessage = document.getElementById('loginMessage');
 
-// ===== 訪客預約彈出視窗元素 =====
-export const visitorBookingModal = document.getElementById('visitorBookingModal'); // 訪客預約的 modal 容器
+// ===== 訪客預約相關元素 =====
+export const visitorBookingModal = document.getElementById('visitor-booking-modal'); // 訪客預約的 modal 容器
 export const closeVisitorBookingModal = document.getElementById('closeVisitorBookingModal'); // 關閉按鈕
-export const visitorBookingForm = document.getElementById('visitorBookingForm'); // 驗證碼輸入表單
+export const visitorBookingForm = document.getElementById('visitor-booking-form'); // 驗證碼輸入表單
 export const bookingCodeInput = document.getElementById('bookingCodeInput');     // 使用者輸入的驗證碼欄位
 export const bookingResult = document.getElementById('bookingResult');           // 顯示驗證和拍照結果的區塊
 
@@ -96,6 +95,7 @@ const DOM = {
     loginForm,
     loginMessage,
 
+    visitorBookingBtn,
     visitorBookingModal,
     closeVisitorBookingModal,
     visitorBookingForm,
