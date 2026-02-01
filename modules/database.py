@@ -26,23 +26,6 @@ class DatabaseManager:
     # =======================  
     def init_database(self):
         conn, cursor = self.get_db_connection() # 使用統一的連接方法
-        
-        # ----- 創建人臉資料表(faces) -----
-        # id: 主鍵、自動遞增、不可重複
-        # name: 人名、不可為空值
-        # face_encoding: 人臉特徵資料、BLOB 格式序列化陣列
-        # image_path: 原始圖片(可不存)
-        # create_date: 資料建立日期時間
-        # ------------------------- 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS faces (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                face_encoding BLOB,
-                image_path TEXT,
-                created_date TEXT
-            )
-        ''')
 
         # ----- 新人臉識別(face_recognition) -----
         # (儲存姓名與 128 維特徵向量；存成 text，內容為 json 格式)
@@ -54,7 +37,9 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS face_recognition (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                encoding TEXT NOT NULL
+                encoding BLOB NOT NULL,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
@@ -93,89 +78,11 @@ class DatabaseManager:
                     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP       
                 )    
         ''')
-        
-
-        # ----- 建立訪客預約資料表格(visitor_bookings) -----
-        # id: 主鍵、自動遞增、不可重複
-        # username: 住戶名稱、文字、不可為空
-        # visitor_face_name: 訪客人臉識別名稱
-        # visitor_face_id: 關聯到 face_recognition 表格的 ID
-        # created_date: 預約建立時間
-        # used: 是否已使用、布林值、預設為False
-        # used_date: 使用時間
-        # -----------------------------
-        cursor.execute('''
-                CREATE TABLE IF NOT EXISTS visitor_bookings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL,
-                    visitor_face_name TEXT NOT NULL,
-                    visitor_face_id INTEGER,
-                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    used BOOLEAN DEFAULT FALSE,
-                    used_date TIMESTAMP,
-                    FOREIGN KEY (visitor_face_id) REFERENCES face_recognition (id)
-                )    
-        ''')
-
-        # ----- 建立訪客留言資料表格(user_message) -----
-        # id: 主鍵、自動遞增、不可重複
-        # username: 住戶名稱、文字、不可為空
-        # visitor_image_path: 訪客照片路徑、文字、不可為空
-        # created_date: 留言建立時間
-        # booking_code: 對應的預約碼（選填）
-        # status: 審核狀態 (pending, approved, rejected)
-        # reviewed_date: 審核時間
-        # -----------------------------
-        cursor.execute('''
-                CREATE TABLE IF NOT EXISTS user_message (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL,
-                    visitor_image_path TEXT NOT NULL,
-                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    booking_code TEXT,
-                    status TEXT DEFAULT 'pending',
-                    reviewed_date TIMESTAMP
-                )    
-        ''')
 
         conn.commit() # 確認變更(寫入磁碟)
         conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
 
-    # ===== 列出資料庫中的所有人臉資料 =====
-    # 回傳 字典格式資料
-    # ==================================== 
-    def get_all_faces(self):
-        try:
-            conn, cursor = self.get_db_connection() # 使用統一的連接方法
-            
-            # 查詢資料(face 表格中的三個欄位(id, name, created_date))
-            cursor.execute("SELECT id, name, created_date FROM faces")
-
-            # 資料轉換(列表推導式，把原始資料轉換為字典格式)
-            faces = [{
-                'id': row[0],
-                'name': row[1],
-                'created_date': row[2]}
-                for row in cursor.fetchall()
-                ]
-            conn.close() # 關閉連接
-            return faces # 回傳資料查詢結果
-        
-        # 查詢資料庫時的例外錯誤(資料庫檔案不存在、權限問題、資料庫鎖定等)
-        except sqlite3.DatabaseError as e:
-            print(f"資料庫查詢時發生錯誤 by database: {e}")
-            return [] # 回傳空列表，防止程式崩潰
-        
-        # 查詢人臉資料時發生的例外錯誤
-        except Exception as e:
-            print(f"查詢人臉資料時發生錯誤 by database: {e}")
-            return [] # 回傳空列表
-        
-        # 一定會執行的部分
-        finally:
-            if 'conn' in locals(): # 檢查 conn 是否存在
-                conn.close() # 關閉資料庫
 
     # ===== 列出資料庫中的所有辨識紀錄 =====
     # 回傳 字典格式資料
@@ -221,30 +128,6 @@ class DatabaseManager:
             if 'conn' in locals(): # 確認 conn 存在
                 conn.close()
     
-    # ===== add_face_to_database 儲存人臉資料部分 =====
-    # 傳入 人臉名稱、人臉資訊(二進位)、圖片
-    # ================================================ 
-    def save_face_to_db(self, name, face_blob, image_path=None):
-        conn, cursor = self.get_db_connection() # 使用統一的連接方法
-
-        # 取得目前的日期和時間，並格式化成字串，記錄資料建立的時間
-        created_date = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S")
-
-        # SQL 指令，意思是「新增一筆資料到 faces 表格」。
-        # ? 是參數佔位符，防止 SQL injection（安全性）。
-        # 插入的資料，分別是人名、序列化後的人臉影像、圖片路徑、建立時間。
-        cursor.execute('''
-                INSERT INTO faces (name, face_encoding, image_path, created_date)
-                VALUES (?, ?, ?, ?)
-            ''', (name, face_blob, image_path, created_date))
-
-        face_id = cursor.lastrowid  # 取得剛剛插入資料的「自動遞增主鍵」ID (唯一編號)
-        conn.commit()  # 提交變更，確保資料儲存到資料庫
-        conn.close()  # 關閉連接，避免記憶體洩漏或效能問題
-
-        # ----- 顯示成功訊息 -----
-        print(f"成功將 {name} 的人臉資料加入資料庫 (ID: {face_id}) by database")
     
     # ===== 辨識紀錄儲存 ======
     # 傳入 事件類型、事件訊息、人臉id(選填)、信心度(選填)
@@ -282,7 +165,7 @@ class DatabaseManager:
     # =========================== 
     def search_face(self, face_id):
         conn, cursor = self.get_db_connection() # 使用統一的連接方法
-        cursor.execute("SELECT name FROM faces WHERE id = ?", (face_id,))# SQL 查詢，跟據 ID 查詢人名
+        cursor.execute("SELECT name FROM face_recognition WHERE id = ?", (face_id,))# SQL 查詢，跟據 ID 查詢人名
         result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
         conn.close() # 關閉連接
         return result

@@ -162,8 +162,10 @@ class FaceRecognition:
                     # 將 numpy array 轉成二進位 BLOB
                     encoding_blob = encodings[0].tobytes()
                     # 插入到 face_recognition 表格
-                    cursor.execute("INSERT INTO face_recognition (name, encoding) VALUES (?, ?)", 
-                                 (name, encoding_blob))
+                    cursor.execute(
+                        "INSERT INTO face_recognition (name, encoding, created_date, updated_date) VALUES (?, ?, datetime('now'), datetime('now'))", 
+                        (name, encoding_blob)
+                    )
                     count += 1
                 else:
                     print(f"[警告] 圖片 {f} 未偵測到人臉，跳過。")
@@ -465,8 +467,10 @@ class FaceRecognition:
                 
                 if len(encodings) > 0:
                     encoding_blob = encodings[0].tobytes()
-                    cursor.execute("INSERT INTO face_recognition (name, encoding) VALUES (?, ?)", 
-                                 (visitor_name, encoding_blob))
+                    cursor.execute(
+                        "INSERT INTO face_recognition (name, encoding, created_date, updated_date) VALUES (?, ?, datetime('now'), datetime('now'))", 
+                        (visitor_name, encoding_blob)
+                    )
                     
                     if first_face_id is None:
                         first_face_id = cursor.lastrowid

@@ -54,12 +54,21 @@ export async function testFaceModal() {
             alert('請選擇圖片');
             return;
         }
+        // 顯示「辨識中...」訊息
+        DOM.testResult.textContent = '辨識中...';
         // 建立表單&加入資料
         const formData = new FormData();
         formData.append('image', DOM.modalTestImage.files[0]);
         try {
             const result = await testFace(formData) // 呼叫 api 函式
-            DOM.testResult.textContent = result.message;
+            if (result.success && result.results) {
+                DOM.testResult.textContent = result.message + '\n\n' + 
+                    result.results.map((r, i) => 
+                        `結果: ${r.name} (信心度: ${r.confidence})`
+                    ).join('\n');
+            } else {
+                DOM.testResult.textContent = result.message;
+            }
         } catch (error) {
             DOM.testResult.textContent = '辨識失敗: ' + error;
         }
@@ -73,13 +82,18 @@ export async function viewFace() {
         setTimeout(() => centerModal(DOM.viewDbModal), 0); // 視窗置中
 
         try {
-            const faces = await getFace(); // 呼叫 api 程式
+            const result = await getFace(); // 呼叫 api 程式
             DOM.modalTableBody.innerHTML = '';
-            faces.forEach(face => {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${face.id}</td><td>${face.name}</td><td>${face.created_date}</td>`;
-                DOM.modalTableBody.appendChild(row);
-            });
+            // 檢查回應是否成功且有 faces 陣列
+            if (result.success && result.faces && Array.isArray(result.faces)) {
+                result.faces.forEach(face => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${face.id}</td><td>${face.name}</td><td>${face.created_date || '無'}</td>`;
+                    DOM.modalTableBody.appendChild(row);
+                });
+            } else {
+                DOM.modalTableBody.innerHTML = `<tr><td colspan="3">無人臉資料</td></tr>`;
+            }
         } catch (error) {
             DOM.modalTableBody.innerHTML = `<tr><td colspan="3">獲取資料失敗: ${error.message}</td></tr>`;
         }

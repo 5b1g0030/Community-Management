@@ -4,7 +4,6 @@ from flask import Flask, render_template, request, jsonify, Response
 from flask_socketio import SocketIO
 import cv2
 import numpy as np
-from modules.face_detector import FaceDetector  # 修改引用
 from modules.database import DatabaseManager    # 修改引用
 from modules.user import UserManager
 from modules.face_recognition import FaceRecognition, init_face_cache, refresh_face_cache  # 新增引用
@@ -13,14 +12,14 @@ import os
 from datetime import datetime
 import random
 import face_recognition
-from modules.config import FACE_RECOGNITION_TOLERANCE, FACE_RECOGNITION_FRAME_SKIP
+from modules.config import FACE_RECOGNITION_RESIZE_WIDTH, FACE_RECOGNITION_FRAME_SKIP
 
 
 app = Flask(__name__)
+#app.config['SECRET_KEY'] = 'your-secret-key-here' cors_allowed_origins="*", async_mode='threading'
 socketio = SocketIO(app)
 
-# 初始化系統組件
-face_detector = FaceDetector()  # 人臉辨識器
+# ===== 初始化系統組件 =====
 db_manager = DatabaseManager()  # 資料庫管理器
 user = UserManager()            # 使用者資料管理
 face_recognizer = FaceRecognition()  # 人臉註冊與辨識
@@ -161,68 +160,104 @@ def gen_frames():
                 img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
                 cv2.imwrite(img_path, frame)
     
-    global last_names, latest_frame # 本次辨識到的人臉, 紀錄最新影像 
+    # ===== 在影像上繪製辨識結果 =====
+    def draw_frame(results, frame):
+        for result in results:
+            x, y, w, h = result['position']
+            name = result['name']
+            confidence = result['confidence']
+
+            color = (0, 255, 0) if name != '未知' else (0, 0, 255)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+
+            label = f"{name} ({confidence:.1f})"
+            cv2.putText(frame, label, (x, y-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+
+    global last_names, latest_frame
 
     """ 相機設定&開啟 """
-    # ----- 攝影機自動搜尋 -----
-    backends = CameraManager.get_camera_config() # 取得系統後端
-    camera_index, backend = CameraManager.find_camera(backends) # 取得可用的相機設定
-    # ----- 檢查是否有找到攝影機 -----
-    if camera_index and backend is None:
-        print("無法找到可用的攝影機")
-        return
-    # ----- 使用找到的最佳攝影機設定開啟攝影機 -----
-    cap = CameraManager.open_camera(camera_index, backend)
-    # ----- 檢查攝影機有沒有打開 -----
-    if not cap.isOpened():
-        print("攝影機開啟失敗")
-        return
+    try:
+        # ----- 攝影機自動搜尋 -----
+        backends = CameraManager.get_camera_config()
+        camera_index, backend = CameraManager.find_camera(backends)
+        
+        # ----- 檢查是否有找到攝影機 -----
+        if camera_index is None or backend is None:
+            print("[錯誤] 無法找到可用的攝影機")
+            # 返回一個錯誤影像而不是直接 return
+            error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(error_frame, 'Camera Not Found', (50, 240),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            ret, buffer = cv2.imencode('.jpg', error_frame)
+            frame_bytes = buffer.tobytes()
+            while True:
+                yield (b'--frame\r\n'
+                      b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+        
+        # ----- 使用找到的最佳攝影機設定開啟攝影機 -----
+        cap = CameraManager.open_camera(camera_index, backend)
+        
+        # ----- 檢查攝影機有沒有打開 -----
+        if not cap or not cap.isOpened():
+            print("[錯誤] 攝影機開啟失敗")
+            error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(error_frame, 'Camera Open Failed', (50, 240),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            ret, buffer = cv2.imencode('.jpg', error_frame)
+            frame_bytes = buffer.tobytes()
+            while True:
+                yield (b'--frame\r\n'
+                      b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
+    except Exception as e:
+        print(f"[錯誤] 攝影機初始化失敗: {e}")
+        error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(error_frame, f'Error: {str(e)}', (50, 240),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        ret, buffer = cv2.imencode('.jpg', error_frame)
+        frame_bytes = buffer.tobytes()
+        while True:
+            yield (b'--frame\r\n'
+                  b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
-    """ 開始讀取影像&播放 """
-    frame_count = 0  # 幀計數器
-    last_results = []  # 儲存上次辨識結果
+    """ ===== 開始讀取影像&播放 ====== """
+    frame_count = 0
+    last_results = []
     
     try:
         while True:
-            ret, frame = cap.read() # 讀取影像
-            # ----- 檢查是否正確讀取，沒有的話則跳出回圈 -----
+            ret, frame = cap.read()
             if not ret:
+                print("[警告] 無法讀取影像幀")
                 break
             
-            latest_frame = frame.copy() # 紀錄最新影像(給人工審核視窗更新照片)
+            latest_frame = frame.copy()
 
             # ----- 幀數控制：每 N 幀才執行一次辨識 -----
             frame_count += 1
             if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
-                # 進行人臉辨識（使用實例方法）
                 results = face_recognizer.recognize_face_from_frame(db_manager, frame, use_cache=True)
-                last_results = results  # 儲存辨識結果
-                frame_count = 0  # 重置計數器
+                last_results = results
+                frame_count = 0
             else:
-                # 使用上次的辨識結果
                 results = last_results
 
-            current_names = set([r['name'] for r in results])  # 本次影像中所有被辨識到的人名（不重複）
+            current_names = set([r['name'] for r in results])
 
             # ----- 第一次啟動時，主動推送辨識紀錄 -----
             if last_names is None:
-                face_message(results) # 呼叫「根據辨識情況推送訊息函式」
-                last_names = current_names # 紀錄本次辨識到的人臉 
+                face_message(results)
+                last_names = current_names
 
             # ----- 在新住戶或未知人物出現時推送 -----
             elif current_names != last_names:
                 if not results:
                     socketio.emit('recognition', {
                                 'type': 'recognition', 'message': '未偵測到人臉'})
-                    # 【辨識紀錄-未知人物事件儲存】
                     db_manager.save_recognition_log("未知", "未偵測到人臉")
                 else:
-                    face_message(results) # 呼叫「根據辨識情況推送訊息函式」
-                    # ----- 儲存辨識紀錄 -----
-                    # 直接用 results 裡的 id 與 confidence 儲存：只存「新出現且為已知」的人
-
-                    # 【辨識紀錄-已知人物事件儲存】
+                    face_message(results)
                     try:
                         for r in results:
                             name = r.get('name')
@@ -234,24 +269,28 @@ def gen_frames():
                             elif name == '未知':
                                 db_manager.save_recognition_log("未知", "未知人物")
                     except Exception as e:
-                        print(f"儲存辨識紀錄失敗: {e} by app")
+                        print(f"儲存辨識紀錄失敗: {e}")
 
-                last_names = current_names  # 更新偵測結果(名字或 null)
+                last_names = current_names
 
             # ----- 在影像上繪製辨識結果 -----
-            face_detector.draw_frame(results, frame) # 呼叫函式
+            draw_frame(results, frame)
 
             # ----- 將影像轉換為 JPEG 格式，輸出到網頁 -----
             ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
+            frame_bytes = buffer.tobytes()
 
-            # 把每一張即時攝影機畫面傳給前端網頁
             yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                
+    except Exception as e:
+        print(f"[錯誤] 影像串流處理失敗: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
-        CameraManager.clean_camera(cap) # 釋放資源
-        print("攝影機已關閉")
-
+        if 'cap' in locals() and cap is not None:
+            CameraManager.clean_camera(cap)
+            print("[系統] 攝影機已關閉")
 
 # ===== 鏡頭影像顯示 =====
 @app.route('/video_feed')
@@ -299,49 +338,113 @@ def add_face():
 @app.route('/test_face', methods=['POST'])
 def test_face():
     try:
+        print("[測試辨識] 開始處理請求")
         image_file = request.files.get('image')
         
         if not image_file:
-            return jsonify({'success': False, 'message': '請提供照片'})
+            print("[測試辨識] 錯誤：未提供照片")
+            return jsonify({'success': False, 'message': '請提供照片'}), 400
+        
+        print(f"[測試辨識] 收到檔案：{image_file.filename}")
+        
+        # 驗證檔案類型
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.bmp'}
+        file_ext = os.path.splitext(image_file.filename)[1].lower()
+        if file_ext not in allowed_extensions:
+            return jsonify({'success': False, 'message': f'不支援的檔案格式：{file_ext}'}), 400
         
         # 建立臨時資料夾
         temp_dir = os.path.join('static', 'temp_uploads')
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
+            print(f"[測試辨識] 建立資料夾：{temp_dir}")
         
-        # 儲存上傳的圖片到臨時資料夾
+        # 準備檔案路徑
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f'test_{timestamp}.jpg'
         temp_path = os.path.join(temp_dir, filename)
-        image_file.save(temp_path)
+        
+        # 先讀取並驗證圖片
+        try:
+            from PIL import Image
+            
+            # 讀取上傳的圖片（重要：在任何操作前先讀取）
+            image_data = image_file.read()
+            print(f"[測試辨識] 讀取圖片資料，大小：{len(image_data)} bytes")
+            
+            # 驗證圖片是否有效
+            import io
+            img = Image.open(io.BytesIO(image_data))
+            print(f"[測試辨識] 圖片資訊 - 格式：{img.format}, 尺寸：{img.size}, 模式：{img.mode}")
+            
+            # 轉換為 RGB 模式（如果是 RGBA 或其他格式）
+            if img.mode != 'RGB':
+                print(f"[測試辨識] 轉換圖片模式從 {img.mode} 到 RGB")
+                img = img.convert('RGB')
+            
+            # ===== 調整圖片大小（重要：避免圖片過大） =====
+            max_size = FACE_RECOGNITION_RESIZE_WIDTH  # 最大寬度或高度
+            if img.width > max_size or img.height > max_size:
+                print(f"[測試辨識] 圖片過大，正在縮小...")
+                # 計算縮放比例
+                if img.width > img.height:
+                    new_width = max_size
+                    new_height = int(img.height * (max_size / img.width))
+                else:
+                    new_height = max_size
+                    new_width = int(img.width * (max_size / img.height))
+                
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                print(f"[測試辨識] 圖片已調整為：{img.size}")
+            
+            # 儲存處理後的圖片
+            img.save(temp_path, 'JPEG', quality=95)
+            print(f"[測試辨識] 圖片已儲存到：{temp_path}")   
+        except Exception as img_error:
+            print(f"[測試辨識] 圖片處理失敗：{img_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'message': f'圖片處理失敗：{str(img_error)}'}), 400
         
         # 呼叫 recognize_face 函式（使用實例方法）
+        print("[測試辨識] 開始辨識人臉...")
         result = face_recognizer.recognize_face(db_manager, temp_path)
+        print(f"[測試辨識] 辨識結果：{result}")
         
+        # 清理臨時檔案（可選）
+        try:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                print(f"[測試辨識] 已刪除臨時檔案：{temp_path}")
+        except Exception as cleanup_error:
+            print(f"[測試辨識] 清理臨時檔案失敗：{cleanup_error}")
+
+        # 輸出結果
         if result['success']:
-            return jsonify({'success': True, 'results': result['results'], 'message': result['message']})
+            return jsonify({'success': True, 'results': result['results'], 'message': result['message']}), 200
         else:
-            return jsonify({'success': False, 'message': result['message']})
+            return jsonify({'success': False, 'message': result['message']}), 200
     
     except Exception as e:
-        return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
+        print(f"[測試辨識] 發生未預期的錯誤：{e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'系統錯誤：{str(e)}'}), 500
 
 # ===== 取得人臉資料 =====
 @app.route('/get_faces')
 def get_faces():
     try:
-        conn = db_manager.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM faces")
+        conn, cursor = db_manager.get_db_connection()
+        cursor.execute("SELECT id, name, created_date, updated_date FROM face_recognition")
         faces = cursor.fetchall()
         conn.close()
         
-        face_list = [{'id': face[0], 'name': face[1]} for face in faces]
+        face_list = [{'id': face[0], 'name': face[1], 'created_date': face[2], 'updated_date': face[3]} for face in faces]
         return jsonify({'success': True, 'faces': face_list})
     
     except Exception as e:
         return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
-
 
 """
 ===== 訪客預約功能 ===== 
