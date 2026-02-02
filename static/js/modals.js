@@ -1,10 +1,6 @@
 import * as DOM from "./dom.js" // 引入網頁元素
 import { addFace, testFace, getFace } from "./api.js"; // 引入後端api溝通函式
 
-// *************************
-// 彈出視窗管理區
-// *************************
-
 // ===== 加入人臉按鈕 =====
 export async function addFaceModal() {
     // ===== 加入人臉彈出視窗 =====  
@@ -48,19 +44,91 @@ export async function testFaceModal() {
         DOM.modalTestForm.reset();
         DOM.testResult.textContent = '';
     };
+    // ===== 辨識過程 =====
     DOM.modalTestForm.onsubmit = async (e) => {
         e.preventDefault();
         if (!DOM.modalTestImage.files || DOM.modalTestImage.files.length === 0) {
             alert('請選擇圖片');
             return;
         }
-        // 顯示「辨識中...」訊息
-        DOM.testResult.textContent = '辨識中...';
+        
+        // 取得送出按鈕
+        const submitBtn = DOM.modalTestForm.querySelector('button[type="submit"]');
+        
+        // 禁用送出按鈕，防止重複提交
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+        }
+        
+        // 顯示進度條容器
+        let progressContainer = document.getElementById('test-progress-container');
+        if (!progressContainer) {
+            // 如果不存在，創建進度條元素
+            progressContainer = document.createElement('div');
+            progressContainer.id = 'test-progress-container';
+            progressContainer.style.cssText = 'margin: 10px 0; width: 100%;';
+            progressContainer.innerHTML = `
+                <div style="background: #f0f0f0; border-radius: 5px; overflow: hidden; height: 25px; position: relative;">
+                    <div id="test-progress-bar" style="background: linear-gradient(90deg, #4CAF50, #45a049); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;"></div>
+                </div>
+                <div id="test-progress-text" style="text-align: center; margin-top: 5px; font-size: 14px; color: #666;"></div>
+            `;
+            // 插入到結果顯示區域之前
+            DOM.testResult.parentNode.insertBefore(progressContainer, DOM.testResult);
+        }
+        
+        const progressBar = document.getElementById('test-progress-bar');
+        const progressText = document.getElementById('test-progress-text');
+        
+        // 重置進度條
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressText.textContent = '準備中...';
+        progressContainer.style.display = 'block';
+        
+        // 清空結果
+        DOM.testResult.textContent = '';
+        
+        // 模擬進度更新
+        let progress = 0;
+        const stages = [
+            { progress: 10, text: '上傳圖片中...' },
+            { progress: 30, text: '處理圖片中...' },
+            { progress: 50, text: '偵測人臉中...' },
+            { progress: 70, text: '提取特徵中...' },
+            { progress: 90, text: '比對資料庫中...' }
+        ];
+        
+        let stageIndex = 0;
+        const progressInterval = setInterval(() => {
+            if (stageIndex < stages.length) {
+                const stage = stages[stageIndex];
+                progress = stage.progress;
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+                progressText.textContent = stage.text;
+                stageIndex++;
+            }
+        }, 800); // 每 0.8 秒更新一次進度
+        
         // 建立表單&加入資料
         const formData = new FormData();
         formData.append('image', DOM.modalTestImage.files[0]);
+        
         try {
-            const result = await testFace(formData) // 呼叫 api 函式
+            const result = await testFace(formData); // 呼叫 api 函式
+            
+            // 清除進度更新定時器
+            clearInterval(progressInterval);
+            
+            // 完成進度條
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            progressText.textContent = '辨識完成！';
+            
+            // 顯示結果
             if (result.success && result.results) {
                 DOM.testResult.textContent = result.message + '\n\n' + 
                     result.results.map((r, i) => 
@@ -69,8 +137,34 @@ export async function testFaceModal() {
             } else {
                 DOM.testResult.textContent = result.message;
             }
+            
+            // 1秒後隱藏進度條
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 1500);
+            
         } catch (error) {
+            // 清除進度更新定時器
+            clearInterval(progressInterval);
+            
+            // 顯示錯誤
+            progressBar.style.background = '#f44336';
+            progressBar.style.width = '100%';
+            progressBar.textContent = '錯誤';
+            progressText.textContent = '辨識失敗';
             DOM.testResult.textContent = '辨識失敗: ' + error;
+            
+            // 2秒後隱藏進度條
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+            }, 2000);
+        } finally {
+            // 恢復送出按鈕
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
         }
     };
 }
@@ -107,37 +201,32 @@ export async function viewFace() {
 
 // ===== 訪客預約彈出視窗 =====
 export function visitorBooking() {
-    const modal = document.getElementById('visitor-booking-modal');
-    const openBtn = document.getElementById('visitor-booking-btn');
-    const closeBtn = modal.querySelector('.close');
-    const form = document.getElementById('visitor-booking-form');
-    const usernameInput = document.getElementById('booking-username');
-    
-    // 照片上傳相關元素
-    const frontFaceInput = document.getElementById('front-face-input');
-    const leftFaceInput = document.getElementById('left-face-input');
-    const rightFaceInput = document.getElementById('right-face-input');
-    
-    const frontFacePreview = document.getElementById('front-face-preview');
-    const leftFacePreview = document.getElementById('left-face-preview');
-    const rightFacePreview = document.getElementById('right-face-preview');
+    // 檢查必要元素是否存在
+    if (!DOM.visitorBookingModal || !DOM.visitorBookingBtn || 
+        !DOM.visitorBookingCloseBtn || !DOM.visitorBookingForm) {
+        console.error('訪客預約相關元素未找到');
+        return;
+    }
 
     // 開啟彈窗
-    openBtn.onclick = function() {
-        modal.style.display = 'block';
+    DOM.visitorBookingBtn.onclick = function() {
+        DOM.visitorBookingModal.style.display = 'block';
+        setTimeout(() => centerModal(DOM.visitorBookingModal), 0);
     }
 
     // 關閉彈窗
-    closeBtn.onclick = function() {
-        modal.style.display = 'none';
-        form.reset();
-        frontFacePreview.innerHTML = '';
-        leftFacePreview.innerHTML = '';
-        rightFacePreview.innerHTML = '';
+    DOM.visitorBookingCloseBtn.onclick = function() {
+        DOM.visitorBookingModal.style.display = 'none';
+        DOM.visitorBookingForm.reset();
+        DOM.frontFacePreview.innerHTML = '';
+        DOM.leftFacePreview.innerHTML = '';
+        DOM.rightFacePreview.innerHTML = '';
     }
 
     // 照片預覽功能
     function setupImagePreview(input, previewContainer) {
+        if (!input || !previewContainer) return;
+        
         input.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -151,18 +240,18 @@ export function visitorBooking() {
     }
 
     // 設定三個照片上傳的預覽
-    setupImagePreview(frontFaceInput, frontFacePreview);
-    setupImagePreview(leftFaceInput, leftFacePreview);
-    setupImagePreview(rightFaceInput, rightFacePreview);
+    setupImagePreview(DOM.frontFaceInput, DOM.frontFacePreview);
+    setupImagePreview(DOM.leftFaceInput, DOM.leftFacePreview);
+    setupImagePreview(DOM.rightFaceInput, DOM.rightFacePreview);
 
     // 表單提交處理
-    form.onsubmit = async function(e) {
+    DOM.visitorBookingForm.onsubmit = async function(e) {
         e.preventDefault();
 
-        const username = usernameInput.value.trim();
-        const frontFace = frontFaceInput.files[0];
-        const leftFace = leftFaceInput.files[0];
-        const rightFace = rightFaceInput.files[0];
+        const username = DOM.bookingUsernameInput.value.trim();
+        const frontFace = DOM.frontFaceInput.files[0];
+        const leftFace = DOM.leftFaceInput.files[0];
+        const rightFace = DOM.rightFaceInput.files[0];
 
         // 驗證
         if (!username) {
@@ -192,11 +281,11 @@ export function visitorBooking() {
 
             if (result.success) {
                 alert(result.message);
-                modal.style.display = 'none';
-                form.reset();
-                frontFacePreview.innerHTML = '';
-                leftFacePreview.innerHTML = '';
-                rightFacePreview.innerHTML = '';
+                DOM.visitorBookingModal.style.display = 'none';
+                DOM.visitorBookingForm.reset();
+                DOM.frontFacePreview.innerHTML = '';
+                DOM.leftFacePreview.innerHTML = '';
+                DOM.rightFacePreview.innerHTML = '';
             } else {
                 alert('預約失敗：' + result.message);
             }
@@ -244,6 +333,7 @@ function makeModalDraggable(modal) {
     const content = modal.querySelector('.modal-content');
     if (!header || !content){
         console.log("沒有捕捉到<h2> 或 .modal-content 未連接成功")
+        return; // 加入 return 避免後續錯誤
     };
 
     // 初始化拖曳狀態與滑鼠相對位移變數：isDragging 表示是否正在拖曳
@@ -273,6 +363,10 @@ function makeModalDraggable(modal) {
     };
 }
 // 需要拖移的視窗
-[DOM.addFaceModal, DOM.testFaceModal,
- DOM.viewDbModal, DOM.viewLogDbModal,
- DOM.visitorBookingModal].forEach(makeModalDraggable);
+[
+    DOM.addFaceModal, 
+    DOM.testFaceModal,
+    DOM.viewDbModal, 
+    DOM.viewLogDbModal,
+    DOM.visitorBookingModal  // 新增訪客預約 modal
+].forEach(makeModalDraggable);

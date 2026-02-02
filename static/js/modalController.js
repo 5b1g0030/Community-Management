@@ -28,11 +28,5 @@ export function modalsClose(){
                 recognitionLogsTable.search('').columns().search('').draw();
             }
         }
-        // 訪客預約
-        if (event.target === DOM.visitorBookingModal) {
-            DOM.visitorBookingModal.style.display = 'none';
-            DOM.visitorBookingForm.reset();
-            DOM.bookingResult.textContent = '';
-        }
     };
 }

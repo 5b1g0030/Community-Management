@@ -11,6 +11,56 @@ import { modalsClose } from "./modalController.js";
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // ===== 相機控制功能 =====
+    if (DOM.toggleCameraBtn && DOM.cameraStatus) {
+        let cameraActive = false;
+
+        // 初始化相機狀態
+        fetch('/camera_status')
+            .then(res => res.json())
+            .then(data => {
+                cameraActive = data.active;
+                updateCameraUI(cameraActive);
+            })
+            .catch(err => console.error('取得相機狀態失敗:', err));
+
+        // 相機開關按鈕點擊事件
+        DOM.toggleCameraBtn.addEventListener('click', async () => {
+            try {
+                const endpoint = cameraActive ? '/stop_camera' : '/start_camera';
+                const response = await fetch(endpoint, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success) {
+                    cameraActive = !cameraActive;
+                    updateCameraUI(cameraActive);
+                    alert(result.message);
+                } else {
+                    alert('操作失敗: ' + result.message);
+                }
+            } catch (error) {
+                alert('操作失敗: ' + error.message);
+            }
+        });
+
+        // 更新相機 UI 狀態
+        function updateCameraUI(isActive) {
+            if (isActive) {
+                DOM.toggleCameraBtn.textContent = '關閉相機';
+                DOM.toggleCameraBtn.classList.remove('btn-primary');
+                DOM.toggleCameraBtn.classList.add('btn-danger');
+                DOM.cameraStatus.textContent = '相機狀態: 開啟';
+                DOM.cameraStatus.style.color = '#4CAF50';
+            } else {
+                DOM.toggleCameraBtn.textContent = '開啟相機';
+                DOM.toggleCameraBtn.classList.remove('btn-danger');
+                DOM.toggleCameraBtn.classList.add('btn-primary');
+                DOM.cameraStatus.textContent = '相機狀態: 關閉';
+                DOM.cameraStatus.style.color = '#f44336';
+            }
+        }
+    }
+
     // ===== 登入功能（只在登入頁面執行） =====
     if (DOM.loginForm) {
         console.log("登入");

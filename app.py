@@ -29,6 +29,26 @@ init_face_cache(db_manager)
 
 latest_frame = None
 
+# ===== 相機狀態管理 =====
+import threading
+camera_active = False  # 預設關閉
+camera_lock = threading.Lock()
+camera_instance = None  # 新增：儲存攝影機實例
+
+print("[系統] 相機狀態管理已初始化 (預設關閉)")
+
+
+# ===== 新增相機狀態管理 =====
+def init_camera_lock():
+    """初始化相機鎖"""
+    global camera_lock
+    if camera_lock is None:
+        import threading
+        camera_lock = threading.Lock()
+        print("[系統] camera_lock 已初始化")
+
+init_camera_lock()
+
 # ===== 管理者端 =====
 @app.route('/manager')
 def manager():
@@ -174,10 +194,29 @@ def gen_frames():
             cv2.putText(frame, label, (x, y-10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
 
-    global last_names, latest_frame
+    global last_names, latest_frame, camera_active, camera_instance
 
     """ 相機設定&開啟 """
     try:
+        # 等待相機開啟
+        print(f"[系統] gen_frames 啟動，相機狀態: {camera_active}")
+        
+        while not camera_active:
+            # 返回黑色畫面提示相機已關閉
+            black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(black_frame, 'Camera is OFF', (180, 240),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(black_frame, 'Click "Start Camera" to begin', (120, 280),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+            ret, buffer = cv2.imencode('.jpg', black_frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                  b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            import time
+            time.sleep(0.5)
+        
+        print("[系統] 相機已啟動，開始初始化攝影機...")
+        
         # ----- 攝影機自動搜尋 -----
         backends = CameraManager.get_camera_config()
         camera_index, backend = CameraManager.find_camera(backends)
@@ -185,18 +224,21 @@ def gen_frames():
         # ----- 檢查是否有找到攝影機 -----
         if camera_index is None or backend is None:
             print("[錯誤] 無法找到可用的攝影機")
-            # 返回一個錯誤影像而不是直接 return
             error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
             cv2.putText(error_frame, 'Camera Not Found', (50, 240),
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             ret, buffer = cv2.imencode('.jpg', error_frame)
             frame_bytes = buffer.tobytes()
-            while True:
+            while camera_active:
                 yield (b'--frame\r\n'
                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                import time
+                time.sleep(0.5)
+            return
         
         # ----- 使用找到的最佳攝影機設定開啟攝影機 -----
         cap = CameraManager.open_camera(camera_index, backend)
+        camera_instance = cap  # 儲存攝影機實例
         
         # ----- 檢查攝影機有沒有打開 -----
         if not cap or not cap.isOpened():
@@ -206,9 +248,12 @@ def gen_frames():
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             ret, buffer = cv2.imencode('.jpg', error_frame)
             frame_bytes = buffer.tobytes()
-            while True:
+            while camera_active:
                 yield (b'--frame\r\n'
                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                import time
+                time.sleep(0.5)
+            return
 
     except Exception as e:
         print(f"[錯誤] 攝影機初始化失敗: {e}")
@@ -217,16 +262,19 @@ def gen_frames():
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         ret, buffer = cv2.imencode('.jpg', error_frame)
         frame_bytes = buffer.tobytes()
-        while True:
+        while camera_active:
             yield (b'--frame\r\n'
                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            import time
+            time.sleep(0.5)
+        return
 
     """ ===== 開始讀取影像&播放 ====== """
     frame_count = 0
     last_results = []
     
     try:
-        while True:
+        while camera_active:  # 改為檢查 camera_active
             ret, frame = cap.read()
             if not ret:
                 print("[警告] 無法讀取影像幀")
@@ -288,9 +336,31 @@ def gen_frames():
         import traceback
         traceback.print_exc()
     finally:
-        if 'cap' in locals() and cap is not None:
+        if cap is not None:
             CameraManager.clean_camera(cap)
-            print("[系統] 攝影機已關閉")
+            camera_instance = None
+            print("[系統] 攝影機已關閉並釋放資源")
+        
+        # 關閉後繼續提供黑屏，等待重新開啟
+        while True:
+            black_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            cv2.putText(black_frame, 'Camera is OFF', (180, 240),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(black_frame, 'Click "Start Camera" to begin', (120, 280),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+            ret, buffer = cv2.imencode('.jpg', black_frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                  b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            import time
+            time.sleep(0.5)
+            
+            # 如果相機被重新開啟，重新初始化
+            if camera_active:
+                print("[系統] 偵測到相機重新開啟，重新啟動串流")
+                # 遞迴呼叫自己重新開始
+                yield from gen_frames()
+                return
 
 # ===== 鏡頭影像顯示 =====
 @app.route('/video_feed')
@@ -298,6 +368,55 @@ def video_feed():
     return Response(gen_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
+# ===== 開啟相機 API =====
+@app.route('/start_camera', methods=['POST'])
+def start_camera():
+    global camera_active
+    try:
+        with camera_lock:
+            if camera_active:
+                return jsonify({'success': True, 'message': '相機已經在運行中'}), 200
+            camera_active = True
+        print("[系統] 相機已開啟")
+        return jsonify({'success': True, 'message': '相機已開啟'}), 200
+    except Exception as e:
+        print(f"[錯誤] 開啟相機失敗: {e}")
+        return jsonify({'success': False, 'message': f'開啟失敗: {str(e)}'}), 500
+
+# ===== 關閉相機 API =====
+@app.route('/stop_camera', methods=['POST'])
+def stop_camera():
+    global camera_active, camera_instance
+    try:
+        with camera_lock:
+            if not camera_active:
+                return jsonify({'success': True, 'message': '相機已經關閉'}), 200
+            camera_active = False
+            
+            # 立即釋放攝影機資源
+            if camera_instance is not None:
+                try:
+                    CameraManager.clean_camera(camera_instance)
+                    print("[系統] 已釋放攝影機資源")
+                except Exception as e:
+                    print(f"[警告] 釋放攝影機資源時發生錯誤: {e}")
+                finally:
+                    camera_instance = None
+        
+        print("[系統] 相機已關閉")
+        import time
+        time.sleep(0.5)  # 給予時間讓串流停止
+        return jsonify({'success': True, 'message': '相機已關閉'}), 200
+    except Exception as e:
+        print(f"[錯誤] 關閉相機失敗: {e}")
+        return jsonify({'success': False, 'message': f'關閉失敗: {str(e)}'}), 500
+
+# ===== 取得相機狀態 API =====
+@app.route('/camera_status', methods=['GET'])
+def camera_status():
+    global camera_active
+    return jsonify({'active': camera_active}), 200
 
 # ===== 加入人臉到資料庫 =====
 @app.route('/add_face', methods=['POST'])
@@ -339,6 +458,17 @@ def add_face():
 def test_face():
     try:
         print("[測試辨識] 開始處理請求")
+        
+        # ===== 自動關閉相機 =====
+        global camera_active
+        camera_was_active = camera_active
+        if camera_was_active:
+            with camera_lock:
+                camera_active = False
+            print("[測試辨識] 已自動關閉相機")
+            import time
+            time.sleep(1.0)  # 增加等待時間確保相機完全關閉
+        
         image_file = request.files.get('image')
         
         if not image_file:
@@ -421,11 +551,29 @@ def test_face():
 
         # 輸出結果
         if result['success']:
+            # 如果之前相機是開啟的，重新開啟
+            if camera_was_active:
+                with camera_lock:
+                    camera_active = True
+                print("[測試辨識] 已重新開啟相機")
+            
             return jsonify({'success': True, 'results': result['results'], 'message': result['message']}), 200
         else:
+            # 如果之前相機是開啟的，重新開啟
+            if camera_was_active:
+                with camera_lock:
+                    camera_active = True
+                print("[測試辨識] 已重新開啟相機")
+            
             return jsonify({'success': False, 'message': result['message']}), 200
     
     except Exception as e:
+        # 發生錯誤時也要恢復相機狀態
+        if camera_was_active:
+            with camera_lock:
+                camera_active = True
+            print("[測試辨識] 錯誤發生，已重新開啟相機")
+        
         print(f"[測試辨識] 發生未預期的錯誤：{e}")
         import traceback
         traceback.print_exc()

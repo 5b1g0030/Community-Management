@@ -8,7 +8,11 @@ export const testFaceBtn = document.getElementById('testFaceBtn');         // �
 export const viewFaceDbBtn = document.getElementById('viewFaceDbBtn');     // 「查看資料庫」功能按鈕
 export const viewLogDbBtn = document.getElementById('viewLogDbBtn');       // 「查看辨識紀錄資料庫」功能按鈕
 export const visitorBookingBtn = document.getElementById('visitor-booking-btn'); // 「訪客預約」功能按鈕
-export const recognitionLog = document.getElementById('recognitionLog');       // 辨識紀錄清單
+export const recognitionLog = document.getElementById('recognitionMessages');  // 辨識紀錄清單（修改為正確的 ID）
+
+// ===== 相機控制元素 =====
+export const toggleCameraBtn = document.getElementById('toggleCamera');    // 相機開關按鈕
+export const cameraStatus = document.getElementById('cameraStatus');       // 相機狀態顯示
 
 // ===== 加入人臉彈出視窗 =====
 export const addFaceModal = document.getElementById('addFaceModal');           // 「加入人臉」浮空視窗
@@ -33,6 +37,21 @@ export const modalTableBody = document.getElementById('modalTableBody');       /
 export const viewLogDbModal = document.getElementById('viewLogDbModal');       // 辨識紀錄 Modal(彈出視窗)
 export const closeViewLogDbModal = document.getElementById('closeViewLogDbModal'); // 關閉按鈕(辨識紀錄)
 
+// ===== 訪客預約 Modal =====
+export const visitorBookingModal = document.getElementById('visitor-booking-modal'); // 訪客預約彈出視窗
+export const visitorBookingCloseBtn = document.querySelector('#visitor-booking-modal .close'); // 關閉按鈕
+export const visitorBookingForm = document.getElementById('visitor-booking-form'); // 表單
+export const bookingUsernameInput = document.getElementById('booking-username'); // 住戶名稱輸入框
+    
+// 照片上傳相關元素
+export const frontFaceInput = document.getElementById('front-face-input');
+export const leftFaceInput = document.getElementById('left-face-input');
+export const rightFaceInput = document.getElementById('right-face-input');
+export const frontFacePreview = document.getElementById('front-face-preview');
+export const leftFacePreview = document.getElementById('left-face-preview');
+export const rightFacePreview = document.getElementById('right-face-preview');
+
+// 使用者註冊
 export const registerForm = document.getElementById('registerForm');
 export const username = document.getElementById('username');
 export const password = document.getElementById('password');
@@ -45,13 +64,6 @@ export const submitMessage = document.getElementById('submitMessage');
 export const loginForm = document.getElementById('loginForm');
 export const loginMessage = document.getElementById('loginMessage');
 
-// ===== 訪客預約相關元素 =====
-export const visitorBookingModal = document.getElementById('visitor-booking-modal'); // 訪客預約的 modal 容器
-export const closeVisitorBookingModal = document.getElementById('closeVisitorBookingModal'); // 關閉按鈕
-export const visitorBookingForm = document.getElementById('visitor-booking-form'); // 驗證碼輸入表單
-export const bookingCodeInput = document.getElementById('bookingCodeInput');     // 使用者輸入的驗證碼欄位
-export const bookingResult = document.getElementById('bookingResult');           // 顯示驗證和拍照結果的區塊
-
 
 // ===== 匯出元素 =====
 
@@ -63,6 +75,9 @@ const DOM = {
     viewLogDbBtn,
     visitorBookingBtn,
     recognitionLog,
+
+    toggleCameraBtn,
+    cameraStatus,
 
     addFaceModal,
     closeAddFaceModal,
@@ -83,6 +98,17 @@ const DOM = {
     viewLogDbModal,
     closeViewLogDbModal,
 
+    visitorBookingModal,
+    visitorBookingCloseBtn,
+    visitorBookingForm,
+    bookingUsernameInput,
+    frontFaceInput,
+    leftFaceInput,
+    rightFaceInput,
+    frontFacePreview,
+    leftFacePreview,
+    rightFacePreview,
+
     registerForm,
     username,
     password,
@@ -94,13 +120,6 @@ const DOM = {
 
     loginForm,
     loginMessage,
-
-    visitorBookingBtn,
-    visitorBookingModal,
-    closeVisitorBookingModal,
-    visitorBookingForm,
-    bookingCodeInput,
-    bookingResult
 }; 
 
 export default DOM

@@ -20,7 +20,7 @@ body {
 .function-buttons {
     margin: 20px 0;
     display: flex;
-    gap: 10px;
+    gap: 20px;
 }
 
 button {
@@ -85,23 +85,82 @@ th {
 
 /* 辨識紀錄 */
 .log-entry {
-    margin-bottom: 5px; /* 底部間距 */
-    padding: 5px;       /* 內間距 */
+    margin-bottom: 8px; /* 底部間距 */
+    padding: 8px;       /* 內間距 */
+    border-radius: 4px; /* 圓角 */
     border-bottom: 1px solid #eee; /* 底部細線 */
+    word-wrap: break-word; /* 文字換行 */
+    font-size: 14px;
+    line-height: 1.4;
 }
+
 /* 辨識紀錄(已知人物) */
-/* 同時擁有兩個類別的同一個元素 */
-/* 需要在 log-entry 後面加上類別名稱才有效 */
 .log-entry.know-face{
-    background-color: green;
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
 }
+
 /* 辨識紀錄(未知人物) */
 .log-entry.unknow-face{
-    background-color: red;
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
 }
-/* 辨識紀錄(已知人物) */
+
+/* 辨識紀錄(未偵測到人臉) */
 .log-entry.no-face{
-    background-color: gray;
+    background-color: #e2e3e5;
+    color: #383d41;
+    border-left: 4px solid #6c757d;
+}
+
+/* 滾動條樣式美化 */
+#recognitionMessages::-webkit-scrollbar {
+    width: 8px;
+}
+
+#recognitionMessages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#recognitionMessages::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#recognitionMessages::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 即時影像串流區域 */
+.video-section {
+    width: 426px;
+    flex-shrink: 0; /* 防止被壓縮 */
+}
+
+/* 辨識紀錄區域 */
+.recognition-log {
+    width: 300px;
+    flex-shrink: 0; /* 防止被壓縮 */
+}
+
+.recognition-log h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* 辨識紀錄容器 - 固定高度並啟用滾動 */
+#recognitionMessages {
+    height: 400px; /* 固定高度 */
+    max-height: 400px;
+    overflow-y: auto; /* 垂直滾動 */
+    overflow-x: hidden; /* 隱藏水平滾動 */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f9f9f9;
 }
 
 /* 浮空視窗遮罩 */
@@ -175,6 +234,17 @@ th {
     margin-top: 0;
     margin-bottom: 10px;
     color: #333;
+}
+
+/* ==================
+    相機開關按鈕
+   ================== */
+.btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+.btn-danger:hover {
+    background-color: #da190b;
 }
 
 /* ==================== 

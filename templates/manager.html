@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- 引入 DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
-    
+
 </head>
 <body>
     <!-- 顯示在網頁上的區域(start) -->
@@ -26,7 +26,6 @@
                 <button type="button" id="testFaceBtn">測試辨識</button>
                 <button type="button" id="viewFaceDbBtn">查看已登錄人臉</button>
                 <button type="button" id="viewLogDbBtn">查看辨識紀錄</button>
-                <button type="button" id="visitorBookingBtn">訪客預約</button>
             </div>
 
             <!-- 人工審核區 -->
@@ -56,22 +55,24 @@
             </div>
         </div>
 
-        <!-- 即時影像與紀錄區 -->
-        <div class="sidebar">
-            
-            <!-- 及時辨識影像畫面 -->
+        <!-- 即時影像串流區域 -->
+        <div class="video-section">
+            <h2>即時影像串流</h2>
             <div class="video-container">
-                <!-- 從後端「/video_feed」顯示在網頁上 -->
-                {# {{}} => Flask 的 Jinja2 模板語法 #}
-                <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="即時影像">
+                <img src="{{ url_for('video_feed') }}" alt="影像串流" style="width: 100%; max-width: 426px;">
             </div>
-
-            <!-- 辨識紀錄清單(即時顯示) -->
-            <div class="log-container">
-                <h3>辨識紀錄</h3>
-                <div id="recognitionLog"></div> <!-- 清單內容放這裡 -->
+            
+            <!-- 相機控制按鈕 -->
+            <div class="camera-controls" style="margin-top: 15px; text-align: center;">
+                <button id="toggleCamera" class="btn btn-primary">開啟相機</button>
+                <span id="cameraStatus" style="margin-left: 15px; font-weight: bold; font-size: 16px;">相機狀態: 關閉</span>
             </div>
+        </div>
 
+        <!-- 辨識紀錄區域 -->
+        <div class="recognition-log">
+            <h2>辨識紀錄</h2>
+            <div id="recognitionMessages"></div>
         </div>
     </div>
     <!-- 顯示在網頁上的區域(end) -->
@@ -190,23 +191,6 @@
                     <tbody></tbody>
                 </table>
             </div>
-        </div>
-    </div>
-    
-    <!-- 訪客預約驗證 Modal(彈出視窗) -->
-    <div id="visitorBookingModal" class="modal" style="display:none;">
-        <div class="modal-content"
-            style="position:fixed; left:45vw; top:30vh; z-index:2000; min-width:350px; min-height:250px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
-            <span class="close" id="closeVisitorBookingModal">&times;</span>
-            <h2>訪客預約驗證</h2>
-            <form id="visitorBookingForm">
-                <!-- 預約碼輸入 -->
-                <input type="text" id="bookingCodeInput" placeholder="請輸入6位數預約碼" maxlength="6" required><br><br>
-                <!-- 送出按鈕 -->
-                <button type="submit">驗證</button>
-            </form>
-            <!-- 顯示結果訊息 -->
-            <div id="bookingResult" style="margin-top: 15px;"></div>
         </div>
     </div>
     
