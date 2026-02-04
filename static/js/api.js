@@ -72,9 +72,9 @@ export async function getFace() {
 }
 
 // ===== 訪客驗證碼驗證 =====
-export async function verifyBookingCode(formData) {
+export async function generateBookingCode(formData) {
     // 把表單提交到後端，目的: '/verify_booking_code'，等待回應
-    const response = await fetch('/verify_booking_code', {
+    const response = await fetch('/generate_booking_code', {
         method: 'POST', // POST 請求
         body: formData // 要傳送的資料
     });            

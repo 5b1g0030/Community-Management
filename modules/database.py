@@ -208,6 +208,8 @@ class DatabaseManager:
     def get_visitor_by_face_name(self, visitor_face_name):
         """
         根據訪客人臉名稱查詢對應的住戶名稱
+        預約紀錄（visitor_bookings）會保留，只是標記為已使用（used = TRUE），
+        這樣既能保留歷史紀錄，又能確保人臉資料不會被重複使用或濫用
         
         參數:
             visitor_face_name: 訪客人臉識別名稱 (如 visitor_20240101_123456)
@@ -238,6 +240,7 @@ class DatabaseManager:
     def clear_visitor_face_data(self, visitor_face_name):
         """
         清除訪客的人臉資料（完全刪除，不保留記錄）
+        訪客的人臉資料屬於一次性用途，當辨識完成、通行後，為了保護住戶與訪客的隱私
         
         參數:
             visitor_face_name: 訪客人臉識別名稱

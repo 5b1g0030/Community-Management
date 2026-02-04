@@ -7,7 +7,6 @@ export const addFaceBtn = document.getElementById('addFaceBtn');           // �
 export const testFaceBtn = document.getElementById('testFaceBtn');         // 「測試辨識」功能按鈕
 export const viewFaceDbBtn = document.getElementById('viewFaceDbBtn');     // 「查看資料庫」功能按鈕
 export const viewLogDbBtn = document.getElementById('viewLogDbBtn');       // 「查看辨識紀錄資料庫」功能按鈕
-export const visitorBookingBtn = document.getElementById('visitor-booking-btn'); // 「訪客預約」功能按鈕
 export const recognitionLog = document.getElementById('recognitionMessages');  // 辨識紀錄清單（修改為正確的 ID）
 
 // ===== 相機控制元素 =====
@@ -38,6 +37,7 @@ export const viewLogDbModal = document.getElementById('viewLogDbModal');       /
 export const closeViewLogDbModal = document.getElementById('closeViewLogDbModal'); // 關閉按鈕(辨識紀錄)
 
 // ===== 訪客預約 Modal =====
+export const visitorBookingBtn = document.getElementById('visitor-booking-btn'); // 「訪客預約」功能按鈕
 export const visitorBookingModal = document.getElementById('visitor-booking-modal'); // 訪客預約彈出視窗
 export const visitorBookingCloseBtn = document.querySelector('#visitor-booking-modal .close'); // 關閉按鈕
 export const visitorBookingForm = document.getElementById('visitor-booking-form'); // 表單
@@ -73,7 +73,6 @@ const DOM = {
     testFaceBtn,
     viewFaceDbBtn,
     viewLogDbBtn,
-    visitorBookingBtn,
     recognitionLog,
 
     toggleCameraBtn,
@@ -98,6 +97,7 @@ const DOM = {
     viewLogDbModal,
     closeViewLogDbModal,
 
+    visitorBookingBtn,
     visitorBookingModal,
     visitorBookingCloseBtn,
     visitorBookingForm,

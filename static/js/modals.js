@@ -1,5 +1,5 @@
 import * as DOM from "./dom.js" // 引入網頁元素
-import { addFace, testFace, getFace } from "./api.js"; // 引入後端api溝通函式
+import { addFace, testFace, getFace, generateBookingCode } from "./api.js"; // 引入後端api溝通函式
 
 // ===== 加入人臉按鈕 =====
 export async function addFaceModal() {
@@ -200,98 +200,93 @@ export async function viewFace() {
 }
 
 // ===== 訪客預約彈出視窗 =====
-export function visitorBooking() {
-    // 檢查必要元素是否存在
+export async function visitorBooking() {
+    // --- 檢查必要元素是否存在 ---
     if (!DOM.visitorBookingModal || !DOM.visitorBookingBtn || 
         !DOM.visitorBookingCloseBtn || !DOM.visitorBookingForm) {
         console.error('訪客預約相關元素未找到');
         return;
     }
 
-    // 開啟彈窗
+    // --- 開啟彈窗 ---
     DOM.visitorBookingBtn.onclick = function() {
         DOM.visitorBookingModal.style.display = 'block';
         setTimeout(() => centerModal(DOM.visitorBookingModal), 0);
+        // 照片預覽功能
+        function setupImagePreview(input, previewContainer) {
+            // 如果 input(照片) 或預覽容器不存在，就直接結束，不做任何事
+            if (!input || !previewContainer) return;
+            
+            // 產生預覽標籤
+            input.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewContainer.innerHTML = `<img src="${e.target.result}" alt="預覽" style="max-width: 100%; max-height: 150px;">`;
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // 設定三個照片上傳的預覽
+        setupImagePreview(DOM.frontFaceInput, DOM.frontFacePreview);
+        setupImagePreview(DOM.leftFaceInput, DOM.leftFacePreview);
+        setupImagePreview(DOM.rightFaceInput, DOM.rightFacePreview);
+
+        // 表單提交處理
+        DOM.visitorBookingForm.onsubmit = async function(e) {
+            e.preventDefault();
+            // 取得使用者名稱+訪客照片
+            const username = DOM.bookingUsernameInput.value.trim();
+            const frontFace = DOM.frontFaceInput.files[0];
+            const leftFace = DOM.leftFaceInput.files[0];
+            const rightFace = DOM.rightFaceInput.files[0];
+
+            // 驗證
+            if (!username) {
+                alert('請輸入住戶名稱');
+                return;
+            }
+            if (!frontFace || !leftFace || !rightFace) {
+                alert('請上傳三張照片（正面、左微側、右微側）');
+                return;
+            }
+
+            // 建立 FormData
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('front_face', frontFace);
+            formData.append('left_face', leftFace);
+            formData.append('right_face', rightFace);
+
+            try {
+                const result = await generateBookingCode(formData)
+
+                if (result.success) {
+                    alert(result.message);
+                    DOM.visitorBookingModal.style.display = 'none';
+                    DOM.visitorBookingForm.reset();
+                    DOM.frontFacePreview.innerHTML = '';
+                    DOM.leftFacePreview.innerHTML = '';
+                    DOM.rightFacePreview.innerHTML = '';
+                } else {
+                    alert('預約失敗：' + result.message);
+                }
+            } catch (error) {
+                alert('預約失敗：' + error.message);
+            }
+        }
     }
 
-    // 關閉彈窗
+    // ---- 關閉彈窗 ---
     DOM.visitorBookingCloseBtn.onclick = function() {
         DOM.visitorBookingModal.style.display = 'none';
         DOM.visitorBookingForm.reset();
         DOM.frontFacePreview.innerHTML = '';
         DOM.leftFacePreview.innerHTML = '';
         DOM.rightFacePreview.innerHTML = '';
-    }
-
-    // 照片預覽功能
-    function setupImagePreview(input, previewContainer) {
-        if (!input || !previewContainer) return;
-        
-        input.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    previewContainer.innerHTML = `<img src="${e.target.result}" alt="預覽" style="max-width: 100%; max-height: 150px;">`;
-                }
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-
-    // 設定三個照片上傳的預覽
-    setupImagePreview(DOM.frontFaceInput, DOM.frontFacePreview);
-    setupImagePreview(DOM.leftFaceInput, DOM.leftFacePreview);
-    setupImagePreview(DOM.rightFaceInput, DOM.rightFacePreview);
-
-    // 表單提交處理
-    DOM.visitorBookingForm.onsubmit = async function(e) {
-        e.preventDefault();
-
-        const username = DOM.bookingUsernameInput.value.trim();
-        const frontFace = DOM.frontFaceInput.files[0];
-        const leftFace = DOM.leftFaceInput.files[0];
-        const rightFace = DOM.rightFaceInput.files[0];
-
-        // 驗證
-        if (!username) {
-            alert('請輸入住戶名稱');
-            return;
-        }
-
-        if (!frontFace || !leftFace || !rightFace) {
-            alert('請上傳三張照片（正面、左微側、右微側）');
-            return;
-        }
-
-        // 建立 FormData
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('front_face', frontFace);
-        formData.append('left_face', leftFace);
-        formData.append('right_face', rightFace);
-
-        try {
-            const response = await fetch('/generate_booking_code', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                alert(result.message);
-                DOM.visitorBookingModal.style.display = 'none';
-                DOM.visitorBookingForm.reset();
-                DOM.frontFacePreview.innerHTML = '';
-                DOM.leftFacePreview.innerHTML = '';
-                DOM.rightFacePreview.innerHTML = '';
-            } else {
-                alert('預約失敗：' + result.message);
-            }
-        } catch (error) {
-            alert('預約失敗：' + error.message);
-        }
     }
 }
 
@@ -321,6 +316,7 @@ function centerModal(modal) {
     content.style.top = 'calc(50vh - ' + (content.offsetHeight / 2) + 'px)';
     content.style.zIndex = 2000;
 }
+
 // ===== 讓指定的 modal 可透過標題欄（<h2>）拖曳移動 =====
 function makeModalDraggable(modal) {
     // 檢查有沒有彈窗

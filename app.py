@@ -594,9 +594,6 @@ def get_faces():
     except Exception as e:
         return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
 
-"""
-===== 訪客預約功能 ===== 
-"""
 
 # ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
 @app.route('/api/recognition_logs')
@@ -623,12 +620,12 @@ def get_recognition_logs_datatables():
     
     return jsonify({'data': data})
 
-# ===== 新增住戶頁面路由 =====
+# ===== 住戶頁面路由 =====
 @app.route('/residents')
 def residents():
     return render_template('residents.html')
 
-# ===== 生成訪客預約碼 =====
+# ===== 生成訪客預約通行證 =====
 @app.route('/generate_booking_code', methods=['POST'])
 def generate_booking_code():
     """
@@ -646,6 +643,7 @@ def generate_booking_code():
         left_face = request.files.get('left_face')
         right_face = request.files.get('right_face')
         
+        # 檢查是否有三張照片
         if not front_face or not left_face or not right_face:
             return jsonify({'success': False, 'message': '請上傳三張照片（正面、左微側、右微側）'}), 400
         
@@ -659,13 +657,14 @@ def generate_booking_code():
         # 驗證照片是否能偵測到人臉
         validation_result = face_recognizer.validate_face_images(image_files)
         
+        # 驗證失敗時(沒偵測到人臉)，回傳錯誤訊息和 400 狀態碼
         if not validation_result['success']:
             return jsonify({
                 'success': False,
                 'message': validation_result['message']
             }), 400
         
-        # 生成唯一的訪客識別名稱
+        # 生成唯一的訪客識別名稱(用於儲存)
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         random_suffix = random.randint(1000, 9999)
         visitor_name = f"visitor_{timestamp}_{random_suffix}"
@@ -677,6 +676,7 @@ def generate_booking_code():
             image_files
         )
         
+        # # 驗證失敗時(沒註冊成功)，回傳錯誤訊息和 400 狀態碼
         if not register_result['success']:
             return jsonify({
                 'success': False,
@@ -693,7 +693,7 @@ def generate_booking_code():
         if not success:
             return jsonify({'success': False, 'message': message}), 400
         
-        # 重新整理人臉快取
+        # 重新整理人臉快取(更新數據庫)
         refresh_face_cache(db_manager)
         
         return jsonify({
