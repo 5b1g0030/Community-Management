@@ -341,6 +341,25 @@ document.addEventListener('DOMContentLoaded', () => {
         DOM.recognitionLog.insertBefore(entry, DOM.recognitionLog.firstChild);
     }
 
+    // // ===== 自動重啟影像串流 =====
+    // function reloadStream() {
+    //     const img = document.getElementById('video-stream');
+    //     if (img) {
+    //         img.src = '/video_feed?' + new Date().getTime();
+    //     }
+    // }
+
+    // // 檢查影像是否黑屏（可根據實際情況調整）
+    // setInterval(function() {
+    //     const reloadBtn = document.getElementById('toggleCamera');
+    //     if (reloadBtn) {
+    //         reloadBtn.addEventListener('click', function() {
+    //             reloadStream();
+    //         });
+    //     }
+    // }, 3000);
+
+
     // ************************
     // 辨識紀錄篩選-按鈕觸發
     // ************************

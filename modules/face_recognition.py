@@ -50,10 +50,6 @@ class FaceRecognitionCache:
         """檢查快取是否為空"""
         return len(self.known_ids) == 0
     
-    def refresh(self, db_manager):
-        """重新整理快取"""
-        print("[快取] 正在重新整理...")
-        self.load_from_database(db_manager)
 
 # 建立全域快取實例
 _face_cache = FaceRecognitionCache()
@@ -61,12 +57,14 @@ _face_cache = FaceRecognitionCache()
 # ===== 初始化快取（全域函式）=====
 def init_face_cache(db_manager):
     """初始化人臉快取（在應用啟動時呼叫）"""
+    print("[快取] 正在初始化...")
     _face_cache.load_from_database(db_manager)
 
 # ===== 重新整理快取（全域函式）=====
 def refresh_face_cache(db_manager):
     """重新整理人臉快取（新增人臉後呼叫）"""
-    _face_cache.refresh(db_manager)
+    print("[快取] 正在重新整理...")
+    _face_cache.load_from_database(db_manager)
 
 # ===== 人臉註冊&辨識類別 =====
 class FaceRecognition:
