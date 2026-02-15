@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 import time
 
-# ----- 推送辨識訊息(已知, 未知, 訪客) -----
+# ===== 推送辨識訊息(已知, 未知, 訪客) =====
 def face_message(results, frame):
     for result in results:
         name = result['name']
@@ -72,16 +72,32 @@ def face_message(results, frame):
 # ===== 在影像上繪製辨識結果 =====
 def draw_frame(results, frame):
     for result in results:
-        x, y, w, h = result['position']
-        name = result['name']
-        confidence = result['confidence']
+        x, y, w, h = result['position'] # 人臉座標
+        name = result['name'] # 人名
+        confidence = result['confidence'] # 信心度
 
+        # 已知=綠色；未知=紅色
         color = (0, 255, 0) if name != '未知' else (0, 0, 255)
         cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
 
         label = f"{name} ({confidence:.1f})"
         cv2.putText(frame, label, (x, y-10),
             cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+
+# ===== 如果無法成功編碼時使用，嘗試顯示錯誤畫面 =====
+def show_encoding_error_frame():
+    print("[錯誤] 無法將黑色畫面編碼為 JPEG 格式")
+    # 返回一個簡單的錯誤畫面
+    frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    cv2.putText(frame, 'Encoding Error', (150, 240),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    ret, buffer = cv2.imencode('.jpg', frame)
+    # 如果編碼再次失敗
+    if not ret:
+        print("[嚴重錯誤] 無法生成錯誤畫面")
+        buffer = b''
+
+    return buffer
 
 # ===== 顯示黑色畫面 =====
 def show_black_frame():
@@ -95,86 +111,112 @@ def show_black_frame():
     ret, buffer = cv2.imencode('.jpg', frame)
     # 如果編碼失敗
     if not ret:
-        print("[錯誤] 無法將黑色畫面編碼為 JPEG 格式")
-        # 返回一個簡單的錯誤畫面
-        error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        cv2.putText(error_frame, 'Encoding Error', (150, 240),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        ret, buffer = cv2.imencode('.jpg', error_frame)
-        # 如果編碼再次失敗
-        if not ret:
-            print("[嚴重錯誤] 無法生成錯誤畫面")
-            buffer = b''
+        buffer = show_encoding_error_frame()
     
     # 包裝成 HTTP 響應的一部分，傳輸到客戶端（例如瀏覽器）
     frame_bytes = buffer.tobytes()
 
     return frame_bytes
 
+# ===== 顯示找不到相機畫面 =====
+def show_not_found_frame():
+    frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    cv2.putText(frame, 'Camera Not Found', (50, 240),
+    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    ret, buffer = cv2.imencode('.jpg', frame)
+    # 如果編碼失敗
+    if not ret:
+        buffer = show_encoding_error_frame()
+    
+    # 包裝成 HTTP 響應的一部分，傳輸到客戶端（例如瀏覽器）
+    frame_bytes = buffer.tobytes()
+
+    return frame_bytes
+
+# ===== 顯示相機開啟失敗畫面 =====
+def show_open_failed_frame():
+    error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    cv2.putText(error_frame, 'Camera Open Failed', (50, 240),
+        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    ret, buffer = cv2.imencode('.jpg', error_frame)
+
+    # 如果編碼失敗
+    if not ret:
+        buffer = show_encoding_error_frame()
+
+    # 包裝成 HTTP 響應的一部分，傳輸到客戶端（例如瀏覽器）
+    frame_bytes = buffer.tobytes()
+
+    return frame_bytes
+
+
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
     while True:
-        # 等待相機開啟
+        # --- 等待相機開啟期間，顯示黑畫面 ---
         while not config.CAMERA_ACTIVE:
             black_frame = show_black_frame()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + black_frame + b'\r\n')
             time.sleep(0.5)
         
-        # 相機啟動流程
+        # ===== 影像串流 =====
         try:
+            # --- 取得相機索引、可用參數 ---
             backends = CameraManager.get_camera_config()
             camera_index, backend = CameraManager.find_camera(backends)
+
+            # --- 如果沒有找到相機或可用參數，顯示無法找到相機的畫面 ---
             if camera_index is None or backend is None:
-                error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                cv2.putText(error_frame, 'Camera Not Found', (50, 240),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                ret, buffer = cv2.imencode('.jpg', error_frame)
-                frame_bytes = buffer.tobytes()
+                not_found_frame = show_not_found_frame()
+            
                 while config.CAMERA_ACTIVE:
                     yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                           b'Content-Type: image/jpeg\r\n\r\n' + not_found_frame + b'\r\n')
                     time.sleep(0.5)
                 continue  # 回到最外層 while，等待相機重新開啟
+            
+            # --- 儲存相機實例(需要檢查有相機後才可呼叫) ---
+            config.CAMERA_INSTANCE = CameraManager.open_camera(camera_index, backend)
 
-            cap = CameraManager.open_camera(camera_index, backend)
-            config.CAMERA_INSTANCE = cap
-
-            if not cap or not cap.isOpened():
-                error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                cv2.putText(error_frame, 'Camera Open Failed', (50, 240),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                ret, buffer = cv2.imencode('.jpg', error_frame)
-                frame_bytes = buffer.tobytes()
+            # --- 如果沒有相機實例或無法開啟相機 ---
+            if not config.CAMERA_INSTANCE or not config.CAMERA_INSTANCE.isOpened():
+                error_frame = show_open_failed_frame()
+                
                 while config.CAMERA_ACTIVE:
                     yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                           b'Content-Type: image/jpeg\r\n\r\n' + error_frame + b'\r\n')
                     time.sleep(0.5)
                 continue
 
             # ===== 主串流迴圈 =====
-            frame_count = 0
-            last_results = []
-            last_names = set()
+            frame_count = 0 # 影片幀數
+            last_results = [] # 最新結果
+            last_names = set() # 辨識到的人臉集合
 
             while config.CAMERA_ACTIVE:
-                ret, frame = cap.read()
+                ret, frame = config.CAMERA_INSTANCE.read() # 讀取影像
                 if not ret:
                     break
-                frame_count += 1
+                frame_count += 1 # 計算影片幀數
+                # --- 如果幀數好是 FACE_RECOGNITION_FRAME_SKIP 的倍數時，才執行辨識 ---
                 if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
                     results = face_recognizer.recognize_face_from_frame(db_manager, frame, use_cache=True)
                     last_results = results
                     frame_count = 0
                 else:
+                    # 紀錄上一個畫面，以便保持有畫面有可以顯示
                     results = last_results
 
-                current_names = set([r['name'] for r in results])
+                # --- 只在「辨識到的人臉名稱有變化」時，才推送辨識訊息到前端 ---
+                current_names = set([r['name'] for r in results]) # 辨識到的人臉集合
+                # 將兩個集合比較，如果內容不同則代表是新結果
                 if current_names != last_names:
-                    face_message(results, frame)
+                    face_message(results, frame) # 推送及時通知
+                    # 把 last_names 更新成這一幀的 current_names，以便下次比對
                     last_names = current_names
 
-                draw_frame(results, frame)
+                draw_frame(results, frame) # 劃出辨識框
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'
