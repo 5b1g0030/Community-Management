@@ -9,7 +9,7 @@ import random
 import time
 from modules.config import FACE_RECOGNITION_RESIZE_WIDTH #FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config # 給相機做同步修改
-from modules.video_streaming import gen_frames
+from modules.video_streaming import gen_frames, pick_up_frame
 from modules import app, socketio, db_manager, face_recognizer, user
 
 # app = Flask(__name__)
@@ -341,17 +341,17 @@ def get_faces():
 # ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
 @app.route('/api/recognition_logs')
 def get_recognition_logs_datatables():
-    """提供給 DataTables 讀取的 JSON 格式辨識紀錄資料"""
+    # 從資料庫獲取提供給 DataTables 讀取的 JSON 格式辨識紀錄資料
     logs = db_manager.get_all_recognition_logs()  # 修改引用
     
-    # 轉換為 DataTables 期望的格式 (陣列的陣列)
+    # 轉換為 DataTables 期望的格式
     data = []
     for log in logs:
         # 處理 None 值，顯示為 "無"
         face_id = log['face_id'] if log['face_id'] is not None else '無'
         confidence = f"{log['confidence']:.1f}" if log['confidence'] is not None else '無'
         
-        # 加入資料
+        # 加入資料(每個欄位的順序對應於前端 DataTables 的欄位索引)
         data.append([
             log['id'],            # id編號
             log['created_date'],  # 資料建立時間
@@ -361,7 +361,7 @@ def get_recognition_logs_datatables():
             confidence            # 信心值
         ])
     
-    return jsonify({'data': data})
+    return jsonify({'data': data}) # 轉json
 
 # ===== 住戶頁面路由 =====
 @app.route('/residents')
@@ -450,6 +450,14 @@ def generate_booking_code():
             'success': False,
             'message': f'預約失敗: {str(e)}'
         }), 500
+
+# ===== 取貨影像串流（辨識但不儲存、不推送通知） =====
+@app.route('/pick_up_feed')
+def pick_up_feed():
+    return Response(pick_up_frame(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
 
 
 if __name__ == '__main__':

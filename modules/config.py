@@ -18,3 +18,7 @@ CAMERA_ACTIVE = False
 CAMERA_LOCK = threading.Lock() 
 CAMERA_INSTANCE = None
 LATEST_FRAME = None
+
+# ===== 取貨串流控制 =====
+PICKUP_STREAM_ACTIVE = False
+PICKUP_FACE_DETECTED = False  # 標記是否辨識到人臉

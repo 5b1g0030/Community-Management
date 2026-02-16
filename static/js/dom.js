@@ -64,6 +64,11 @@ export const submitMessage = document.getElementById('submitMessage');
 export const loginForm = document.getElementById('loginForm');
 export const loginMessage = document.getElementById('loginMessage');
 
+// ===== 取貨相關元素 =====
+export const pickUpBtn = document.getElementById('pickUpBtn');
+export const pickUpModal = document.getElementById('pickUpModal');
+export const closePickUpModal = document.getElementById('closePickUpModal');
+export const pickupVideoStream = document.getElementById('pickup-video-stream');
 
 // ===== 匯出元素 =====
 
@@ -120,6 +125,11 @@ const DOM = {
 
     loginForm,
     loginMessage,
+
+    pickUpBtn,
+    pickUpModal,
+    closePickUpModal,
+    pickupVideoStream,
 }; 
 
 export default DOM

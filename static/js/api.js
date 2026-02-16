@@ -65,13 +65,13 @@ export async function testFace(formData) {
     return await parseJsonResponse(response);
 }
 
-// ===== 查看人臉資料庫 =====
+// ===== 查看人臉資料庫api =====
 export async function getFace() {
     const response = await fetch('/get_faces');
     return await parseJsonResponse(response);
 }
 
-// ===== 訪客驗證碼驗證 =====
+// ===== 訪客驗證碼驗證api =====
 export async function generateBookingCode(formData) {
     // 把表單提交到後端，目的: '/verify_booking_code'，等待回應
     const response = await fetch('/generate_booking_code', {

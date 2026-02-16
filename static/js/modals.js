@@ -290,6 +290,69 @@ export async function visitorBooking() {
     }
 }
 
+// ===== 取貨功能彈出視窗 =====
+export async function pickUp() {
+    // 按鈕事件
+    DOM.pickUpBtn.addEventListener('click', async () => {
+        try {
+            // 1. 關閉主串流（停止相機）
+            const stopResponse = await fetch('/stop_camera', { method: 'POST' });
+            const stopResult = await stopResponse.json();
+
+            if (!stopResult.success) {
+                alert('無法關閉主串流：' + stopResult.message);
+                return;
+            }
+
+            // 2. 開啟取貨 Modal
+            DOM.pickUpModal.style.display = 'block';
+
+            // 3. 設定取貨串流來源
+            DOM.pickupVideoStream.src = '/pick_up_feed?' + new Date().getTime();
+
+            console.log('[取貨] 取貨視窗已開啟');
+        } catch (error) {
+            alert('開啟取貨視窗失敗：' + error.message);
+        }
+    });
+
+    // 關閉取貨 Modal
+    const closePickUpWindow = async () => {
+        try {
+            // 1. 停止取貨串流
+            DOM.pickupVideoStream.src = '';
+
+            // 2. 關閉 Modal
+            DOM.pickUpModal.style.display = 'none';
+
+            // 3. 重新開啟主串流
+            const startResponse = await fetch('/start_camera', { method: 'POST' });
+            const startResult = await startResponse.json();
+
+            if (startResult.success) {
+                // 更新相機 UI 狀態
+                updateCameraUI(true);
+            }
+
+            console.log('[取貨] 取貨視窗已關閉，主串流已恢復');
+        } catch (error) {
+            console.error('關閉取貨視窗失敗：', error);
+        }
+    };
+
+    // 點擊關閉按鈕
+    if (DOM.closePickUpModal) {
+        DOM.closePickUpModal.addEventListener('click', closePickUpWindow);
+    }
+
+    // 點擊 Modal 外部關閉
+    DOM.pickUpModal.addEventListener('click', (e) => {
+        if (e.target === DOM.pickUpModal) {
+            closePickUpWindow();
+        }
+    });
+}
+
 // ===== 辨識紀錄 =====
 export function initViewLogDbModal({
     onOpen,

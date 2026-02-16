@@ -149,7 +149,6 @@ def show_open_failed_frame():
 
     return frame_bytes
 
-
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
     while True:
@@ -230,3 +229,100 @@ def gen_frames():
                 config.CAMERA_INSTANCE = None
                 print("[系統] 攝影機已關閉並釋放資源")
         # 這裡不 return，直接回到最外層 while，等待相機重新開啟
+
+
+# ===== 取貨專用影像串流（辨識但不儲存、不推送） =====
+def pick_up_frame():
+    """
+    取貨專用串流：
+    - 執行人臉辨識並繪製框
+    - 不儲存辨識紀錄
+    - 不推送通知
+    - 辨識到人物後自動結束串流
+    """
+    print("[取貨串流] 開始取貨串流")
+    
+    # 設定取貨串流為啟用狀態
+    config.PICKUP_STREAM_ACTIVE = True
+    config.PICKUP_FACE_DETECTED = False
+    
+    try:
+        # --- 取得相機索引、可用參數 ---
+        backends = CameraManager.get_camera_config()
+        camera_index, backend = CameraManager.find_camera(backends)
+
+        # --- 如果沒有找到相機或可用參數 ---
+        if camera_index is None or backend is None:
+            not_found_frame = show_not_found_frame()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + not_found_frame + b'\r\n')
+            return
+        
+        # --- 開啟相機 ---
+        camera = CameraManager.open_camera(camera_index, backend)
+
+        # --- 如果無法開啟相機 ---
+        if not camera or not camera.isOpened():
+            error_frame = show_open_failed_frame()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + error_frame + b'\r\n')
+            return
+
+        # ===== 取貨串流迴圈 =====
+        frame_count = 0 # 畫面幀數
+        last_results = [] # 最新辨識結果
+
+        # 開始辨識
+        while config.PICKUP_STREAM_ACTIVE:
+            ret, frame = camera.read()
+            if not ret:
+                break
+            
+            frame_count += 1
+            
+            # --- 每 N 幀執行一次辨識 ---
+            if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
+                results = face_recognizer.recognize_face_from_frame(
+                    db_manager, frame, use_cache=True
+                )
+                last_results = results
+                frame_count = 0
+                
+                # --- 檢查是否辨識到已知人臉（不包含未知、訪客） ---
+                for result in results:
+                    name = result['name']
+                    # 過濾掉: 空值、訪客、未知的辨識結果
+                    if name and name != '未知' and not name.startswith('visitor_'):
+                        print(f"[取貨串流] 辨識到住戶：{name}，準備關閉串流")
+                        config.PICKUP_FACE_DETECTED = True
+                        config.PICKUP_STREAM_ACTIVE = False
+                        break
+            else:
+                results = last_results
+
+            # --- 繪製辨識框 ---
+            draw_frame(results, frame)
+            
+            # --- 編碼並傳送影像 ---
+            ret, buffer = cv2.imencode('.jpg', frame)
+            if not ret:
+                continue
+            
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            
+            # --- 如果辨識到人臉，再傳送最後一幀後結束 ---
+            if config.PICKUP_FACE_DETECTED:
+                time.sleep(0.5)  # 讓前端顯示最後一幀
+                break
+
+    except Exception as e:
+        print(f"[錯誤] 取貨串流處理失敗: {e}")
+    finally:
+        if camera is not None:
+            CameraManager.clean_camera(camera)
+            print("[取貨串流] 相機資源已釋放")
+        
+        config.PICKUP_STREAM_ACTIVE = False
+        print("[取貨串流] 取貨串流已結束")

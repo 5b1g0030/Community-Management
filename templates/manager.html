@@ -26,6 +26,7 @@
                 <button type="button" id="testFaceBtn">測試辨識</button>
                 <button type="button" id="viewFaceDbBtn">查看已登錄人臉</button>
                 <button type="button" id="viewLogDbBtn">查看辨識紀錄</button>
+                <button type="button" id="pickUpBtn">取貨</button>
             </div>
 
             <!-- 人工審核區 -->
@@ -191,6 +192,19 @@
                     <tbody></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+    
+    <!-- 取貨 Modal(彈出視窗) -->
+    <div id="pickUpModal" class="modal" style="display:none;">
+        <div class="modal-content"
+            style="position:fixed; left:50vw; top:10vh; z-index:2000; min-width:500px; min-height:400px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+            <span class="close" id="closePickUpModal">&times;</span>
+            <h2>取貨辨識</h2>
+            <div class="video-container">
+                <img id="pickup-video-stream" src="" alt="取貨影像串流" style="width: 100%; max-width: 640px;">
+            </div>
+            <p style="margin-top: 10px; color: #666;">辨識到人物後將自動關閉</p>
         </div>
     </div>
     
