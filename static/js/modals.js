@@ -1,5 +1,5 @@
 import * as DOM from "./dom.js" // 引入網頁元素
-import { addFace, testFace, getFace, generateBookingCode } from "./api.js"; // 引入後端api溝通函式
+import { addFace, testFace, getFace, generateBookingCode, getLockerStatus, registerPackage, clearLocker } from "./api.js"; // 引入後端api溝通函式
 
 // ===== 加入人臉按鈕 =====
 export async function addFaceModal() {
@@ -290,6 +290,111 @@ export async function visitorBooking() {
     }
 }
 
+// ===== 包裹登記彈出視窗 =====
+export async function packageRegistration() {
+    // 開啟 Modal
+    DOM.packageRegisterBtn.onclick = async () => {
+        DOM.packageRegisterModal.style.display = 'block';
+        setTimeout(() => centerModal(DOM.packageRegisterModal), 0);
+        
+        // 載入櫃位狀態
+        await loadLockerStatus();
+    };
+    
+    // 關閉 Modal
+    DOM.closePackageRegisterModal.onclick = () => {
+        DOM.packageRegisterModal.style.display = 'none';
+        DOM.packageRegisterForm.reset();
+    };
+    
+    // 表單提交
+    DOM.packageRegisterForm.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const recipientName = DOM.recipientNameInput.value.trim();
+        
+        if (!recipientName) {
+            alert('請輸入取件人姓名');
+            return;
+        }
+        
+        try {
+            const result = await registerPackage(recipientName);
+            
+            if (result.success) {
+                alert(result.message);
+                DOM.packageRegisterForm.reset();
+                // 重新載入櫃位狀態
+                await loadLockerStatus();
+            } else {
+                alert('登記失敗：' + result.message);
+            }
+        } catch (error) {
+            alert('登記失敗：' + error.message);
+        }
+    };
+    
+    // 清除櫃位按鈕事件（事件委派）
+    DOM.lockerStatusDisplay.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('clear-locker-btn')) {
+            const lockerNumber = parseInt(e.target.dataset.locker);
+            
+            if (confirm(`確定要清除 ${lockerNumber} 號櫃的登記資料嗎？`)) {
+                try {
+                    const result = await clearLocker(lockerNumber);
+                    
+                    if (result.success) {
+                        alert(result.message);
+                        await loadLockerStatus();
+                    } else {
+                        alert('清除失敗：' + result.message);
+                    }
+                } catch (error) {
+                    alert('清除失敗：' + error.message);
+                }
+            }
+        }
+    });
+}
+
+// ===== 載入櫃位狀態 =====
+async function loadLockerStatus() {
+    try {
+        const result = await getLockerStatus();
+        
+        if (result.success && result.lockers) {
+            result.lockers.forEach(locker => {
+                const lockerCard = document.getElementById(`locker${locker.locker_number}Status`);
+                const statusText = lockerCard.querySelector('.locker-status');
+                const recipientText = lockerCard.querySelector('.locker-recipient');
+                const clearBtn = lockerCard.querySelector('.clear-locker-btn');
+                
+                // 移除舊的 class
+                lockerCard.classList.remove('available', 'occupied');
+                
+                if (locker.is_occupied) {
+                    // 已佔用
+                    lockerCard.classList.add('occupied');
+                    statusText.textContent = '已佔用';
+                    statusText.style.color = '#f44336';
+                    recipientText.textContent = `取件人：${locker.recipient_name}`;
+                    clearBtn.style.display = 'inline-block';
+                } else {
+                    // 空閒
+                    lockerCard.classList.add('available');
+                    statusText.textContent = '空閒';
+                    statusText.style.color = '#4CAF50';
+                    recipientText.textContent = '';
+                    clearBtn.style.display = 'none';
+                }
+            });
+        }
+    } catch (error) {
+        console.error('載入櫃位狀態失敗：', error);
+        alert('無法載入櫃位狀態');
+    }
+}
+
 // ===== 取貨功能彈出視窗 =====
 export async function pickUp() {
     // 按鈕事件
@@ -306,6 +411,10 @@ export async function pickUp() {
 
             // 2. 開啟取貨 Modal
             DOM.pickUpModal.style.display = 'block';
+            
+            // 隱藏狀態訊息
+            DOM.pickupStatusMessage.style.display = 'none';
+            DOM.pickupStatusMessage.textContent = '';
 
             // 3. 設定取貨串流來源
             DOM.pickupVideoStream.src = '/pick_up_feed?' + new Date().getTime();
@@ -324,17 +433,23 @@ export async function pickUp() {
 
             // 2. 關閉 Modal
             DOM.pickUpModal.style.display = 'none';
+            
+            // 隱藏狀態訊息
+            DOM.pickupStatusMessage.style.display = 'none';
+            DOM.pickupStatusMessage.textContent = '';
 
             // 3. 重新開啟主串流
             const startResponse = await fetch('/start_camera', { method: 'POST' });
             const startResult = await startResponse.json();
 
             if (startResult.success) {
-                // 更新相機 UI 狀態
-                updateCameraUI(true);
+                console.log('[取貨] 主串流已重新開啟');
+                // 移除 updateCameraUI 呼叫
+            } else {
+                console.warn('[取貨] 重新開啟主串流失敗：', startResult.message);
             }
 
-            console.log('[取貨] 取貨視窗已關閉，主串流已恢復');
+            console.log('[取貨] 取貨視窗已關閉');
         } catch (error) {
             console.error('關閉取貨視窗失敗：', error);
         }
@@ -427,5 +542,6 @@ function makeModalDraggable(modal) {
     DOM.testFaceModal,
     DOM.viewDbModal, 
     DOM.viewLogDbModal,
-    DOM.visitorBookingModal  // 新增訪客預約 modal
+    DOM.visitorBookingModal, 
+    DOM.packageRegisterModal  // 新增
 ].forEach(makeModalDraggable);

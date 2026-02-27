@@ -26,6 +26,7 @@
                 <button type="button" id="testFaceBtn">測試辨識</button>
                 <button type="button" id="viewFaceDbBtn">查看已登錄人臉</button>
                 <button type="button" id="viewLogDbBtn">查看辨識紀錄</button>
+                <button type="button" id="packageRegisterBtn">包裹登記</button>
                 <button type="button" id="pickUpBtn">取貨</button>
             </div>
 
@@ -204,7 +205,46 @@
             <div class="video-container">
                 <img id="pickup-video-stream" src="" alt="取貨影像串流" style="width: 100%; max-width: 640px;">
             </div>
+            <!-- 取貨狀態提示區 -->
+            <div id="pickupStatusMessage" style="margin-top: 15px; padding: 10px; background: #4CAF50; color: white; font-size: 18px; font-weight: bold; text-align: center; display: none; border-radius: 5px;">
+            </div>
             <p style="margin-top: 10px; color: #666;">辨識到人物後將自動關閉</p>
+        </div>
+    </div>
+    
+    <!-- 包裹登記 Modal(彈出視窗) -->
+    <div id="packageRegisterModal" class="modal" style="display:none;">
+        <div class="modal-content"
+            style="position:fixed; left:50vw; top:20vh; z-index:2000; min-width:450px; min-height:300px; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
+            <span class="close" id="closePackageRegisterModal">&times;</span>
+            <h2>包裹登記</h2>
+            
+            <!-- 櫃位狀態顯示 -->
+            <div id="lockerStatusDisplay" style="margin-bottom: 20px;">
+                <h3>櫃位狀態</h3>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <div id="locker1Status" class="locker-card">
+                        <h4>1 號櫃</h4>
+                        <p class="locker-status">載入中...</p>
+                        <p class="locker-recipient"></p>
+                        <button class="clear-locker-btn" style="display:none;" data-locker="1">清除</button>
+                    </div>
+                    <div id="locker2Status" class="locker-card">
+                        <h4>2 號櫃</h4>
+                        <p class="locker-status">載入中...</p>
+                        <p class="locker-recipient"></p>
+                        <button class="clear-locker-btn" style="display:none;" data-locker="2">清除</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 登記表單 -->
+            <form id="packageRegisterForm">
+                <label for="recipientName">取件人（住戶名稱）：</label><br>
+                <input type="text" id="recipientName" placeholder="請輸入取件人姓名" required style="width: 90%; padding: 8px; margin: 10px 0;"><br>
+                <p style="font-size: 14px; color: #666;">系統將自動分配可用櫃位</p>
+                <button type="submit" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer;">確認登記</button>
+            </form>
         </div>
     </div>
     

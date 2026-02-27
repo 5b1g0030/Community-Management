@@ -27,6 +27,7 @@ def face_message(results, frame):
                         'type': 'recognition',
                         'message': f'偵測到{username}住戶的訪客已到大門'
                     })
+                    # 【led = green】
                         
                     # 儲存辨識紀錄
                     face_id = result.get('id')
@@ -51,7 +52,8 @@ def face_message(results, frame):
                 socketio.emit('recognition', {
                     'type': 'recognition',
                     'message': f'偵測到{name}住戶來到大門'
-            })
+                })
+                # 【led = green】
             
             # ----- 如果是「未知」，顯示未知人物 -----
         elif name == '未知':
@@ -60,6 +62,7 @@ def face_message(results, frame):
                 'type': 'recognition',
                 'message': '偵測到未知人物'
             })
+            # 【led = red】
                     
             # 儲存暫存圖片
             temp_dir = os.path.join('static', 'temp')
@@ -149,6 +152,20 @@ def show_open_failed_frame():
 
     return frame_bytes
 
+# ===== 開啟led燈號(根據辨識訊息) =====
+def open_rgbled():
+    pass
+
+# ===== 操作伺服馬達 =====
+# def change_servo_angle(number, angle):
+#     # --- 轉0 ---
+#     if angle == 0:
+#         # 【根據number決定操作哪個馬達】
+#     # --- 轉90 ---
+#     if angle == 90:
+#         # 【根據number決定操作哪個馬達】
+#     pass
+
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
     while True:
@@ -230,15 +247,15 @@ def gen_frames():
                 print("[系統] 攝影機已關閉並釋放資源")
         # 這裡不 return，直接回到最外層 while，等待相機重新開啟
 
-
-# ===== 取貨專用影像串流（辨識但不儲存、不推送） =====
+# ===== 取貨專用影像串流（辨識但不儲存、不推送通知） =====
 def pick_up_frame():
     """
     取貨專用串流：
     - 執行人臉辨識並繪製框
     - 不儲存辨識紀錄
     - 不推送通知
-    - 辨識到人物後自動結束串流
+    - 辨識到人物後查詢包裹櫃號
+    - 如有包裹則推送開櫃訊息並結束串流
     """
     print("[取貨串流] 開始取貨串流")
     
@@ -293,10 +310,35 @@ def pick_up_frame():
                     name = result['name']
                     # 過濾掉: 空值、訪客、未知的辨識結果
                     if name and name != '未知' and not name.startswith('visitor_'):
-                        print(f"[取貨串流] 辨識到住戶：{name}，準備關閉串流")
-                        config.PICKUP_FACE_DETECTED = True
-                        config.PICKUP_STREAM_ACTIVE = False
-                        break
+                        print(f"[取貨串流] 辨識到住戶：{name}")
+                        
+                        # 查詢是否有包裹
+                        locker_number = db_manager.get_locker_by_name(name)
+                        
+                        if locker_number:
+                            # 有包裹，推送開櫃訊息
+                            print(f"[取貨串流] {name} 有包裹在 {locker_number} 號櫃")
+                            socketio.emit('pickup_success', {
+                                'type': 'pickup',
+                                'name': name,
+                                'locker_number': locker_number,
+                                'message': f'{locker_number} 號取貨櫃已開啟，請立即取貨'
+                            })
+                            
+                            # 清除櫃位資料
+                            db_manager.clear_locker(locker_number)
+                            print(f"[取貨串流] {locker_number} 號櫃已清除")
+                            
+                            # 【操作對應馬達開啟】
+                            # change_servo_angle(locker_number, 90)
+                            
+                            # 標記已偵測到並準備結束
+                            config.PICKUP_FACE_DETECTED = True
+                            config.PICKUP_STREAM_ACTIVE = False
+                            break
+                        else:
+                            # 無包裹，繼續辨識
+                            print(f"[取貨串流] {name} 沒有登記包裹，繼續辨識")
             else:
                 results = last_results
 
@@ -312,11 +354,10 @@ def pick_up_frame():
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             
-            # --- 如果辨識到人臉，再傳送最後一幀後結束 ---
+            # --- 如果辨識到人臉且有包裹，再傳送最後一幀後結束 ---
             if config.PICKUP_FACE_DETECTED:
                 time.sleep(0.5)  # 讓前端顯示最後一幀
                 break
-
     except Exception as e:
         print(f"[錯誤] 取貨串流處理失敗: {e}")
     finally:
@@ -326,3 +367,4 @@ def pick_up_frame():
         
         config.PICKUP_STREAM_ACTIVE = False
         print("[取貨串流] 取貨串流已結束")
+        print(f"CAMERA_ACTIVE = {config.CAMERA_ACTIVE}")

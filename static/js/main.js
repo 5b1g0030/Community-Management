@@ -5,7 +5,7 @@
 
 import * as DOM from "./dom.js" // 引入網頁元素
 import { login, register } from "./api.js"; // 引入後端api溝通函式
-import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal, pickUp } from "./modals.js";
+import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal, pickUp, packageRegistration } from "./modals.js";
 import { initializeRecognitionLogsTable, initRecognitionSocket, clearLogFilters } from "./recognitionLogs.js";
 import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
 import { modalsClose } from "./modalController.js";
@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 註冊功能（只在註冊頁面執行） =====
     if (DOM.registerForm && DOM.username && DOM.password && DOM.confirmPassword) {
+        console.log("密碼確認檢查")
         // 即時密碼確認檢查
         DOM.confirmPassword.addEventListener('input', () => {
             if (DOM.password.value !== DOM.confirmPassword.value) {
@@ -105,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        console.log("表單提交處理")
         // 表單提交處理
         DOM.registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -170,6 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
         pickUp()
     }
 
+    // ===== 包裹登記彈出視窗 =====
+    if (DOM.packageRegisterBtn) {
+        packageRegistration()
+    }
+
     // *************************
     // 辨識紀錄篩選-初始化函式
     // *************************
@@ -178,6 +185,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // 辨識紀錄即時推送
     const socket = io();
     initRecognitionSocket(socket);
+    
+    // ===== 監聽取貨成功事件 =====
+    socket.on('pickup_success', function(data) {
+        console.log('[取貨] 收到取貨成功訊息:', data);
+        
+        // 顯示取貨訊息
+        if (DOM.pickupStatusMessage) {
+            DOM.pickupStatusMessage.textContent = data.message;
+            DOM.pickupStatusMessage.style.display = 'block';
+        }
+        
+        // 3 秒後自動關閉 Modal
+        setTimeout(() => {
+            if (DOM.pickUpModal && DOM.pickUpModal.style.display === 'block') {
+                DOM.closePickUpModal.click();
+            }
+        }, 3000);
+    });
 
     // 辨識紀錄彈窗
     if (DOM.viewLogDbBtn) {

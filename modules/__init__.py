@@ -23,3 +23,6 @@ user = UserManager()
 
 # 初始化人臉辨識快取
 init_face_cache(db_manager)
+
+# 初始化包裹櫃位資料表
+db_manager.init_package_lockers()

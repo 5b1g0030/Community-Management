@@ -7,6 +7,7 @@ export const addFaceBtn = document.getElementById('addFaceBtn');           // �
 export const testFaceBtn = document.getElementById('testFaceBtn');         // 「測試辨識」功能按鈕
 export const viewFaceDbBtn = document.getElementById('viewFaceDbBtn');     // 「查看資料庫」功能按鈕
 export const viewLogDbBtn = document.getElementById('viewLogDbBtn');       // 「查看辨識紀錄資料庫」功能按鈕
+export const packageRegisterBtn = document.getElementById('packageRegisterBtn'); // 新增
 export const recognitionLog = document.getElementById('recognitionMessages');  // 辨識紀錄清單（修改為正確的 ID）
 
 // ===== 相機控制元素 =====
@@ -64,13 +65,21 @@ export const submitMessage = document.getElementById('submitMessage');
 export const loginForm = document.getElementById('loginForm');
 export const loginMessage = document.getElementById('loginMessage');
 
+// ===== 匯出元素 =====
+
+// ===== 包裹登記 Modal =====
+export const packageRegisterModal = document.getElementById('packageRegisterModal');
+export const closePackageRegisterModal = document.getElementById('closePackageRegisterModal');
+export const packageRegisterForm = document.getElementById('packageRegisterForm');
+export const recipientNameInput = document.getElementById('recipientName');
+export const lockerStatusDisplay = document.getElementById('lockerStatusDisplay');
+
 // ===== 取貨相關元素 =====
 export const pickUpBtn = document.getElementById('pickUpBtn');
 export const pickUpModal = document.getElementById('pickUpModal');
 export const closePickUpModal = document.getElementById('closePickUpModal');
 export const pickupVideoStream = document.getElementById('pickup-video-stream');
-
-// ===== 匯出元素 =====
+export const pickupStatusMessage = document.getElementById('pickupStatusMessage'); // 新增
 
 // 元素列表
 const DOM = {
@@ -78,6 +87,12 @@ const DOM = {
     testFaceBtn,
     viewFaceDbBtn,
     viewLogDbBtn,
+    packageRegisterBtn,
+    packageRegisterModal,
+    closePackageRegisterModal,
+    packageRegisterForm,
+    recipientNameInput,
+    lockerStatusDisplay,
     recognitionLog,
 
     toggleCameraBtn,
@@ -130,6 +145,7 @@ const DOM = {
     pickUpModal,
     closePickUpModal,
     pickupVideoStream,
+    pickupStatusMessage,
 }; 
 
 export default DOM

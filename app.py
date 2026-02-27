@@ -458,7 +458,61 @@ def pick_up_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+# ===== 取得櫃位狀態 API =====
+@app.route('/api/locker_status', methods=['GET'])
+def get_locker_status():
+    """取得所有櫃位的狀態"""
+    try:
+        lockers = db_manager.get_all_lockers_status()
+        return jsonify({'success': True, 'lockers': lockers}), 200
+    except Exception as e:
+        print(f"[錯誤] 取得櫃位狀態失敗: {e}")
+        return jsonify({'success': False, 'message': f'取得失敗: {str(e)}'}), 500
 
+# ===== 登記包裹 API =====
+@app.route('/api/register_package', methods=['POST'])
+def register_package():
+    """登記包裹（系統自動分配櫃號）"""
+    try:
+        data = request.get_json()
+        recipient_name = data.get('recipient_name', '').strip()
+        
+        if not recipient_name:
+            return jsonify({'success': False, 'message': '請輸入取件人姓名'}), 400
+        
+        success, locker_number, message = db_manager.register_package(recipient_name)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'locker_number': locker_number,
+                'message': message
+            }), 200
+        else:
+            return jsonify({'success': False, 'message': message}), 400
+    
+    except Exception as e:
+        print(f"[錯誤] 登記包裹失敗: {e}")
+        return jsonify({'success': False, 'message': f'登記失敗: {str(e)}'}), 500
+
+# ===== 手動清除櫃位 API =====
+@app.route('/api/clear_locker/<int:locker_number>', methods=['POST'])
+def clear_locker(locker_number):
+    """手動清除櫃位"""
+    try:
+        if locker_number not in [1, 2]:
+            return jsonify({'success': False, 'message': '無效的櫃號'}), 400
+        
+        success, message = db_manager.clear_locker(locker_number)
+        
+        if success:
+            return jsonify({'success': True, 'message': message}), 200
+        else:
+            return jsonify({'success': False, 'message': message}), 400
+    
+    except Exception as e:
+        print(f"[錯誤] 清除櫃位失敗: {e}")
+        return jsonify({'success': False, 'message': f'清除失敗: {str(e)}'}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

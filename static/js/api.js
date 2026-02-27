@@ -82,3 +82,29 @@ export async function generateBookingCode(formData) {
     return await parseJsonResponse(response)
 
 }
+
+// ===== 取得櫃位狀態 API =====
+export async function getLockerStatus() {
+    const response = await fetch('/api/locker_status');
+    return await parseJsonResponse(response);
+}
+
+// ===== 登記包裹 API =====
+export async function registerPackage(recipientName) {
+    const response = await fetch('/api/register_package', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipient_name: recipientName })
+    });
+    return await parseJsonResponse(response);
+}
+
+// ===== 清除櫃位 API =====
+export async function clearLocker(lockerNumber) {
+    const response = await fetch(`/api/clear_locker/${lockerNumber}`, {
+        method: 'POST'
+    });
+    return await parseJsonResponse(response);
+}

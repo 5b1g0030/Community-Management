@@ -272,4 +272,131 @@ class DatabaseManager:
             print(f"[資料庫] 清除訪客人臉資料失敗: {e}")
             return False
 
+    # ===== 決定櫃位管理功能 =====
+    def init_package_lockers(self):
+        """初始化包裹櫃位資料表"""
+        conn, cursor = self.get_db_connection()
+        try:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS package_lockers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    locker_number INTEGER UNIQUE NOT NULL,
+                    recipient_name TEXT,
+                    registered_date TEXT,
+                    is_occupied INTEGER DEFAULT 0
+                )
+            """)
+            
+            # 插入初始櫃位資料（1號和2號）
+            cursor.execute("INSERT OR IGNORE INTO package_lockers (locker_number, is_occupied) VALUES (1, 0)")
+            cursor.execute("INSERT OR IGNORE INTO package_lockers (locker_number, is_occupied) VALUES (2, 0)")
+            
+            conn.commit()
+            print("[資料庫] 包裹櫃位資料表初始化完成")
+        except Exception as e:
+            print(f"[資料庫] 初始化包裹櫃位失敗: {e}")
+            conn.rollback()
+        finally:
+            conn.close()
+    
+    def get_available_locker(self):
+        """取得可用的櫃號（返回最小的空閒櫃號）"""
+        conn, cursor = self.get_db_connection()
+        try:
+            cursor.execute("""
+                SELECT locker_number FROM package_lockers 
+                WHERE is_occupied = 0 
+                ORDER BY locker_number ASC 
+                LIMIT 1
+            """)
+            result = cursor.fetchone()
+            return result[0] if result else None
+        finally:
+            conn.close()
+    
+    def register_package(self, recipient_name):
+        """自動分配櫃號並登記包裹"""
+        conn, cursor = self.get_db_connection()
+        try:
+            # 取得可用櫃號
+            locker_number = self.get_available_locker()
+            
+            if locker_number is None:
+                return False, None, "所有櫃位已滿，請稍後再試"
+            
+            # 登記包裹
+            from datetime import datetime
+            registered_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
+            cursor.execute("""
+                UPDATE package_lockers 
+                SET recipient_name = ?, registered_date = ?, is_occupied = 1 
+                WHERE locker_number = ?
+            """, (recipient_name, registered_date, locker_number))
+            
+            conn.commit()
+            print(f"[資料庫] 包裹已登記至 {locker_number} 號櫃，收件人：{recipient_name}")
+            return True, locker_number, f"包裹已登記至 {locker_number} 號櫃"
+        except Exception as e:
+            print(f"[資料庫] 登記包裹失敗: {e}")
+            conn.rollback()
+            return False, None, f"登記失敗: {str(e)}"
+        finally:
+            conn.close()
+    
+    def get_locker_by_name(self, name):
+        """根據住戶名稱查詢櫃號"""
+        conn, cursor = self.get_db_connection()
+        try:
+            cursor.execute("""
+                SELECT locker_number FROM package_lockers 
+                WHERE recipient_name = ? AND is_occupied = 1
+            """, (name,))
+            result = cursor.fetchone()
+            return result[0] if result else None
+        finally:
+            conn.close()
+    
+    def clear_locker(self, locker_number):
+        """清除櫃位資訊"""
+        conn, cursor = self.get_db_connection()
+        try:
+            cursor.execute("""
+                UPDATE package_lockers 
+                SET recipient_name = NULL, registered_date = NULL, is_occupied = 0 
+                WHERE locker_number = ?
+            """, (locker_number,))
+            conn.commit()
+            print(f"[資料庫] {locker_number} 號櫃已清除")
+            return True, "櫃位已清除"
+        except Exception as e:
+            print(f"[資料庫] 清除櫃位失敗: {e}")
+            conn.rollback()
+            return False, f"清除失敗: {str(e)}"
+        finally:
+            conn.close()
+    
+    def get_all_lockers_status(self):
+        """取得所有櫃位狀態"""
+        conn, cursor = self.get_db_connection()
+        try:
+            cursor.execute("""
+                SELECT locker_number, recipient_name, registered_date, is_occupied 
+                FROM package_lockers 
+                ORDER BY locker_number ASC
+            """)
+            rows = cursor.fetchall()
+            
+            lockers = []
+            for row in rows:
+                lockers.append({
+                    'locker_number': row[0],
+                    'recipient_name': row[1],
+                    'registered_date': row[2],
+                    'is_occupied': bool(row[3])
+                })
+            return lockers
+        finally:
+            conn.close()
+
 
