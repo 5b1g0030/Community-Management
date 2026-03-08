@@ -5,47 +5,53 @@ body {
     font-family: Arial, sans-serif;
 }
 
+/* 建立一個居中的彈性容器 */
 .container {
-    display: flex;
-    gap: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
+    display: flex; /* 允許其子元素根據容器的規則進行排列 */
+    gap: 20px; /* 子元素之間的間距 */
+    max-width: 1200px; /* 最大寬度 */
+    margin: 0 auto; /* 水平置中 */
 }
 
+/* 讓該區域自適應剩餘空間 */
 .main-content {
     flex: 1;
 }
 
-/* 功能按鈕區 */
+/* 管理按鈕排版的區域 */
 .function-buttons {
-    margin: 20px 0;
-    display: flex;
-    gap: 20px;
+    margin: 20px 0; /* 上下外邊距為 20px，左右外邊距為 0 */
+    display: flex; /* 元素依照容器規則排列 */
+    gap: 20px; /* 子元素之間的間隔 */
 }
 
+/* 全域按鈕設定 */
 button {
-    padding: 10px 20px;
-    background-color: #4CAF50;
-    color: white;
+    padding: 10px 20px; /* 上下為 10px，左右為 20px */
+    background-color: #4CAF50; /* 按鈕本身的顏色 */
+    color: white; /* 文字顏色 */
     border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    border-radius: 4px; /* 圓角 */
+    cursor: pointer; /* 鼠標顯示指針樣式（手型） */
 }
-
+/* 鼠標懸停效果 */
 button:hover {
     background-color: #45a049;
 }
 
-/* 資料表格 */
+/* ==========
+  資料表格 
+===============*/
+/* 調整表格容器的上外邊距 */
 .database-table {
-    margin-top: 20px;
+    margin-top: 20px; /* 上外邊距為 20px */
 }
-
+/* 全域表格設定 */
 table {
     width: 100%;
     border-collapse: collapse;
 }
-
+/*  */
 th, td {
     padding: 8px;
     text-align: left;
@@ -83,7 +89,9 @@ th {
     font-size: 14px;
 }
 
-/* 辨識紀錄 */
+/*************
+ 辨識紀錄 
+ *************/
 .log-entry {
     margin-bottom: 8px; /* 底部間距 */
     padding: 8px;       /* 內間距 */
@@ -388,4 +396,111 @@ th {
 .status-rejected {
     color: #dc3545;
     font-weight: bold;
+}
+
+/* ==================== 
+   火災監測區域樣式 
+   ==================== */
+
+/* 火災監測主容器 */
+.fire-detection-section {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.fire-detection-section h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 20px;
+}
+
+/* 火災監測卡片容器 */
+.fire-zones-container {
+    display: flex;
+    gap: 20px;
+    justify-content: flex-start;
+}
+
+/* 火災監測卡片 */
+.fire-zone-card {
+    width: 150px;
+    height: 120px;
+    border: 3px solid #28a745;
+    border-radius: 8px;
+    background-color: #d4edda;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+/* 卡片頭部區域 */
+.zone-header {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+/* 區域標籤 (A、B) */
+.zone-label {
+    font-size: 24px;
+    font-weight: bold;
+    color: #155724;
+    background-color: #28a745;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+/* 卡片資訊區域 */
+.zone-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 溫度顯示 */
+.zone-temperature {
+    font-size: 32px;
+    font-weight: bold;
+    color: #155724;
+}
+
+/* 狀態文字 */
+.zone-status {
+    font-size: 18px;
+    font-weight: bold;
+    color: #155724;
+}
+
+/* 警告狀態樣式（預留） */
+.fire-zone-card.warning {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+.fire-zone-card.warning .zone-label {
+    background-color: #dc3545;
+}
+
+.fire-zone-card.warning .zone-temperature,
+.fire-zone-card.warning .zone-status {
+    color: #721c24;
+}
+
+/* hover 效果 */
+.fire-zone-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }

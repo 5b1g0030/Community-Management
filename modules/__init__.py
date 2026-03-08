@@ -25,4 +25,4 @@ user = UserManager()
 init_face_cache(db_manager)
 
 # 初始化包裹櫃位資料表
-db_manager.init_package_lockers()
+# db_manager.init_package_lockers()
