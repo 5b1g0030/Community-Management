@@ -1,248 +1,36 @@
-/* 基本樣式 */
-body {
-    margin: 0;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-}
-
-/* 建立一個居中的彈性容器 */
-.container {
-    display: flex; /* 允許其子元素根據容器的規則進行排列 */
-    gap: 20px; /* 子元素之間的間距 */
-    max-width: 1200px; /* 最大寬度 */
-    margin: 0 auto; /* 水平置中 */
-}
-
-/* 讓該區域自適應剩餘空間 */
-.main-content {
-    flex: 1;
-}
-
-/* 管理按鈕排版的區域 */
-.function-buttons {
-    margin: 20px 0; /* 上下外邊距為 20px，左右外邊距為 0 */
-    display: flex; /* 元素依照容器規則排列 */
-    gap: 20px; /* 子元素之間的間隔 */
-}
-
-/* 全域按鈕設定 */
-button {
-    padding: 10px 20px; /* 上下為 10px，左右為 20px */
-    background-color: #4CAF50; /* 按鈕本身的顏色 */
-    color: white; /* 文字顏色 */
-    border: none;
-    border-radius: 4px; /* 圓角 */
-    cursor: pointer; /* 鼠標顯示指針樣式（手型） */
-}
-/* 鼠標懸停效果 */
-button:hover {
-    background-color: #45a049;
-}
-
-/* ==========
-  資料表格 
-===============*/
-/* 調整表格容器的上外邊距 */
-.database-table {
-    margin-top: 20px; /* 上外邊距為 20px */
-}
-/* 全域表格設定 */
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-/*  */
-th, td {
-    padding: 8px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-}
-
-th {
-    background-color: #f2f2f2;
-}
-
-/* 側邊欄 */
-.sidebar {
-    width: 300px;
-}
-
-.video-container {
-    margin-bottom: 20px;
-}
-
-#videoFeed {
-    width: 100%;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.log-container {
-    height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 10px;
-}
-
-#recognitionLog {
-    font-size: 14px;
-}
-
-/*************
- 辨識紀錄 
- *************/
-.log-entry {
-    margin-bottom: 8px; /* 底部間距 */
-    padding: 8px;       /* 內間距 */
-    border-radius: 4px; /* 圓角 */
-    border-bottom: 1px solid #eee; /* 底部細線 */
-    word-wrap: break-word; /* 文字換行 */
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-/* 辨識紀錄(已知人物) */
-.log-entry.know-face{
-    background-color: #d4edda;
-    color: #155724;
-    border-left: 4px solid #28a745;
-}
-
-/* 辨識紀錄(未知人物) */
-.log-entry.unknow-face{
-    background-color: #f8d7da;
-    color: #721c24;
-    border-left: 4px solid #dc3545;
-}
-
-/* 辨識紀錄(未偵測到人臉) */
-.log-entry.no-face{
-    background-color: #e2e3e5;
-    color: #383d41;
-    border-left: 4px solid #6c757d;
-}
-
-/* 滾動條樣式美化 */
-#recognitionMessages::-webkit-scrollbar {
-    width: 8px;
-}
-
-#recognitionMessages::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-#recognitionMessages::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-#recognitionMessages::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
+/*===========
+   即時影像
+=============*/
 /* 即時影像串流區域 */
 .video-section {
     width: 426px;
     flex-shrink: 0; /* 防止被壓縮 */
 }
-
-/* 辨識紀錄區域 */
-.recognition-log {
-    width: 300px;
-    flex-shrink: 0; /* 防止被壓縮 */
+/* 即時影像串流區排版 */
+.video-container {
+    margin-bottom: 20px; /* 下邊界間隔 20px */
+}
+/* 播放即時影像的標籤 */
+#video-stream{
+    width: 100%; 
+    max-width: 426px;
+    border-radius: 4px;
 }
 
-.recognition-log h2 {
-    margin-top: 0;
-    margin-bottom: 10px;
-}
 
-/* 辨識紀錄容器 - 固定高度並啟用滾動 */
-#recognitionMessages {
-    height: 400px; /* 固定高度 */
-    max-height: 400px;
-    overflow-y: auto; /* 垂直滾動 */
-    overflow-x: hidden; /* 隱藏水平滾動 */
+
+/* .log-container {
+    height: 300px;
+    overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 4px;
     padding: 10px;
-    background-color: #f9f9f9;
-}
+} */
 
-/* 浮空視窗遮罩 */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0; top: 0; width: 100vw; height: 100vh;
-    background-color: rgba(0,0,0,0.4);
-}
+/* #recognitionLog {
+    font-size: 14px;
+} */
 
-/* 浮空視窗本體 */
-.modal-content {
-    background-color: #fff;
-    position: fixed;
-    left: 50vw;
-    top: 20vh;
-    z-index: 2000;
-    min-width: 300px;
-    min-height: 180px;
-    max-width: 90vw;
-    max-height: 80vh;
-    resize: both;
-    overflow: auto;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.2);
-    border-radius: 8px;
-    padding: 20px;
-}
-
-.close {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    font-size: 24px;
-    cursor: pointer;
-    z-index: 2100;
-}
-
-  /* 篩選器樣式 */
-.filter-container { 
-    margin-bottom: 20px; 
-    padding: 15px; 
-    border: 1px solid #eee; 
-    border-radius: 5px; 
-    background-color: #f9f9f9;
-}
-.filter-container input, .filter-container select {
-    padding: 8px;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    width: 150px; 
-}
-
-/* 日期篩選框特殊樣式 */
-.filter-container input[type="number"] {
-    width: 120px;
-}
-
-#clear-date-filter {
-    background-color: #6c757d;
-    font-size: 12px;
-}
-
-#clear-date-filter:hover {
-    background-color: #545b62;
-}
-
-.filter-container h4 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: #333;
-}
 
 /* ==================
     相機開關按鈕

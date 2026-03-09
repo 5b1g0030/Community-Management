@@ -1,0 +1,65 @@
+/* 網站整體全域樣式 */
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+/* 建立一個居中的彈性容器 */
+.container {
+    display: flex; /* 允許其子元素根據容器的規則進行排列 */
+    gap: 20px; /* 子元素之間的間距 */
+    max-width: 1200px; /* 最大寬度 */
+    margin: 0 auto; /* 水平置中 */
+}
+
+/* 讓該區域自適應剩餘空間 */
+.main-content {
+    flex: 1;
+}
+
+/* =========
+   按鈕
+============*/
+/* 全域按鈕設定 */
+button {
+    padding: 10px 20px; /* 上下為 10px，左右為 20px */
+    background-color: #4CAF50; /* 按鈕本身的顏色 */
+    color: white; /* 文字顏色 */
+    border: none;
+    border-radius: 4px; /* 圓角 */
+    cursor: pointer; /* 鼠標顯示指針樣式（手型） */
+}
+/* 鼠標懸停效果 */
+button:hover {
+    background-color: #45a049;
+}
+/* 管理按鈕排版的區域 */
+.function-buttons {
+    margin: 20px 0; /* 上下外邊距為 20px，左右外邊距為 0 */
+    display: flex; /* 元素依照容器規則排列 */
+    gap: 20px; /* 子元素之間的間隔 */
+}
+
+/* ==========
+  資料表格 
+===============*/
+/* 調整表格容器的上外邊距 */
+.database-table {
+    margin-top: 20px; /* 上外邊距為 20px */
+}
+/* 全域表格設定 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+/* 標題欄&資料欄全域樣式 */
+th, td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+/* 標題欄全域樣式 */
+th {
+    background-color: #f2f2f2;
+}

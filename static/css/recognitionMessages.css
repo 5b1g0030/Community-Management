@@ -1,0 +1,74 @@
+/*************
+ 辨識紀錄樣式
+ *************/
+
+/* 辨識紀錄區域 */
+.recognition-log {
+    width: 300px;
+    flex-shrink: 0; /* 防止被壓縮 */
+}
+/* 辨識紀錄區域標題 */
+.recognition-log h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* 即時顯示紀錄區(js插入) */
+.log-entry {
+    margin-bottom: 8px; /* 底部間距 */
+    padding: 8px;       /* 內間距 */
+    border-radius: 4px; /* 圓角 */
+    border-bottom: 1px solid #eee; /* 底部細線 */
+    word-wrap: break-word; /* 文字換行 */
+    font-size: 14px;
+    line-height: 1.4;
+}
+/* 辨識紀錄(已知人物) */
+.log-entry.know-face{
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+/* 辨識紀錄(未知人物) */
+.log-entry.unknow-face{
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+/* 辨識紀錄(未偵測到人臉) */
+.log-entry.no-face{
+    background-color: #e2e3e5;
+    color: #383d41;
+    border-left: 4px solid #6c757d;
+}
+
+/* ===== 滾動條樣式美化 ===== */
+/* 固定高度並啟用滾動 */
+#recognitionMessages {
+    height: 400px; /* 固定高度 */
+    max-height: 400px;
+    overflow-y: auto; /* 垂直滾動 */
+    overflow-x: hidden; /* 隱藏水平滾動 */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f9f9f9;
+}
+/* 寬度 */
+#recognitionMessages::-webkit-scrollbar {
+    width: 8px;
+}
+/* 顏色、圓角 */
+#recognitionMessages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+/* 滾動條滑塊、圓角 */
+#recognitionMessages::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+/* 滑鼠懸停效果 */
+#recognitionMessages::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

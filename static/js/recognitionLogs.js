@@ -193,11 +193,18 @@ export function addLogEntry(message) {
 
 // ===== 初始化 Socket.IO 連接 =====
 export function initRecognitionSocket(socket) {
+     console.log('[辨識紀錄] 初始化 Socket.IO 連接');
     // 監聽 recognition 事件，當後端推送辨識訊息時，調用 addLogEntry 將訊息顯示到前端
     socket.on('recognition', function(data) {
         if (data.type === 'recognition') {
             addLogEntry(data.message);
         }
+    });
+
+    // 監聽 update_logs 事件，用於即時更新表格
+    socket.on('update-log', function(data) {
+        console.log('[辨識紀錄] 收到更新事件:', data.message);
+        reloadRecognitionLogsTable(); // 重新載入辨識紀錄表格
     });
 }
 
@@ -209,5 +216,12 @@ export function clearLogFilters() {
     // 如果 DataTable 存在，清空搜尋條件並刷新表格
     if (recognitionLogsTable) {
         recognitionLogsTable.search('').columns().search('').draw();
+    }
+}
+
+// ===== 重新載入辨識紀錄表格 =====
+export function reloadRecognitionLogsTable() {
+    if (recognitionLogsTable) {
+        recognitionLogsTable.ajax.reload(null, false); // false 表示保持當前分頁
     }
 }

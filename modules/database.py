@@ -165,6 +165,12 @@ class DatabaseManager:
             
             conn.commit() # 提交變更、確保資料真的儲存到資料庫。
             print(f"事件紀錄已儲存: {event_type} - {event_message} by database") # 成功訊息
+            
+            # 推送訊息給前端，讓前端自動更新表格
+            from modules import socketio # 延遲匯入
+            print("事件紀錄已更新: 正在發送更新訊息...  by database")
+            socketio.emit('update-log', {'message': f'辨識紀錄資料已更新'})
+            print("事件紀錄已更新: 已發送更新訊息!  by database")
         
         # 例外錯誤處理
         except Exception as e:

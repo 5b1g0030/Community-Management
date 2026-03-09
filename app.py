@@ -1,7 +1,7 @@
 """ Flask 網頁後端"""
 
 from flask import Flask, render_template, request, jsonify, Response
-from modules.face_recognition import refresh_face_cache 
+from modules.face_recognition import refresh_face_cache
 from utils.camera_utils import CameraManager
 import os
 from datetime import datetime
@@ -12,39 +12,9 @@ import modules.config as config # 給相機做同步修改
 from modules.video_streaming import gen_frames, pick_up_frame
 from modules import app, socketio, db_manager, face_recognizer, user
 
-# app = Flask(__name__)
-# #app.config['SECRET_KEY'] = 'your-secret-key-here' cors_allowed_origins="*", async_mode='threading'
-# socketio = SocketIO(app)
-
-# # ===== 初始化系統組件 =====
-# db_manager = DatabaseManager()  # 資料庫管理器
-# user = UserManager()            # 使用者資料管理
-# face_recognizer = FaceRecognition()  # 人臉註冊與辨識
-
-# # 初始化人臉辨識快取
-# init_face_cache(db_manager)
-
-# latest_frame = None
-
-# ===== 相機狀態管理 =====
-# import threading
-# camera_active = False  # 預設關閉
-# camera_lock = threading.Lock()
-# camera_instance = None  # 儲存攝影機實例
 
 print("[系統] 相機狀態管理已初始化 (預設關閉)")
 
-
-# # ===== 新增相機狀態管理 =====
-# def init_camera_lock():
-#     """初始化相機鎖"""
-#     global camera_lock
-#     if camera_lock is None:
-#         import threading
-#         camera_lock = threading.Lock()
-#         print("[系統] camera_lock 已初始化")
-
-# init_camera_lock()
 
 # ===== 管理者端 =====
 @app.route('/manager')
@@ -361,7 +331,10 @@ def get_recognition_logs_datatables():
             confidence            # 信心值
         ])
     
-    return jsonify({'data': data}) # 轉json
+    response = jsonify({'data': data}) # 轉json
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate" # 禁用快取(利於即時更新)
+
+    return response
 
 # ===== 住戶頁面路由 =====
 @app.route('/residents')

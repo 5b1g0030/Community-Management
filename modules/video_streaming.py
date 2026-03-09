@@ -27,41 +27,47 @@ def face_message(results, frame):
                         'type': 'recognition',
                         'message': f'偵測到{username}住戶的訪客已到大門'
                     })
-                    # 【led = green】
                         
-                    # 儲存辨識紀錄
+                    # --- 儲存辨識紀錄 ---
                     face_id = result.get('id')
                     conf = float(result.get('confidence', 0.0))
                     if face_id:
                         db_manager.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
                         
                     # 立即清除訪客人臉資料
-                    success = db_manager.clear_visitor_face_data(name)
-                        
+                    success = db_manager.clear_visitor_face_data(name)   
                     if success:
                         # 重新整理快取
                         refresh_face_cache(db_manager)
                         print(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
                     else:
                         print(f"[系統] 訪客 {name} 人臉資料清除失敗")
+
+                    # 【led = green】
             
-            # ----- 如果不是「未知」且 name 不為空，則顯示名字 -----
-        
+        # ----- 如果不是「未知」且 name 不為空，則顯示名字 -----
         elif name and name != '未知':
                 print("[推送辨識訊息] 辨識為住戶")
                 socketio.emit('recognition', {
                     'type': 'recognition',
                     'message': f'偵測到{name}住戶來到大門'
                 })
+                # --- 儲存辨識紀錄 ---
+                face_id = result.get('id')
+                conf = float(result.get('confidence', 0.0))
+                if face_id:
+                    db_manager.save_recognition_log("住戶", f"住戶{name}已來到大門", face_id, conf)
                 # 【led = green】
             
-            # ----- 如果是「未知」，顯示未知人物 -----
+        # ----- 如果是「未知」，顯示未知人物 -----
         elif name == '未知':
             print("[推送辨識訊息] 辨識為未知")
             socketio.emit('recognition', {
                 'type': 'recognition',
                 'message': '偵測到未知人物'
             })
+            # --- 儲存辨識紀錄 ---
+            db_manager.save_recognition_log("未知", "偵測到未知人物")
             # 【led = red】
                     
             # 儲存暫存圖片
