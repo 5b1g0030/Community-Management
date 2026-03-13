@@ -1,0 +1,42 @@
+/*===========
+   即時影像
+=============*/
+/* 即時影像串流區域 */
+.video-section {
+    width: 426px;
+    flex-shrink: 0; /* 防止被壓縮 */
+}
+/* 即時影像串流區排版 */
+.video-container {
+    margin-bottom: 20px; /* 下邊界間隔 20px */
+}
+/* 播放即時影像的標籤 */
+#video-stream{
+    width: 100%; 
+    max-width: 426px;
+    border-radius: 4px;
+}
+
+/* ==================
+    相機開關按鈕
+   ================== */
+.btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+.btn-danger:hover {
+    background-color: #da190b;
+}
+
+
+/* .log-container {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+} */
+
+/* #recognitionLog {
+    font-size: 14px;
+} */

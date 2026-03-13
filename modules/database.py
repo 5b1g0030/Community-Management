@@ -10,8 +10,9 @@ class DatabaseManager:
         self.db_path = db_path # 設定路徑
         self.init_database()
         # 建立 user manager 以維持舊有 API 的轉發
-        self.user_manager = UserManager(self.db_path)
+        #self.user_manager = UserManager(self.db_path)
     
+    # 【資料庫初始化類別】
     # ===== 建立資料庫連接與游標 =====
     # 回傳 連接物件和游標物件
     # ===============================
@@ -21,6 +22,7 @@ class DatabaseManager:
         cursor = conn.cursor()
         return conn, cursor
     
+    # 【資料庫初始化類別】
     # ===== 初始化資料庫 =====
     # 建立資料庫表格(已存在則不建立)
     # =======================  
@@ -102,6 +104,7 @@ class DatabaseManager:
         conn.close() # 關閉連接
         print("資料庫初始化完成 by database")
 
+    # 【辨識紀錄類別】
     # ===== 列出資料庫中的所有辨識紀錄 =====
     # 回傳 字典格式資料
     # =================================== 
@@ -146,6 +149,7 @@ class DatabaseManager:
             if 'conn' in locals(): # 確認 conn 存在
                 conn.close()
     
+    # 【辨識紀錄類別】
     # ===== 辨識紀錄儲存 ======
     # 傳入 事件類型、事件訊息、人臉id(選填)、信心度(選填)
     # 回傳 無 
@@ -182,17 +186,7 @@ class DatabaseManager:
             if 'conn' in locals(): # 檢查 conn 是否存在
                 conn.close() # 關閉資料庫
 
-    # ===== 透過id從資料庫查詢人名 =====
-    # 傳入 人臉 id
-    # 傳出 人臉資料
-    # =========================== 
-    def search_face(self, face_id):
-        conn, cursor = self.get_db_connection() # 使用統一的連接方法
-        cursor.execute("SELECT name FROM face_recognition WHERE id = ?", (face_id,))# SQL 查詢，跟據 ID 查詢人名
-        result = cursor.fetchone() # 只取出一筆資料，有資料就會是 (name,)，否則是 None
-        conn.close() # 關閉連接
-        return result
-
+    # 【訪客預約類別】
     # ===== 儲存訪客預約記錄 =====
     def save_visitor_booking(self, username, visitor_face_name, visitor_face_id):
         """
@@ -227,6 +221,7 @@ class DatabaseManager:
             print(f"[資料庫] 儲存訪客預約失敗: {e}")
             return False, f'儲存失敗: {str(e)}'
 
+    # 【訪客預約類別】
     # ===== 根據訪客人臉名稱查詢住戶名稱 =====
     def get_visitor_by_face_name(self, visitor_face_name):
         """
@@ -259,6 +254,7 @@ class DatabaseManager:
             print(f"[資料庫] 查詢訪客住戶失敗: {e}")
             return None
 
+    # 【訪客預約類別】
     # ===== 清除訪客人臉資料 =====
     def clear_visitor_face_data(self, visitor_face_name):
         """
@@ -295,6 +291,7 @@ class DatabaseManager:
             print(f"[資料庫] 清除訪客人臉資料失敗: {e}")
             return False
     
+    # 【智慧取貨類別】
     # ===== 取得可用的櫃號（返回最小的空閒櫃號） =====
     def get_available_locker(self):
         conn, cursor = self.get_db_connection()
@@ -310,6 +307,7 @@ class DatabaseManager:
         finally:
             conn.close()
     
+    # 【智慧取貨類別】
     # ====== 自動分配櫃號並登記包裹 ======
     def register_package(self, recipient_name):
         conn, cursor = self.get_db_connection()
@@ -342,6 +340,7 @@ class DatabaseManager:
         finally:
             conn.close()
     
+    # 【智慧取貨類別】
     # ===== 根據住戶名稱查詢櫃號 =====
     def get_locker_by_name(self, name):
         conn, cursor = self.get_db_connection()
@@ -356,6 +355,7 @@ class DatabaseManager:
         finally:
             conn.close()
     
+    # 【智慧取貨類別】
     # ===== 清除櫃位資訊 ======
     def clear_locker(self, locker_number):
         conn, cursor = self.get_db_connection()
@@ -377,8 +377,9 @@ class DatabaseManager:
         finally:
             conn.close()
     
+    # 【智慧取貨類別】
+    # ===== 取得所有櫃位狀態 =====
     def get_all_lockers_status(self):
-        """取得所有櫃位狀態"""
         conn, cursor = self.get_db_connection()
         try:
             cursor.execute("""
