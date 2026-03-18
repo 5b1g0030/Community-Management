@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
-from .user import UserManager
-from .config import DATABASE
+from modules.config import DATABASE 
+# 【空殼已建立】
 
 # ===== 資料庫存取類別 =====
 class DatabaseManager:

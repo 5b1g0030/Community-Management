@@ -13,8 +13,6 @@ from modules.video_streaming import gen_frames, pick_up_frame
 from modules import app, socketio, db_manager, face_recognizer, user
 
 
-print("[系統] 相機狀態管理已初始化 (預設關閉)")
-
 
 # ===== 管理者端 =====
 @app.route('/manager')
