@@ -65,8 +65,6 @@ export const submitMessage = document.getElementById('submitMessage');
 export const loginForm = document.getElementById('loginForm');
 export const loginMessage = document.getElementById('loginMessage');
 
-// ===== 匯出元素 =====
-
 // ===== 包裹登記 Modal =====
 export const packageRegisterModal = document.getElementById('packageRegisterModal');
 export const closePackageRegisterModal = document.getElementById('closePackageRegisterModal');
@@ -81,6 +79,10 @@ export const closePickUpModal = document.getElementById('closePickUpModal');
 export const pickupVideoStream = document.getElementById('pickup-video-stream');
 export const pickupStatusMessage = document.getElementById('pickupStatusMessage'); // 新增
 
+
+// ================
+// 匯出元素 
+// ================
 // 元素列表
 const DOM = {
     addFaceBtn,

@@ -372,15 +372,16 @@ async function loadLockerStatus() {
                 // 移除舊的 class
                 lockerCard.classList.remove('available', 'occupied');
                 
+                // 根據占用狀態賦予 CSS
                 if (locker.is_occupied) {
-                    // 已佔用
+                    // 已佔用CSS
                     lockerCard.classList.add('occupied');
                     statusText.textContent = '已佔用';
                     statusText.style.color = '#f44336';
                     recipientText.textContent = `取件人：${locker.recipient_name}`;
                     clearBtn.style.display = 'inline-block';
                 } else {
-                    // 空閒
+                    // 空閒CSS
                     lockerCard.classList.add('available');
                     statusText.textContent = '空閒';
                     statusText.style.color = '#4CAF50';

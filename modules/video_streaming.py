@@ -1,4 +1,4 @@
-from modules import socketio, db_manager, face_recognizer
+from modules import socketio, db_manager, face_recognizer, recognition_Logs, visitor_Booking, pick_up
 from utils.camera_utils import CameraManager
 from modules.face_recognition import refresh_face_cache
 from modules.config import FACE_RECOGNITION_FRAME_SKIP
@@ -13,12 +13,12 @@ import time
 def face_message(results, frame):
     for result in results:
         name = result['name']
-        print(f"[推送辨識訊息] 檢查是否為訪客? name: {name}")
+        print(f"[推送辨識訊息] 檢查是否為訪客? name: {name} by video_streaming")
         # ----- 檢查是否為訪客 -----
         if name and name.startswith('visitor_'):
             # 查詢對應的住戶名稱
-            print("[推送辨識訊息] 查詢對應的住戶名稱")
-            username = db_manager.get_visitor_by_face_name(name)
+            print("[推送辨識訊息] 查詢對應的住戶名稱 by video_streaming")
+            username = visitor_Booking.get_visitor_by_face_name(name)
 
             if username:
                     # 推送訊息
@@ -32,22 +32,22 @@ def face_message(results, frame):
                     face_id = result.get('id')
                     conf = float(result.get('confidence', 0.0))
                     if face_id:
-                        db_manager.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
+                        recognition_Logs.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
                         
                     # 立即清除訪客人臉資料
-                    success = db_manager.clear_visitor_face_data(name)   
+                    success = visitor_Booking.clear_visitor_face_data(name)   
                     if success:
                         # 重新整理快取
                         refresh_face_cache(db_manager)
-                        print(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
+                        print(f"[系統] 訪客 {name} 已辨識並清除人臉資料 by video_streaming")
                     else:
-                        print(f"[系統] 訪客 {name} 人臉資料清除失敗")
+                        print(f"[系統] 訪客 {name} 人臉資料清除失敗 by video_streaming")
 
                     # 【led = green】
             
         # ----- 如果不是「未知」且 name 不為空，則顯示名字 -----
         elif name and name != '未知':
-                print("[推送辨識訊息] 辨識為住戶")
+                print("[推送辨識訊息] 辨識為住戶 by video_streaming")
                 socketio.emit('recognition', {
                     'type': 'recognition',
                     'message': f'偵測到{name}住戶來到大門'
@@ -56,18 +56,18 @@ def face_message(results, frame):
                 face_id = result.get('id')
                 conf = float(result.get('confidence', 0.0))
                 if face_id:
-                    db_manager.save_recognition_log("住戶", f"住戶{name}已來到大門", face_id, conf)
+                   recognition_Logs.save_recognition_log("住戶", f"住戶{name}已來到大門", face_id, conf)
                 # 【led = green】
             
         # ----- 如果是「未知」，顯示未知人物 -----
         elif name == '未知':
-            print("[推送辨識訊息] 辨識為未知")
+            print("[推送辨識訊息] 辨識為未知 by video_streaming")
             socketio.emit('recognition', {
                 'type': 'recognition',
                 'message': '偵測到未知人物'
             })
             # --- 儲存辨識紀錄 ---
-            db_manager.save_recognition_log("未知", "偵測到未知人物")
+            recognition_Logs.save_recognition_log("未知", "偵測到未知人物")
             # 【led = red】
                     
             # 儲存暫存圖片
@@ -95,7 +95,7 @@ def draw_frame(results, frame):
 
 # ===== 如果無法成功編碼時使用，嘗試顯示錯誤畫面 =====
 def show_encoding_error_frame():
-    print("[錯誤] 無法將黑色畫面編碼為 JPEG 格式")
+    print("[錯誤] 無法將黑色畫面編碼為 JPEG 格式 by video_streaming")
     # 返回一個簡單的錯誤畫面
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
     cv2.putText(frame, 'Encoding Error', (150, 240),
@@ -103,7 +103,7 @@ def show_encoding_error_frame():
     ret, buffer = cv2.imencode('.jpg', frame)
     # 如果編碼再次失敗
     if not ret:
-        print("[嚴重錯誤] 無法生成錯誤畫面")
+        print("[嚴重錯誤] 無法生成錯誤畫面 by video_streaming")
         buffer = b''
 
     return buffer
@@ -158,19 +158,6 @@ def show_open_failed_frame():
 
     return frame_bytes
 
-# ===== 開啟led燈號(根據辨識訊息) =====
-def open_rgbled():
-    pass
-
-# ===== 操作伺服馬達 =====
-# def change_servo_angle(number, angle):
-#     # --- 轉0 ---
-#     if angle == 0:
-#         # 【根據number決定操作哪個馬達】
-#     # --- 轉90 ---
-#     if angle == 90:
-#         # 【根據number決定操作哪個馬達】
-#     pass
 
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():
@@ -245,12 +232,12 @@ def gen_frames():
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
         except Exception as e:
-            print(f"[錯誤] 影像串流處理失敗: {e}")
+            print(f"[錯誤] 影像串流處理失敗: {e} by video_streaming")
         finally:
             if config.CAMERA_INSTANCE is not None:
                 CameraManager.clean_camera(config.CAMERA_INSTANCE)
                 config.CAMERA_INSTANCE = None
-                print("[系統] 攝影機已關閉並釋放資源")
+                print("[系統] 攝影機已關閉並釋放資源 by video_streaming")
         # 這裡不 return，直接回到最外層 while，等待相機重新開啟
 
 # ===== 取貨專用影像串流（辨識但不儲存、不推送通知） =====
@@ -316,14 +303,14 @@ def pick_up_frame():
                     name = result['name']
                     # 過濾掉: 空值、訪客、未知的辨識結果
                     if name and name != '未知' and not name.startswith('visitor_'):
-                        print(f"[取貨串流] 辨識到住戶：{name}")
+                        print(f"[取貨串流] 辨識到住戶：{name} by video_streaming")
                         
                         # 查詢是否有包裹
-                        locker_number = db_manager.get_locker_by_name(name)
+                        locker_number = pick_up.get_locker_by_name(name)
                         
                         if locker_number:
                             # 有包裹，推送開櫃訊息
-                            print(f"[取貨串流] {name} 有包裹在 {locker_number} 號櫃")
+                            print(f"[取貨串流] {name} 有包裹在 {locker_number} 號櫃 by video_streaming")
                             socketio.emit('pickup_success', {
                                 'type': 'pickup',
                                 'name': name,
@@ -332,8 +319,8 @@ def pick_up_frame():
                             })
                             
                             # 清除櫃位資料
-                            db_manager.clear_locker(locker_number)
-                            print(f"[取貨串流] {locker_number} 號櫃已清除")
+                            pick_up.clear_locker(locker_number)
+                            print(f"[取貨串流] {locker_number} 號櫃已清除 by video_streaming")
                             
                             # 【操作對應馬達開啟】
                             # change_servo_angle(locker_number, 90)
@@ -344,7 +331,7 @@ def pick_up_frame():
                             break
                         else:
                             # 無包裹，繼續辨識
-                            print(f"[取貨串流] {name} 沒有登記包裹，繼續辨識")
+                            print(f"[取貨串流] {name} 沒有登記包裹，繼續辨識 by video_streaming")
             else:
                 results = last_results
 
@@ -365,12 +352,11 @@ def pick_up_frame():
                 time.sleep(0.5)  # 讓前端顯示最後一幀
                 break
     except Exception as e:
-        print(f"[錯誤] 取貨串流處理失敗: {e}")
+        print(f"[錯誤] 取貨串流處理失敗: {e} by video_streaming")
     finally:
         if camera is not None:
             CameraManager.clean_camera(camera)
-            print("[取貨串流] 相機資源已釋放")
+            print("[取貨串流] 相機資源已釋放 by video_streaming")
         
         config.PICKUP_STREAM_ACTIVE = False
-        print("[取貨串流] 取貨串流已結束")
-        print(f"CAMERA_ACTIVE = {config.CAMERA_ACTIVE}")
+        print("[取貨串流] 取貨串流已結束 by video_streaming")

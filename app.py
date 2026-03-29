@@ -10,7 +10,7 @@ import time
 from modules.config import FACE_RECOGNITION_RESIZE_WIDTH #FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config # 給相機做同步修改
 from modules.video_streaming import gen_frames, pick_up_frame
-from modules import app, socketio, db_manager, face_recognizer, user
+from modules import app, socketio, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
 
 
 
@@ -310,7 +310,7 @@ def get_faces():
 @app.route('/api/recognition_logs')
 def get_recognition_logs_datatables():
     # 從資料庫獲取提供給 DataTables 讀取的 JSON 格式辨識紀錄資料
-    logs = db_manager.get_all_recognition_logs()  # 修改引用
+    logs = recognition_Logs.get_all_recognition_logs()  # 修改引用
     
     # 轉換為 DataTables 期望的格式
     data = []
@@ -398,7 +398,7 @@ def generate_booking_code():
             }), 400
         
         # 儲存訪客預約記錄
-        success, message = db_manager.save_visitor_booking(
+        success, message = visitor_Booking.save_visitor_booking(
             username, 
             visitor_name, 
             register_result['visitor_face_id']
@@ -428,13 +428,12 @@ def pick_up_feed():
     return Response(pick_up_frame(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
-
 # ===== 取得櫃位狀態 API =====
 @app.route('/api/locker_status', methods=['GET'])
 def get_locker_status():
     """取得所有櫃位的狀態"""
     try:
-        lockers = db_manager.get_all_lockers_status()
+        lockers = pick_up.get_all_lockers_status()
         return jsonify({'success': True, 'lockers': lockers}), 200
     except Exception as e:
         print(f"[錯誤] 取得櫃位狀態失敗: {e}")
@@ -451,7 +450,7 @@ def register_package():
         if not recipient_name:
             return jsonify({'success': False, 'message': '請輸入取件人姓名'}), 400
         
-        success, locker_number, message = db_manager.register_package(recipient_name)
+        success, locker_number, message = pick_up.register_package(recipient_name)
         
         if success:
             return jsonify({
@@ -474,7 +473,7 @@ def clear_locker(locker_number):
         if locker_number not in [1, 2]:
             return jsonify({'success': False, 'message': '無效的櫃號'}), 400
         
-        success, message = db_manager.clear_locker(locker_number)
+        success, message = pick_up.clear_locker(locker_number)
         
         if success:
             return jsonify({'success': True, 'message': message}), 200

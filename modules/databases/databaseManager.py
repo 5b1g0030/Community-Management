@@ -10,12 +10,12 @@ class DatabaseManager:
     # ====== 初始化 ======
     def __init__(self, db_path=DATABASE):
         self.db_path = db_path # 設定路徑
-        self._init_database()
+        # self._init_database()
 
     # ===== 初始化資料庫 =====
     # 建立資料庫表格(已存在則不建立)
     # =======================
-    def _init_database(self):
+    def init_database(self):
         conn, cursor = self.get_db_connection() # 使用統一的連接方法
 
         # ----- 新人臉識別(face_recognition) -----
@@ -52,6 +52,20 @@ class DatabaseManager:
                 confidence REAL,
                 FOREIGN KEY (face_id) REFERENCES faces (id)
             )
+        ''')
+
+        # ----- 建立訪客預約紀錄表(visitor_bookings) -----
+        cursor.execute('''
+                CREATE TABLE IF NOT EXISTS visitor_bookings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL,
+                    visitor_face_name TEXT NOT NULL,
+                    visitor_face_id INTEGER NOT NULL,
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    used INTEGER DEFAULT 0,
+                    used_date TIMESTAMP,
+                    FOREIGN KEY (visitor_face_id) REFERENCES face_recognition (id)
+                )    
         ''')
 
         # ----- 建立使用者資料表格(users) -----

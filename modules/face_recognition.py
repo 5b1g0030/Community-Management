@@ -120,7 +120,7 @@ class FaceRecognition:
                 files.append(f)
         return files
 
-    # ===== 註冊人臉到資料庫 =====
+    # ===== 註冊人臉到資料庫(住戶加入) =====
     def register_faces(self, db_manager, name, folder_path, files):
         """
         註冊人臉到資料庫
