@@ -108,3 +108,9 @@ export async function clearLocker(lockerNumber) {
     });
     return await parseJsonResponse(response);
 }
+
+// ===== 取得火災監測狀態 API =====
+export async function getFireStatus() {
+    const response = await fetch('/api/fire_status');
+    return await parseJsonResponse(response);
+}

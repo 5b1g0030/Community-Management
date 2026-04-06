@@ -27,7 +27,6 @@ user = UserManager() # 使用者操作類別
 recognition_Logs = RecognitionLogs() # 辨識紀錄類別
 visitor_Booking = VisitorBooking() # 訪客預約類別
 pick_up = PickUp() # 智慧取貨類別
-# 【讓資料庫初始化一次就好】
 
 # 初始化人臉辨識快取
 init_face_cache(db_manager)

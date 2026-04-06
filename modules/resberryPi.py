@@ -55,6 +55,18 @@ def rpi_to_rgbled(command):
     except Exception as e:
         print(f"❌ 發生未知錯誤: {e}")
 
+# ===== RGBLED正式引用版 =====
+# 傳入狀態(known=已知；unknown=未知；None=常態)
+def open_rgbLed(state=None):
+    if state == 'Known':
+        rpi_to_rgbled('green')
+        start_time = time.time()  # 記錄切換的開始時間
+    elif state == 'Unknown':
+        rpi_to_rgbled('red')
+        start_time = time.time()  # 記錄切換的開始時間
+
+    return start_time
+
 # ===== 發送訊息給DHT22 =====
 # 【每兩秒呼叫一次，更新資料】
 def rpi_to_dht22():

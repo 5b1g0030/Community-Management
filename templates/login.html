@@ -6,34 +6,44 @@
     <title>社區人臉辨識系統 登入</title>
      <!-- 引入CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}"> <!-- 全域樣式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/Reg_Log.css') }}"> <!-- 登入&註冊介面樣式 -->
 </head>
 <body>
-    <h1>系統登入</h1>
-    <form id="loginForm" action="/login" method="POST">
-        <!-- for => 與同id的元素連接，點擊時能自動引導到該元素 -->
-        <label for="username">使用者名稱：</label>
-        <!-- 使用者名稱輸入 -->
-        <!-- 
-            type => 欄位種類
-            id => 元素識別碼
-            name => 欄位名稱(後端接收用)
-            placeholder => 顯示提示字
-            required => 必填欄位設定 
-        -->
-        <input type="text" id="username" name="username" placeholder="輸入使用者名稱" required>
-        <br>
-        <!-- 密碼輸入 -->
-         <label for="password">密碼：</label>
-        <input type="password" id="password" name="password" placeholder="輸入密碼" required>
-        <br><br>
-        <!-- 登入按鈕 -->
-        <button type="submit">登入</button>
-        <a href="/register" style="margin-left: 10px;">註冊</a>
-    </form>
-    
+    <div class="login-container">
+        <h1>系統登入</h1>
+        <form id="loginForm" action="/login" method="POST">
+            <!-- for => 與同id的元素連接，點擊時能自動引導到該元素 -->
+            <div class="input-group">
+                <label for="username">使用者名稱：</label>
+                <!-- 使用者名稱輸入 -->
+                <!-- 
+                    type => 欄位種類
+                    id => 元素識別碼
+                    name => 欄位名稱(後端接收用)
+                    placeholder => 顯示提示字
+                    required => 必填欄位設定 
+                -->
+                <input type="text" id="username" name="username" placeholder="輸入使用者名稱" required>
+            </div>
+            
+            <div class="input-group">
+                <!-- 密碼輸入 -->
+                <label for="password">密碼：</label>
+                <input type="password" id="password" name="password" placeholder="輸入密碼" required>
+            </div>
+            
+            <!-- 登入按鈕 -->
+             <div class="action-group">
+                <button type="submit" class="login-btn">登入</button>
+                <a href="/register" class="register-link">註冊</a>
+             </div>
+            
+        </form>
+        
 
-    <!-- 錯誤信息顯示區 -->
-    <div id="loginMessage"></div>
+        <!-- 錯誤信息顯示區 -->
+        <div id="loginMessage"></div>
+    </div>
 
     <!-- 引入 JavaScript -->
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>

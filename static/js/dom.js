@@ -79,12 +79,18 @@ export const closePickUpModal = document.getElementById('closePickUpModal');
 export const pickupVideoStream = document.getElementById('pickup-video-stream');
 export const pickupStatusMessage = document.getElementById('pickupStatusMessage'); // 新增
 
+// ===== 火災監測元素 =====
+export const zoneATemp = document.getElementById('zoneATemp');             // 火災監測 A區 數值
+export const zoneBStatus = document.getElementById('zoneBStatus');         // 火災監測 B區 數值
+
 
 // ================
 // 匯出元素 
 // ================
 // 元素列表
 const DOM = {
+    zoneATemp,
+    zoneBStatus,
     addFaceBtn,
     testFaceBtn,
     viewFaceDbBtn,

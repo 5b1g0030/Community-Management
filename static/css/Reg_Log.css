@@ -1,0 +1,155 @@
+/* ======================
+    登入介面&註冊介面樣式
+=========================*/
+
+
+/* 背景設定：預設白色 */
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #ffffff; /* 改為純白色背景 */
+  font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+}
+
+/* 登入框主體：加上明顯的左下陰影以區隔背景 */
+.login-container {
+  background-color: #ffffff;
+  padding: 40px 50px;
+  border: 1px solid #eee; /* 在白色背景下增加淡淡的邊框 */
+  border-radius: 8px;
+  /* 核心需求：左下方陰影 */
+  box-shadow: -12px 12px 25px rgba(0, 0, 0, 0.15); 
+  width: 320px;
+}
+
+/* 登入&註冊字樣 */
+h1 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 35px;
+  color: #333;
+  /* font-size: 26px; */
+  letter-spacing: 2px;
+}
+
+/* 輸入框樣式 */
+.input-group {
+  margin-bottom: 25px;
+}
+/* 輸入框的文字 */
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #444;
+  font-weight: bold;
+  font-size: 20px;
+}
+/* 輸入框邊框 */
+.input-group input {
+  width: 100%;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 2px solid #ccc;
+  background-color: transparent;
+  outline: none;
+  font-size: 16px;
+  transition: border-color 0.3s;
+  margin-bottom: 10px;
+}
+/* 輸入框被點擊時的動作 */
+.input-group input:focus {
+  border-bottom: 2px solid #4CAF50;
+}
+
+/* 按鈕與連結區塊 */
+.action-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 35px;
+}
+/* 登入按鈕 */
+.login-btn {
+  background-color: #4CAF50; /* 綠色按鈕 */
+  color: white;
+  border: none;
+  padding: 10px 30px;
+  border-radius: 4px;
+  font-size: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+/* 登入按鈕滑鼠懸停效果 */
+.login-btn:hover {
+  background-color: #45a049;
+}
+
+/* 註冊連結 */
+.register-link {
+  color: #0066cc;
+  text-decoration: none;
+  font-size: 20px;
+}
+/* 註冊連結懸停效果 */
+.register-link:hover {
+  text-decoration: underline;
+}
+/* 註冊按鈕 */
+.register-btn {
+  display: block; /* 讓按鈕成為區塊級元素 */
+  margin: 0 auto; /* 自動水平置中 */
+  background-color: #4CAF50; /* 綠色按鈕 */
+  color: white;
+  border: none;
+  padding: 10px 140px;
+  border-radius: 4px;
+  font-size: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+/* 註冊按鈕滑鼠懸停效果 */
+.register-btn:hover {
+  background-color: #45a049;
+}
+
+.role-selection {
+  margin: 20px 0;
+}
+.role-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #333;
+}
+.options-container {
+  display: flex;
+  gap: 12px;
+}
+/* 隱藏原始 radio */
+.role-option input[type="radio"] {
+  display: none;
+}
+/* 自定義標籤樣式 */
+.role-option label {
+  display: block;
+  padding: 10px 25px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 15px;
+  color: #666;
+  background: white;
+}
+/* 選中時的樣式：變成綠色（呼應你的登入按鈕） */
+.role-option input[type="radio"]:checked + label {
+  border-color: #4CAF50;
+  color: #4CAF50;
+  background-color: #f1f8e9;
+  font-weight: bold;
+}

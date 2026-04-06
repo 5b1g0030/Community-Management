@@ -4,7 +4,7 @@
 // 否則會在解析階段丟出語法錯誤，整個檔案就不會執行。
 
 import * as DOM from "./dom.js" // 引入網頁元素
-import { login, register } from "./api.js"; // 引入後端api溝通函式
+import { login, register, getFireStatus } from "./api.js"; // 引入後端api溝通函式
 import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal, pickUp, packageRegistration } from "./modals.js";
 import { initializeRecognitionLogsTable, initRecognitionSocket, clearLogFilters } from "./recognitionLogs.js";
 import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
@@ -175,6 +175,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== 包裹登記彈出視窗 =====
     if (DOM.packageRegisterBtn) {
         packageRegistration()
+    }
+
+    // ===== 火災監測狀態更新 (每 3 秒) =====
+    if (DOM.zoneATemp || DOM.zoneBStatus) {
+        // 先執行一次，避免剛載入時等待
+        const updateFireStatus = async () => {
+            try {
+                const data = await getFireStatus();
+                if (data.success) {
+                    if (DOM.zoneATemp) DOM.zoneATemp.textContent = data.zone_a_temp;
+                    if (DOM.zoneBStatus) DOM.zoneBStatus.textContent = data.zone_b_status;
+                }
+            } catch (error) {
+                console.error('取得火災監測狀態失敗:', error);
+            }
+        };
+        
+        // 網頁剛載入時，先手動執行一次，讓畫面立刻有數字
+        updateFireStatus();
+
+        // 設定定時器：每隔 3000 毫秒（3秒），就自動再執行一次 updateFireStatus 函式
+        setInterval(updateFireStatus, 3000);
     }
 
     // *************************
