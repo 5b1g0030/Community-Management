@@ -19,11 +19,11 @@ class UserManager:
 			cursor.execute("SELECT id FROM users WHERE username= ?", (username,))
 			if cursor.fetchone():
 				conn.close()
-				return False, "使用者名稱已被使用 by database"
+				return False, "使用者名稱已被使用 by user"
 			
 			if role not in ('住戶', '管理員'):
 				conn.close()
-				return False, "不支援的身分 by database"
+				return False, "不支援的身分 by user"
 			
 			password_hash = hashlib.sha256(password.encode()).hexdigest()
 			cursor.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
@@ -31,9 +31,9 @@ class UserManager:
 			
 			conn.commit()
 			conn.close()
-			return True, "註冊成功 by database"
+			return True, "註冊成功 by user"
 		except Exception as e:
-			return False, f"註冊失敗 by database: {str(e)}"
+			return False, f"註冊失敗 by user: {str(e)}"
 
 	# 【使用者類別】
     # ===== 使用者登入 =====

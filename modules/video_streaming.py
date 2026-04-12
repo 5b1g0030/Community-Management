@@ -3,6 +3,7 @@ from utils.camera_utils import CameraManager
 from modules.face_recognition import refresh_face_cache
 from modules.config import FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config # 給相機同步修改用
+from modules.resberryPi import open_rgbLed,rpi_to_rgbled,rpi_to_servo  # 樹梅派函式
 import numpy as np
 import cv2
 import os
@@ -21,6 +22,10 @@ def face_message(results, frame):
             username = visitor_Booking.get_visitor_by_face_name(name)
 
             if username:
+                    # 樹梅派操作
+                    # start_time = open_rgbLed('Known') # LED 綠燈、記錄亮起時間
+                    # rpi_to_servo('open') # 伺服馬達開門
+
                     # 推送訊息
                     print("[推送辨識訊息] 辨識為訪客")
                     socketio.emit('recognition', {
@@ -47,6 +52,10 @@ def face_message(results, frame):
             
         # ----- 如果不是「未知」且 name 不為空，則顯示名字 -----
         elif name and name != '未知':
+                # 樹梅派操作
+                # start_time = open_rgbLed('Known') # LED 綠燈、記錄亮起時間
+                # rpi_to_servo('open') # 伺服馬達開門
+
                 print("[推送辨識訊息] 辨識為住戶 by video_streaming")
                 socketio.emit('recognition', {
                     'type': 'recognition',
@@ -62,6 +71,9 @@ def face_message(results, frame):
         # ----- 如果是「未知」，顯示未知人物 -----
         elif name == '未知':
             print("[推送辨識訊息] 辨識為未知 by video_streaming")
+            # 樹梅派操作
+            # start_time = open_rgbLed('UKnown') # LED 紅燈、記錄亮起時間
+            
             socketio.emit('recognition', {
                 'type': 'recognition',
                 'message': '偵測到未知人物'
@@ -77,6 +89,12 @@ def face_message(results, frame):
             
             img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
             cv2.imwrite(img_path, frame)
+
+        # ===== 判斷是否過2秒要切黃燈+關門 =====
+        # if start_time and time.time() - start_time >= 2:  # 維持2秒後切回
+        #     rpi_to_rgbled('yellow')
+        #     rpi_to_servo('close')
+        #     start_time = None
 
 # ===== 在影像上繪製辨識結果 =====
 def draw_frame(results, frame):
@@ -157,7 +175,6 @@ def show_open_failed_frame():
     frame_bytes = buffer.tobytes()
 
     return frame_bytes
-
 
 # ===== 影像串流&推送辨識訊息 =====
 def gen_frames():

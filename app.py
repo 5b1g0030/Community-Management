@@ -489,9 +489,18 @@ def clear_locker(locker_number):
 def get_fire_status():
     """取得火災監測區域 A/B 的數值 (測試用)"""
     try:
+        
+        dht22 = rpi_to_dht22() # 溫度感測器
+        mq135 = rpi_to_mq135() # 煙霧感測器
+        # 回傳資料內容:
+        # 感測器 => 如果成功讀取，回傳資料 
+        print(mq135['data'])
+        return jsonify({
+            'success': True,
+            'dht22': dht22['data'] if dht22['success'] else {'error': dht22['error']},
+            'mq135': mq135['data'] if mq135['success'] else {'error': mq135['error']}
+        }), 200
         # 測試變數，後續可改成讀取樹莓派數據
-        dht22 = rpi_to_dht22()
-        mq135 = rpi_to_mq135()
         # import random
         # return jsonify({
         #     'success': True,

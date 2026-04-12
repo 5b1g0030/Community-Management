@@ -77,15 +77,15 @@ def rpi_to_dht22():
         
         if response.status_code == 200:
             data = response.json()
-            #print(f"✅ DHT22讀取成功 - 溫度: {data['temperature']}°C, 濕度: {data['humidity']}%")
-            return {"success": True, "data": data}
+            print(f"✅ DHT22讀取成功 - 溫度: {data['temperature']}°C, 濕度: {data['humidity']}%")
+            return {"success": True, "data": data} # 只回傳溫度
         else:
             error_message = response.json().get('message', '未知錯誤')
             return {"success": False, "error": error_message}
 
     except requests.exceptions.ConnectionError:
         error_message = "❌ 連線錯誤: 請檢查樹莓派 IP 或伺服器是否啟動"
-        #print(error_message)
+        print(error_message)
         return {"success": False, "error": error_message}
     except Exception as e:
         error_message = f"❌ 發生錯誤: {e}"
@@ -99,12 +99,14 @@ def rpi_to_mq135():
     
     try:
         response = requests.get(url, timeout=5)
+        print(f"樹莓派回應: {response}")
         if response.status_code == 200:
             data = response.json()
-            #print(f"MQ135[{data['timestamp']}] 狀態: {data['message']} ({data['status']})")
+            print(f"MQ135[{data['timestamp']}] 狀態: {data['message']} ({data['status']})")
+            
             return {"success": True, "data": data}
         else:
-            error_message = f"伺服器錯誤: {response.status_code}"
+            error_message = f"伺服器錯誤: {response.status_code} by mq135"
             print(f"❌ {error_message}")
             return {"success": False, "error": error_message}
 
@@ -135,9 +137,9 @@ def main():
 
             if user_input in ['1', '2', '3', '4']:
                 if user_input == '1':
-                    rpi_to_servo('open') # 伺服馬達開門
+                    rpi_to_servo('90') # 伺服馬達開門
                     time.sleep(1) # 停頓一秒
-                    rpi_to_servo('close') # 伺服馬達關門
+                    rpi_to_servo('0') # 伺服馬達關門
                 elif user_input == '2':
                     color = ['off', 'red', 'green', 'yellow', 'off'] # 控制列表
                     for i in color:

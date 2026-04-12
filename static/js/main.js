@@ -177,15 +177,20 @@ document.addEventListener('DOMContentLoaded', () => {
         packageRegistration()
     }
 
-    // ===== 火災監測狀態更新 (每 3 秒) =====
+    // ===== 火災監測狀態更新 (每 3 秒更新) =====
     if (DOM.zoneATemp || DOM.zoneBStatus) {
         // 先執行一次，避免剛載入時等待
         const updateFireStatus = async () => {
             try {
-                const data = await getFireStatus();
+                const data = await getFireStatus(); // 呼叫api
+                // success: 表示 API 呼叫是否成功。
+                // zone_a_temp: 區域 A 的溫度資訊(josn項目)。
+                // zone_b_status: 區域 B 的狀態資訊。
                 if (data.success) {
-                    if (DOM.zoneATemp) DOM.zoneATemp.textContent = data.zone_a_temp;
-                    if (DOM.zoneBStatus) DOM.zoneBStatus.textContent = data.zone_b_status;
+                    // 【這裡改成感測器資料處理邏輯】
+                    // 寫入資到網頁
+                    if (DOM.zoneATemp) DOM.zoneATemp.textContent = data.dht22.temperature;
+                    if (DOM.zoneBStatus) DOM.zoneBStatus.textContent = data.mq135.message;
                 }
             } catch (error) {
                 console.error('取得火災監測狀態失敗:', error);

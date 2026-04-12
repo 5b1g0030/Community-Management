@@ -25,5 +25,5 @@ PICKUP_FACE_DETECTED = False  # 標記是否辨識到人臉
 
 # ====== 樹梅派 =====
 # !!! 請務必將此 IP 位址替換為你樹莓派的實際 IP 位址 !!!
-RPI_IP_ADDRESS = "192.168.5.108" 
+RPI_IP_ADDRESS = "192.168.5.113" 
 RPI_PORT = 5000
