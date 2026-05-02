@@ -12,6 +12,8 @@ import modules.config as config # 給相機做同步修改
 from modules.video_streaming import gen_frames, pick_up_frame
 from modules import app, socketio, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
 from modules.resberryPi import rpi_to_dht22, rpi_to_mq135
+from modules.config import RPI
+import asyncio
 
 
 # ===== 管理者端 =====
@@ -484,31 +486,39 @@ def clear_locker(locker_number):
         print(f"[錯誤] 清除櫃位失敗: {e}")
         return jsonify({'success': False, 'message': f'清除失敗: {str(e)}'}), 500
 
-# ===== 取得火災監測狀態 API (測試用) =====
+# ===== 取得火災監測狀態 API =====
 @app.route('/api/fire_status', methods=['GET'])
 def get_fire_status():
-    """取得火災監測區域 A/B 的數值 (測試用)"""
+    """取得火災監測區域 A/B 的數值"""
     try:
-        
-        dht22 = rpi_to_dht22() # 溫度感測器
-        mq135 = rpi_to_mq135() # 煙霧感測器
-        # 回傳資料內容:
-        # 感測器 => 如果成功讀取，回傳資料 
-        print(mq135['data'])
-        return jsonify({
-            'success': True,
-            'dht22': dht22['data'] if dht22['success'] else {'error': dht22['error']},
-            'mq135': mq135['data'] if mq135['success'] else {'error': mq135['error']}
-        }), 200
-        # 測試變數，後續可改成讀取樹莓派數據
-        # import random
-        # return jsonify({
-        #     'success': True,
-        #     'zone_a_temp': f"{random.randint(25, 30)}°",
-        #     'zone_b_status': random.choice(['無異常', '無異常', '無異常', '注意']) 
-        # })
+        if RPI:
+            dht22 = rpi_to_dht22() # 溫度感測器
+            mq135 =rpi_to_mq135() # 煙霧感測器
+            # print(f"dht22: {dht22}")
+            # print(f"mq135: {mq135}")
+            # 回傳資料內容:
+            # 感測器 => 如果成功讀取，回傳資料 
+            return jsonify({
+                'success': True,
+                'dht22': dht22['data'] if dht22['success'] else {'error': dht22['error']},
+                'mq135': mq135['data'] if mq135['success'] else {'error': mq135['error']}
+            }), 200
+        else:
+            return jsonify({
+                'success': True,
+                'dht22': 26,
+                'mq135': '無異常'
+            }), 200
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+# ===== 火災警報 API ======
+@app.route('/api/fire_status/danger')
+def fire_status_danger():
+    # 【蜂鳴器】
+    # 【REDLED，長亮】
+    # 【由前端呼叫】
+    pass
 
 
 if __name__ == '__main__':

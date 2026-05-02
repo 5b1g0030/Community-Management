@@ -5,17 +5,36 @@
 import msvcrt
 import requests
 import time
+import modules.config as config
 from .config import RPI_IP_ADDRESS, RPI_PORT
+import asyncio # 非同步處理
+
+# ===== 樹梅派元件延遲關閉 =====
+def rpi_time_check():
+    # ----- 馬達關閉時間檢查 -----
+    # print(config.door_start_time)
+    if config.door_start_time and time.time() - config.door_start_time >= 3:  # 維持3秒後切回
+        print("發送關門指令 by resberryPi")
+        open_servo('90') # 馬達關門
+        config.door_start_time = None
+        config.door_last_state = False
+        print(f"開門狀態: {config.door_last_state} by resberryPi")
+    # ----- RBGLED關閉時間檢查 -----
+    if config.rgbled_start_time and time.time() - config.rgbled_start_time >= 2:  # 維持2秒後切回
+        print(f"RGBLED切換為 {config.rgbled_color} by resberryPi")
+        open_servo('yellow') # RGBLED切換為黃色
+        config.rgbled_start_time = None
 
 # ===== 發送訊息給伺服馬達 =====
 # 【辨識到已知人物時開門，3秒後自動關上】
+# 0 => 開門；90 => 關門
 def rpi_to_servo(command):
     # 根據指令 1 或 0 構造 URL
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/servo/{command}"
     
     try:
         # 發送 GET 請求
-        response = requests.get(url, timeout=5) # 設定 5 秒超時
+        response = requests.get(url, timeout=2) # 設定 2 秒超時
         
         # 檢查 HTTP 狀態碼
         if response.status_code == 200:
@@ -31,6 +50,18 @@ def rpi_to_servo(command):
     except Exception as e:
         print(f"❌ 發生未知錯誤: {e}")
 
+# ===== 伺服馬達正式引用版 =====
+# 0 => 開門；90 => 關門
+def open_servo(state=None):
+    if state == '0':
+        rpi_to_servo('0')
+        start_time = time.time()  # 記錄切換的開始時間
+    elif state == '90':
+        rpi_to_servo('90')
+        start_time = time.time()  # 記錄切換的開始時間
+
+    return start_time
+
 # ===== 發送訊息給RGBLED =====
 # 【辨識人臉時呼叫，已知人物亮綠燈，未知人亮紅燈，2秒後變回常態的黃燈】
 def rpi_to_rgbled(command):
@@ -39,7 +70,7 @@ def rpi_to_rgbled(command):
     
     try:
         # 發送 GET 請求
-        response = requests.get(url, timeout=5) # 設定 5 秒超時
+        response = requests.get(url, timeout=2) # 設定 5 秒超時
         
         # 檢查 HTTP 狀態碼
         if response.status_code == 200:
@@ -58,6 +89,7 @@ def rpi_to_rgbled(command):
 # ===== RGBLED正式引用版 =====
 # 傳入狀態(known=已知；unknown=未知；None=常態)
 def open_rgbLed(state=None):
+    print("++++++++++++++++++++")
     if state == 'Known':
         rpi_to_rgbled('green')
         start_time = time.time()  # 記錄切換的開始時間
@@ -73,7 +105,7 @@ def rpi_to_dht22():
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/dht22/data"
     
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=2)
         
         if response.status_code == 200:
             data = response.json()

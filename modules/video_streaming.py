@@ -3,14 +3,18 @@ from utils.camera_utils import CameraManager
 from modules.face_recognition import refresh_face_cache
 from modules.config import FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config # 給相機同步修改用
-from modules.resberryPi import open_rgbLed,rpi_to_rgbled,rpi_to_servo  # 樹梅派函式
+from modules.resberryPi import rpi_time_check,open_rgbLed,open_servo # 樹梅派函式
 import numpy as np
 import cv2
 import os
 from datetime import datetime
 import time
+from modules.config import RPI
 
 # ===== 推送辨識訊息(已知, 未知, 訪客) =====
+# 【建立一個door_is_open的變數，來控制伺服馬達，需要有判斷式來防止開門後又呼叫開門的情況】
+# 【建立一個rgbled_color的變數，儲存led要顯示的顏色(red&green)，直接呼叫即可】
+# 【樹梅派操作放在最後面，統一管理】
 def face_message(results, frame):
     for result in results:
         name = result['name']
@@ -23,8 +27,8 @@ def face_message(results, frame):
 
             if username:
                     # 樹梅派操作
-                    # start_time = open_rgbLed('Known') # LED 綠燈、記錄亮起時間
-                    # rpi_to_servo('open') # 伺服馬達開門
+                    config.door_open = True
+                    config.rgbled_color = 'green'
 
                     # 推送訊息
                     print("[推送辨識訊息] 辨識為訪客")
@@ -53,8 +57,8 @@ def face_message(results, frame):
         # ----- 如果不是「未知」且 name 不為空，則顯示名字 -----
         elif name and name != '未知':
                 # 樹梅派操作
-                # start_time = open_rgbLed('Known') # LED 綠燈、記錄亮起時間
-                # rpi_to_servo('open') # 伺服馬達開門
+                config.door_open = True # 馬達開門
+                config.rgbled_color = 'green' # LED綠色
 
                 print("[推送辨識訊息] 辨識為住戶 by video_streaming")
                 socketio.emit('recognition', {
@@ -72,15 +76,15 @@ def face_message(results, frame):
         elif name == '未知':
             print("[推送辨識訊息] 辨識為未知 by video_streaming")
             # 樹梅派操作
-            # start_time = open_rgbLed('UKnown') # LED 紅燈、記錄亮起時間
-            
+            config.door_open = False # 不開門
+            config.rgbled_color = 'red' # LED紅色
+
             socketio.emit('recognition', {
                 'type': 'recognition',
                 'message': '偵測到未知人物'
             })
             # --- 儲存辨識紀錄 ---
             recognition_Logs.save_recognition_log("未知", "偵測到未知人物")
-            # 【led = red】
                     
             # 儲存暫存圖片
             temp_dir = os.path.join('static', 'temp')
@@ -90,11 +94,21 @@ def face_message(results, frame):
             img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
             cv2.imwrite(img_path, frame)
 
-        # ===== 判斷是否過2秒要切黃燈+關門 =====
-        # if start_time and time.time() - start_time >= 2:  # 維持2秒後切回
-        #     rpi_to_rgbled('yellow')
-        #     rpi_to_servo('close')
-        #     start_time = None
+        # ===== 樹梅派操作 =====
+        # 當下達開門指令 and 門的上一次狀態為關
+        if RPI:
+            if config.door_open == True and config.door_last_state == False:
+                print("發送開門指令 by video_streaming")
+                # config.door_start_time = time.time()
+                # config.door_start_time = open_servo('0') # 馬達開門+紀錄開門時間
+                config.door_last_state = config.door_open # 紀錄這次狀態
+            config.door_open = False
+            print(f"開門狀態: {config.door_last_state} by video_streaming")
+            # 下達LED顏色指令
+            if config.rgbled_color:
+                print(f"RGBLED切換為 {config.rgbled_color} by video_streaming")
+                # config.rgbled_start_time = time.time()
+                config.rgbled_start_time = open_rgbLed(config.rgbled_color)            
 
 # ===== 在影像上繪製辨識結果 =====
 def draw_frame(results, frame):
@@ -185,6 +199,8 @@ def gen_frames():
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + black_frame + b'\r\n')
             time.sleep(0.5)
+            if RPI:
+                rpi_time_check() # 樹梅派元件延遲關閉檢查
         
         # ===== 影像串流 =====
         try:
@@ -200,6 +216,8 @@ def gen_frames():
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + not_found_frame + b'\r\n')
                     time.sleep(0.5)
+                    if RPI:
+                        rpi_time_check() # 樹梅派元件延遲關閉檢查
                 continue  # 回到最外層 while，等待相機重新開啟
             
             # --- 儲存相機實例(需要檢查有相機後才可呼叫) ---
@@ -213,7 +231,10 @@ def gen_frames():
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + error_frame + b'\r\n')
                     time.sleep(0.5)
+                    if RPI:
+                        rpi_time_check() # 樹梅派元件延遲關閉檢查
                 continue
+
 
             # ===== 主串流迴圈 =====
             frame_count = 0 # 影片幀數
@@ -247,6 +268,8 @@ def gen_frames():
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                if RPI:
+                    rpi_time_check() # 樹梅派元件延遲關閉檢查
 
         except Exception as e:
             print(f"[錯誤] 影像串流處理失敗: {e} by video_streaming")

@@ -4,7 +4,7 @@
 // 否則會在解析階段丟出語法錯誤，整個檔案就不會執行。
 
 import * as DOM from "./dom.js" // 引入網頁元素
-import { login, register, getFireStatus } from "./api.js"; // 引入後端api溝通函式
+import { login, register, getFireStatus, FireStatusDanger } from "./api.js"; // 引入後端api溝通函式
 import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal, pickUp, packageRegistration } from "./modals.js";
 import { initializeRecognitionLogsTable, initRecognitionSocket, clearLogFilters } from "./recognitionLogs.js";
 import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
@@ -187,11 +187,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // zone_a_temp: 區域 A 的溫度資訊(josn項目)。
                 // zone_b_status: 區域 B 的狀態資訊。
                 if (data.success) {
-                    // 【這裡改成感測器資料處理邏輯】
                     // 寫入資到網頁
                     if (DOM.zoneATemp) DOM.zoneATemp.textContent = data.dht22.temperature;
                     if (DOM.zoneBStatus) DOM.zoneBStatus.textContent = data.mq135.message;
                 }
+
+                // 火災警報觸發邏輯
+                // data.mq135.message = 有無煙霧
+                // data.dht22.temperature = 溫度
+                // await FireStatusDanger() = 觸發警報(交給後端處理)
+                // if ("溫度條件"){
+
+                // }
+                // if ("煙霧條件"){
+
+                // }
+
             } catch (error) {
                 console.error('取得火災監測狀態失敗:', error);
             }

@@ -114,3 +114,16 @@ export async function getFireStatus() {
     const response = await fetch('/api/fire_status');
     return await parseJsonResponse(response);
 }
+
+// ===== 火災警報呼叫 API (無回傳資料) =====
+export async function FireStatusDanger() {
+    try{
+        await fetch('/api/fire_status', {
+            method: 'GET'
+        });
+        console.log("火災警報呼叫成功");
+    }
+    catch(error){
+        console.error("火災警報呼叫失敗", error)
+    }
+}
