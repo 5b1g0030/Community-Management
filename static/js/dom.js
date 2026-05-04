@@ -82,7 +82,8 @@ export const pickupStatusMessage = document.getElementById('pickupStatusMessage'
 // ===== 火災監測元素 =====
 export const zoneATemp = document.getElementById('zoneATemp');             // 火災監測 A區 數值
 export const zoneBStatus = document.getElementById('zoneBStatus');         // 火災監測 B區 數值
-
+export const Acard = document.getElementById('Acard');                     // 火災監測 A區 面板
+export const Bcard = document.getElementById('Bcard');                     // 火災監測 B區 面板
 
 // ================
 // 匯出元素 
@@ -91,6 +92,8 @@ export const zoneBStatus = document.getElementById('zoneBStatus');         // �
 const DOM = {
     zoneATemp,
     zoneBStatus,
+    Acard,
+    Bcard,
     addFaceBtn,
     testFaceBtn,
     viewFaceDbBtn,

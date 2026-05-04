@@ -15,14 +15,14 @@ def rpi_time_check():
     # print(config.door_start_time)
     if config.door_start_time and time.time() - config.door_start_time >= 3:  # 維持3秒後切回
         print("發送關門指令 by resberryPi")
-        open_servo('90') # 馬達關門
+        rpi_to_servo('90') # 馬達關門
         config.door_start_time = None
         config.door_last_state = False
         print(f"開門狀態: {config.door_last_state} by resberryPi")
     # ----- RBGLED關閉時間檢查 -----
     if config.rgbled_start_time and time.time() - config.rgbled_start_time >= 2:  # 維持2秒後切回
         print(f"RGBLED切換為 {config.rgbled_color} by resberryPi")
-        open_servo('yellow') # RGBLED切換為黃色
+        rpi_to_rgbled('yellow') # RGBLED切換為黃色
         config.rgbled_start_time = None
 
 # ===== 發送訊息給伺服馬達 =====
@@ -50,18 +50,6 @@ def rpi_to_servo(command):
     except Exception as e:
         print(f"❌ 發生未知錯誤: {e}")
 
-# ===== 伺服馬達正式引用版 =====
-# 0 => 開門；90 => 關門
-def open_servo(state=None):
-    if state == '0':
-        rpi_to_servo('0')
-        start_time = time.time()  # 記錄切換的開始時間
-    elif state == '90':
-        rpi_to_servo('90')
-        start_time = time.time()  # 記錄切換的開始時間
-
-    return start_time
-
 # ===== 發送訊息給RGBLED =====
 # 【辨識人臉時呼叫，已知人物亮綠燈，未知人亮紅燈，2秒後變回常態的黃燈】
 def rpi_to_rgbled(command):
@@ -86,18 +74,6 @@ def rpi_to_rgbled(command):
     except Exception as e:
         print(f"❌ 發生未知錯誤: {e}")
 
-# ===== RGBLED正式引用版 =====
-# 傳入狀態(known=已知；unknown=未知；None=常態)
-def open_rgbLed(state=None):
-    print("++++++++++++++++++++")
-    if state == 'Known':
-        rpi_to_rgbled('green')
-        start_time = time.time()  # 記錄切換的開始時間
-    elif state == 'Unknown':
-        rpi_to_rgbled('red')
-        start_time = time.time()  # 記錄切換的開始時間
-
-    return start_time
 
 # ===== 發送訊息給DHT22 =====
 # 【每兩秒呼叫一次，更新資料】

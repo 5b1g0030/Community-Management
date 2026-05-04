@@ -179,29 +179,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 火災監測狀態更新 (每 3 秒更新) =====
     if (DOM.zoneATemp || DOM.zoneBStatus) {
+        // ----- 警告樣式更新 -----
+        function updateZoneWarning(zoneCard, isWarning) {
+            if (isWarning) {
+                zoneCard.classList.add('warning'); // 添加警告樣式
+                console.log("添加警告樣式")
+            } else {
+                zoneCard.classList.remove('warning'); // 移除警告樣式
+            }
+        }
+        // ----- 感測器資料寫入 -----
         // 先執行一次，避免剛載入時等待
         const updateFireStatus = async () => {
             try {
                 const data = await getFireStatus(); // 呼叫api
+                const dht22_temperature = data.dht22.temperature;
+                const mq135_status = data.mq135.status;
+                const mq135_message = data.mq135.message;
                 // success: 表示 API 呼叫是否成功。
                 // zone_a_temp: 區域 A 的溫度資訊(josn項目)。
                 // zone_b_status: 區域 B 的狀態資訊。
                 if (data.success) {
-                    // 寫入資到網頁
-                    if (DOM.zoneATemp) DOM.zoneATemp.textContent = data.dht22.temperature;
-                    if (DOM.zoneBStatus) DOM.zoneBStatus.textContent = data.mq135.message;
+                    // 寫入資到網頁 data.mq135.status data.mq135.message
+                    if (DOM.zoneATemp) DOM.zoneATemp.textContent = dht22_temperature;
+                    if (DOM.zoneBStatus) DOM.zoneBStatus.textContent = mq135_message;
                 }
 
                 // 火災警報觸發邏輯
                 // data.mq135.message = 有無煙霧
                 // data.dht22.temperature = 溫度
                 // await FireStatusDanger() = 觸發警報(交給後端處理)
-                // if ("溫度條件"){
+                const isZoneAWarning = Number(dht22_temperature) > 26;
+                const isZoneBWarning = mq135_status === "Danger";
+                console.log("isZoneBWarning=",isZoneBWarning, mq135_status)
+                console.log("isZoneAWarning=",isZoneAWarning)
+                
+                // 更新顯示樣式
+                updateZoneWarning(DOM.Acard, isZoneAWarning);
+                updateZoneWarning(DOM.Bcard, isZoneBWarning);
 
-                // }
-                // if ("煙霧條件"){
-
-                // }
+                if (isZoneAWarning || isZoneBWarning){
+                    await FireStatusDanger() // 觸發警報(交給後端處理)
+                }
 
             } catch (error) {
                 console.error('取得火災監測狀態失敗:', error);

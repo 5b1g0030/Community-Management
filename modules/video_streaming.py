@@ -3,7 +3,7 @@ from utils.camera_utils import CameraManager
 from modules.face_recognition import refresh_face_cache
 from modules.config import FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config # 給相機同步修改用
-from modules.resberryPi import rpi_time_check,open_rgbLed,open_servo # 樹梅派函式
+from modules.resberryPi import rpi_time_check,rpi_to_servo, rpi_to_rgbled # 樹梅派函式
 import numpy as np
 import cv2
 import os
@@ -97,18 +97,18 @@ def face_message(results, frame):
         # ===== 樹梅派操作 =====
         # 當下達開門指令 and 門的上一次狀態為關
         if RPI:
-            if config.door_open == True and config.door_last_state == False:
-                print("發送開門指令 by video_streaming")
-                # config.door_start_time = time.time()
-                # config.door_start_time = open_servo('0') # 馬達開門+紀錄開門時間
-                config.door_last_state = config.door_open # 紀錄這次狀態
-            config.door_open = False
-            print(f"開門狀態: {config.door_last_state} by video_streaming")
             # 下達LED顏色指令
             if config.rgbled_color:
                 print(f"RGBLED切換為 {config.rgbled_color} by video_streaming")
-                # config.rgbled_start_time = time.time()
-                config.rgbled_start_time = open_rgbLed(config.rgbled_color)            
+                config.rgbled_start_time = time.time()
+                rpi_to_rgbled(config.rgbled_color)  
+            if config.door_open == True and config.door_last_state == False:
+                print("發送開門指令 by video_streaming")
+                config.door_start_time = time.time() # 紀錄開門時間
+                rpi_to_servo('0') # 馬達開門
+                config.door_last_state = config.door_open # 紀錄這次狀態
+            config.door_open = False
+            print(f"開門狀態: {config.door_last_state} by video_streaming")      
 
 # ===== 在影像上繪製辨識結果 =====
 def draw_frame(results, frame):

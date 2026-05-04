@@ -32,6 +32,8 @@ class CameraManager:
             backends = [cv2.CAP_V4L2, cv2.CAP_GSTREAMER]
         else:
             backends = [cv2.CAP_ANY]
+        
+        print(f"選擇{backends}")
 
         return backends # 回傳「相機系統後端(列表)」
     
