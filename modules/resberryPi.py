@@ -74,7 +74,6 @@ def rpi_to_rgbled(command):
     except Exception as e:
         print(f"❌ 發生未知錯誤: {e}")
 
-
 # ===== 發送訊息給DHT22 =====
 # 【每兩秒呼叫一次，更新資料】
 def rpi_to_dht22():
@@ -126,6 +125,53 @@ def rpi_to_mq135():
         error_message = f"❌ 發生錯誤: {e}"
         print(error_message)
         return {"success": False, "error": str(e)}
+
+# ===== 發送訊息給蜂鳴器 =====
+# 輸入 'on', 'off'
+def rpi_to_buzzer(command):
+    url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/bz/{command}"
+    
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return {"success": True}
+        else:
+            error_message = f"伺服器錯誤: {response.status_code}"
+            print(f"❌ {error_message}")
+            return {"success": False, "error": error_message}
+
+    except requests.exceptions.ConnectionError:
+        error_message = "❌ 連線失敗：請檢查樹莓派 IP 或程式是否執行中。"
+        print(error_message)
+        return {"success": False, "error": error_message}
+    except Exception as e:
+        error_message = f"❌ 發生錯誤: {e}"
+        print(error_message)
+        return {"success": False, "error": str(e)}
+
+# ===== 發送訊息給REDLED =====
+# 輸入 'on', 'off'
+def rpi_to_redled(command):
+    url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/redled/{command}"
+    
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return {"success": True}
+        else:
+            error_message = f"伺服器錯誤: {response.status_code}"
+            print(f"❌ {error_message}")
+            return {"success": False, "error": error_message}
+
+    except requests.exceptions.ConnectionError:
+        error_message = "❌ 連線失敗：請檢查樹莓派 IP 或程式是否執行中。"
+        print(error_message)
+        return {"success": False, "error": error_message}
+    except Exception as e:
+        error_message = f"❌ 發生錯誤: {e}"
+        print(error_message)
+        return {"success": False, "error": str(e)}
+
 
 def main():
     print("--- 樹莓派伺服馬達遙控程式(功能測試) ---")

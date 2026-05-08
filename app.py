@@ -11,7 +11,7 @@ from modules.config import FACE_RECOGNITION_RESIZE_WIDTH #FACE_RECOGNITION_FRAME
 import modules.config as config # 給相機做同步修改
 from modules.video_streaming import gen_frames, pick_up_frame
 from modules import app, socketio, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
-from modules.resberryPi import rpi_to_dht22, rpi_to_mq135
+from modules.resberryPi import rpi_to_dht22, rpi_to_mq135, rpi_to_buzzer, rpi_to_redled
 from modules.config import RPI
 import asyncio
 
@@ -504,22 +504,34 @@ def get_fire_status():
                 'mq135': mq135['data'] if mq135['success'] else {'error': mq135['error']}
             }), 200
         else:
+             # 樹莓派未啟用，返回模擬數據
             return jsonify({
                 'success': True,
-                'dht22': 26,
-                'mq135': '無異常'
+                'dht22': {'temperature': 26, 'status': 'Normal'},  # 模擬溫度數據
+                'mq135': {'status': 'Safe', 'message': '無異常'}  # 模擬煙霧數據
             }), 200
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
-# ===== 火災警報 API ======
+# ===== 火災警報開啟 API ======
 @app.route('/api/fire_status/danger')
 def fire_status_danger():
-    # 【蜂鳴器】
+    # 【蜂鳴器鳴叫】
+    rpi_to_buzzer('on')
     # 【REDLED，長亮】
+    rpi_to_redled('on')
     # 【由前端呼叫】
-    pass
+    return jsonify({'success': True, 'message': '火災警報已啟動'})
 
+# ===== 火災警報關閉 API ======
+@app.route('/api/fire_status/safe')
+def fire_status_safe():
+    # 【蜂鳴器靜音】
+    rpi_to_buzzer('off')
+    # 【REDLED關閉】
+    rpi_to_redled('off')
+    # 【由前端呼叫，不須返回資料，所以返回簡單文字以符合Flask規則】
+    return jsonify({'success': True, 'message': '火災警報已關閉'})
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

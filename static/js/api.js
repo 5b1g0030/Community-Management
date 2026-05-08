@@ -118,12 +118,25 @@ export async function getFireStatus() {
 // ===== 火災警報呼叫 API (無回傳資料) =====
 export async function FireStatusDanger() {
     try{
-        await fetch('/api/fire_status', {
+        await fetch('/api/fire_status/danger', {
             method: 'GET'
         });
         console.log("火災警報呼叫成功");
     }
     catch(error){
         console.error("火災警報呼叫失敗", error)
+    }
+}
+
+// ===== 火災警報呼叫關閉 API (無回傳資料) =====
+export async function FireStatusSafe() {
+    try{
+        await fetch('/api/fire_status/safe', {
+            method: 'GET'
+        });
+        console.log("火災警報呼叫關閉成功");
+    }
+    catch(error){
+        console.error("火災警報呼叫關閉失敗", error)
     }
 }

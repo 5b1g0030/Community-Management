@@ -4,7 +4,7 @@
 // 否則會在解析階段丟出語法錯誤，整個檔案就不會執行。
 
 import * as DOM from "./dom.js" // 引入網頁元素
-import { login, register, getFireStatus, FireStatusDanger } from "./api.js"; // 引入後端api溝通函式
+import { login, register, getFireStatus, FireStatusDanger, FireStatusSafe } from "./api.js"; // 引入後端api溝通函式
 import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal, pickUp, packageRegistration } from "./modals.js";
 import { initializeRecognitionLogsTable, initRecognitionSocket, clearLogFilters } from "./recognitionLogs.js";
 import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
@@ -178,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== 火災監測狀態更新 (每 3 秒更新) =====
+    let isABWarning = false; // 初始化警報狀態
     if (DOM.zoneATemp || DOM.zoneBStatus) {
         // ----- 警告樣式更新 -----
         function updateZoneWarning(zoneCard, isWarning) {
@@ -209,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // data.mq135.message = 有無煙霧
                 // data.dht22.temperature = 溫度
                 // await FireStatusDanger() = 觸發警報(交給後端處理)
-                const isZoneAWarning = Number(dht22_temperature) > 26;
+                const isZoneAWarning = Number(dht22_temperature) > 27;
                 const isZoneBWarning = mq135_status === "Danger";
                 console.log("isZoneBWarning=",isZoneBWarning, mq135_status)
                 console.log("isZoneAWarning=",isZoneAWarning)
@@ -218,8 +219,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateZoneWarning(DOM.Acard, isZoneAWarning);
                 updateZoneWarning(DOM.Bcard, isZoneBWarning);
 
-                if (isZoneAWarning || isZoneBWarning){
-                    await FireStatusDanger() // 觸發警報(交給後端處理)
+                if (isZoneAWarning || isZoneBWarning) {
+                    if (!isABWarning) { // 確保只在未觸發警報時執行
+                        await FireStatusDanger(); // 開啟警報(交給後端處理)
+                        isABWarning = true;
+                }
+                } else if (isABWarning) { // 確保有觸發警報時才執行關閉
+                    await FireStatusSafe(); // 關閉警報(交給後端處理)
+                    isABWarning = false;
                 }
 
             } catch (error) {
