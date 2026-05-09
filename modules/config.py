@@ -27,7 +27,7 @@ PICKUP_FACE_DETECTED = False  # 標記是否辨識到人臉
 # !!! 請務必將此 IP 位址替換為你樹莓派的實際 IP 位址 !!!
 RPI_IP_ADDRESS = "192.168.5.101" 
 RPI_PORT = 5000
-RPI = True # 是否開啟樹梅派
+RPI = False # 是否開啟樹梅派
 
 # ===== 樹梅派-硬體狀態 =====
 door_open = False # 馬達是否執行開門動作

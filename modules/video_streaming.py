@@ -285,7 +285,7 @@ def pick_up_frame():
     """
     取貨專用串流：
     - 執行人臉辨識並繪製框
-    - 不儲存辨識紀錄
+    - 儲存辨識紀錄
     - 不推送通知
     - 辨識到人物後查詢包裹櫃號
     - 如有包裹則推送開櫃訊息並結束串流
@@ -357,13 +357,17 @@ def pick_up_frame():
                                 'locker_number': locker_number,
                                 'message': f'{locker_number} 號取貨櫃已開啟，請立即取貨'
                             })
+
+                            face_id = result.get('id')
+                            conf = float(result.get('confidence', 0.0))
+                            if face_id:
+                                recognition_Logs.save_recognition_log("取貨", f"{name}已到{locker_number}號櫃取貨", face_id, conf)
                             
                             # 清除櫃位資料
                             pick_up.clear_locker(locker_number)
                             print(f"[取貨串流] {locker_number} 號櫃已清除 by video_streaming")
                             
                             # 【操作對應馬達開啟】
-                            # change_servo_angle(locker_number, 90)
                             
                             # 標記已偵測到並準備結束
                             config.PICKUP_FACE_DETECTED = True
