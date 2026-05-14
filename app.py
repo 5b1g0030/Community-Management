@@ -1,7 +1,7 @@
 """ Flask 網頁後端"""
 
 from flask import Flask, render_template, request, jsonify, Response
-from modules.face_recognition import refresh_face_cache
+from modules.faceRecognition import refresh_face_cache
 from utils.camera_utils import CameraManager
 import os
 from datetime import datetime

@@ -293,20 +293,23 @@ class FaceRecognition:
             if not data:
                 return []
             
-            known_ids = [row[0] for row in data]
-            known_names = [row[1] for row in data]
-            known_encodings = [np.frombuffer(row[2], dtype=np.float64) for row in data]
+            # 取出快取資料
+            # 資料範例: row = (1, 'John', 'encoding_data')
+            known_ids = [row[0] for row in data] # 人臉索引
+            known_names = [row[1] for row in data] # 人臉名稱
+            known_encodings = [np.frombuffer(row[2], dtype=np.float64) for row in data] # 人臉特徵向量的二進位資料
         
         # 檢查有沒有資料
         if len(known_ids) == 0:
             return []
         
         # === 2. 影像預處理：降低解析度 ===
+        # # frame.shape 返回影像的形狀，例如 (480, 640, 3)，取前兩個值
         original_height, original_width = frame.shape[:2]
         
         # 計算縮放比例
         if original_width > resize_width:
-            scale = resize_width / original_width
+            scale = resize_width / original_width # 計算縮放比例(目標寬度與原始寬度的比值)
             new_width = resize_width
             new_height = int(original_height * scale)
             small_frame = cv2.resize(frame, (new_width, new_height))

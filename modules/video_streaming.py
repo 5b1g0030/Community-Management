@@ -1,6 +1,6 @@
 from modules import socketio, db_manager, face_recognizer, recognition_Logs, visitor_Booking, pick_up
 from utils.camera_utils import CameraManager
-from modules.face_recognition import refresh_face_cache
+from modules.faceRecognition import refresh_face_cache
 from modules.config import FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config # 給相機同步修改用
 from modules.resberryPi import rpi_time_check,rpi_to_servo, rpi_to_rgbled # 樹梅派函式

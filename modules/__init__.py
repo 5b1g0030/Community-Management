@@ -3,7 +3,7 @@
 from flask import Flask
 from flask_socketio import SocketIO
 # from modules.database import DatabaseManager
-from modules.face_recognition import FaceRecognition, init_face_cache
+from modules.faceRecognition import FaceRecognition, init_face_cache
 from modules.user import UserManager
 import os
 from modules.databases.databaseManager import DatabaseManager
