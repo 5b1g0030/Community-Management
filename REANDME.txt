@@ -5,6 +5,8 @@
 啟動: .\venv\Scripts\activate
 退出: deactivate
 
+輸出虛擬環境設定: pip freeze > requirements.txt
+
 
 ** 需要安裝的模組 **
 
