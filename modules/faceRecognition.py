@@ -196,7 +196,7 @@ class FaceRecognition:
         try:
             # 從資料庫讀取所有已知資料
             conn, cursor = db_manager.get_db_connection()
-            cursor.execute("SELECT name, encoding FROM face_recognition")
+            cursor.execute("SELECT id, name, encoding FROM face_recognition")
             data = cursor.fetchall()
             conn.close()
             
@@ -204,9 +204,10 @@ class FaceRecognition:
             if not data:
                 return {'success': False, 'message': '資料庫內無任何已知人臉，請先註冊'}
             
-            # 取出所有名稱、特徵向量
-            known_names = [row[0] for row in data]
-            known_encodings = [np.frombuffer(row[1], dtype=np.float64) for row in data]
+            # 取出所有 id、名稱、特徵向量
+            known_ids = [row[0] for row in data]
+            known_names = [row[1] for row in data]
+            known_encodings = [np.frombuffer(row[2], dtype=np.float64) for row in data]
             
             # 處理測試圖片
             if not os.path.exists(test_img_path):
@@ -231,7 +232,7 @@ class FaceRecognition:
             # 比對圖中偵測到的每一張臉
             for unknown_encoding in test_encodings:
                 matches = face_recognition.compare_faces(known_encodings, unknown_encoding, 
-                                                        tolerance=FACE_RECOGNITION_TOLERANCE)
+                                                    tolerance=FACE_RECOGNITION_TOLERANCE)
                 
                 # 如果有比對到相似的人臉
                 if True in matches:
@@ -240,20 +241,21 @@ class FaceRecognition:
                     
                     if matches[best_match_index]:
                         name = known_names[best_match_index]
+                        face_id = known_ids[best_match_index]  # 新增：取得對應的 id
                         confidence = 1 - face_distances[best_match_index]
                         results.append({
+                            'id': face_id,  # 新增：返回 id
                             'name': name,
                             'confidence': f'{confidence:.2%}',
                             'distance': float(face_distances[best_match_index])
                         })
-                        print(f"[結果] 辨識成功！此人是: {name} (信心距離: {face_distances[best_match_index]:.4f})")
+                        print(f"[結果] 辨識成功！此人是: {name} (ID: {face_id}, 信心距離: {face_distances[best_match_index]:.4f})")
                     else:
-                        results.append({'name': '未知', 'confidence': 'N/A'})
+                        results.append({'id': None, 'name': '未知', 'confidence': 'N/A'})
                 else:
-                    results.append({'name': '未知', 'confidence': 'N/A'})
-            
-            return {'success': True, 'message': '辨識完成', 'results': results}
-            
+                    results.append({'id': None, 'name': '未知', 'confidence': 'N/A'})
+
+                return {'success': True, 'message': '辨識成功', 'results': results}
         except Exception as e:
             print(f"[錯誤] 辨識失敗: {e}")
             return {'success': False, 'message': f'辨識失敗: {str(e)}'}

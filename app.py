@@ -13,7 +13,7 @@ from modules.video_streaming import gen_frames, pick_up_frame
 from modules import app, socketio, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
 from modules.resberryPi import rpi_to_dht22, rpi_to_mq135, rpi_to_buzzer, rpi_to_redled
 from modules.config import RPI
-import asyncio
+import cv2
 
 
 # ===== 管理者端 =====
@@ -253,8 +253,80 @@ def test_face():
         print("[測試辨識] 開始辨識人臉...")
         result = face_recognizer.recognize_face(db_manager, temp_path)
         print(f"[測試辨識] 辨識結果：{result}")
-        
-        # 清理臨時檔案（可選）
+
+        # 提取第一個辨識結果
+        frist_result = result['results'][0]
+        name = frist_result['name']
+        print(f"[測試辨識] 辨識結果：{name}")
+
+        # 如果結果為訪客，則把訪客資料刪除
+        if name and name.startswith('visitor_'):
+            username = visitor_Booking.get_visitor_by_face_name(name) # 查詢申請此訪客的住戶
+            # 推送訊息
+            print("[推送辨識訊息] 辨識為訪客 by app")
+            socketio.emit('recognition', {
+                    'type': 'recognition',
+                    'message': f'偵測到{username}住戶的訪客已到大門'
+            })
+
+            # --- 儲存辨識紀錄 ---
+            face_id = result.get('id')
+            conf = float(result.get('confidence', 0.0))
+            if face_id:
+                recognition_Logs.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
+                print("辨識紀錄已儲存 by app")
+                       
+            # 立即清除訪客人臉資料
+            success = visitor_Booking.clear_visitor_face_data(name)   
+            if success:
+                # 重新整理快取
+                refresh_face_cache(db_manager)
+                print(f"[系統] 訪客 {name} 已辨識並清除人臉資料 by video_streaming")
+            else:
+                print(f"[系統] 訪客 {name} 人臉資料清除失敗 by video_streaming")
+        # 如果結果為未知
+        elif name == "未知":
+            print("[推送辨識訊息] 辨識為未知 by app")
+            socketio.emit('recognition', {
+                'type': 'recognition',
+                'message': '偵測到未知人物'
+            })
+            # --- 儲存辨識紀錄 ---
+            recognition_Logs.save_recognition_log("未知", "偵測到未知人物")
+            print("辨識紀錄已儲存 by app")
+                    
+            # 儲存暫存圖片
+            temp_dir = os.path.join('static', 'temp')
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
+            
+            # 將 PIL 圖片轉換為 OpenCV 格式
+            try:
+                import numpy as np
+                img_cv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                img_path = os.path.join(temp_dir, f'unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg')
+                cv2.imwrite(img_path, img_cv)
+                print(f"[測試辨識] 未知人物圖片已儲存到：{img_path}")
+            except Exception as save_error:
+                print(f"[測試辨識] 儲存未知人物圖片失敗：{save_error}")
+        # 如果結果為住戶名稱(為排除例外情況，所以採用此判斷方式)
+        elif name and name != "未知":
+            print("[推送辨識訊息] 辨識為住戶 by app")
+            socketio.emit('recognition', {
+                'type': 'recognition',
+                'message': f'偵測到{name}住戶來到大門'
+            })
+            # --- 儲存辨識紀錄 ---
+            face_id = frist_result.get('id')
+            print(f"人臉索引: {face_id}")
+            # 解析信心值
+            confidence_str = frist_result.get('confidence', '0.0%')  # 預設為 '0.0%'
+            conf = float(confidence_str.strip('%')) / 100  # 移除 '%' 並轉換為小數
+            if face_id:
+                recognition_Logs.save_recognition_log("住戶", f"住戶{name}已來到大門", face_id, conf)
+                print("辨識紀錄已儲存 by app")
+
+        # 清理臨時檔案
         try:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
