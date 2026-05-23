@@ -592,6 +592,8 @@ def fire_status_danger():
     rpi_to_buzzer('on')
     # 【REDLED，長亮】
     rpi_to_redled('on')
+    # 【開啟大門(不記錄時間)】
+
     # 【由前端呼叫】
     return jsonify({'success': True, 'message': '火災警報已啟動'})
 
@@ -602,8 +604,13 @@ def fire_status_safe():
     rpi_to_buzzer('off')
     # 【REDLED關閉】
     rpi_to_redled('off')
+    # 【關閉大門(不記錄時間)】
+    
     # 【由前端呼叫，不須返回資料，所以返回簡單文字以符合Flask規則】
     return jsonify({'success': True, 'message': '火災警報已關閉'})
+
+# ===== 手動關閉警報 API =====
+# 包括關閉蜂鳴器、關閉大門、重新開啟人臉辨識
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

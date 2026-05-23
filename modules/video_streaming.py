@@ -246,24 +246,27 @@ def gen_frames():
                 if not ret:
                     break
                 frame_count += 1 # 計算影片幀數
+                
+                # ----- 人臉辨識部分(只在警報關閉時啟用) -----
                 # --- 如果幀數好是 FACE_RECOGNITION_FRAME_SKIP 的倍數時，才執行辨識 ---
-                if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
-                    results = face_recognizer.recognize_face_from_frame(db_manager, frame, use_cache=True)
-                    last_results = results
-                    frame_count = 0
-                else:
-                    # 紀錄上一個畫面，以便保持有畫面有可以顯示
-                    results = last_results
+                if config.fire_status_is_open:
+                    if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
+                        results = face_recognizer.recognize_face_from_frame(db_manager, frame, use_cache=True)
+                        last_results = results
+                        frame_count = 0
+                    else:
+                        # 紀錄上一個畫面，以便保持有畫面有可以顯示
+                        results = last_results
 
-                # --- 只在「辨識到的人臉名稱有變化」時，才推送辨識訊息到前端 ---
-                current_names = set([r['name'] for r in results]) # 辨識到的人臉集合
-                # 將兩個集合比較，如果內容不同則代表是新結果
-                if current_names != last_names:
-                    face_message(results, frame) # 推送及時通知
-                    # 把 last_names 更新成這一幀的 current_names，以便下次比對
-                    last_names = current_names
+                    # --- 只在「辨識到的人臉名稱有變化」時，才推送辨識訊息到前端 ---
+                    current_names = set([r['name'] for r in results]) # 辨識到的人臉集合
+                    # 將兩個集合比較，如果內容不同則代表是新結果
+                    if current_names != last_names:
+                        face_message(results, frame) # 推送及時通知
+                        # 把 last_names 更新成這一幀的 current_names，以便下次比對
+                        last_names = current_names
+                    draw_frame(results, frame) # 劃出辨識框
 
-                draw_frame(results, frame) # 劃出辨識框
                 ret, buffer = cv2.imencode('.jpg', frame)
                 frame_bytes = buffer.tobytes()
                 yield (b'--frame\r\n'

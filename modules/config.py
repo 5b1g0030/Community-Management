@@ -36,3 +36,5 @@ door_start_time = None # 馬達上次開啟時間
 
 rgbled_color = None # LED顏色
 rgbled_start_time = None # LED上次開啟時間
+
+fire_status_is_open = True # 火災警報狀態(開/關)
