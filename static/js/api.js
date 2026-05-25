@@ -140,3 +140,16 @@ export async function FireStatusSafe() {
         console.error("火災警報呼叫關閉失敗", error)
     }
 }
+
+// ===== 火災警報手動關閉 API =====
+export async function FireStatusClose() {
+    try {
+        const response = await fetch('/api/fire_status/close', {
+            method: 'GET'
+        });
+        const data = await response.json();
+        console.log("手動關閉警報:", data.message);
+    } catch(error) {
+        console.error("手動關閉警報失敗", error);
+    }
+}

@@ -179,7 +179,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ===== 火災監測狀態更新 (每 3 秒更新) =====
     let isABWarning = false; // 初始化警報狀態
+    let manualMuted = false; // 新增：用來記錄是否已手動靜音，避免感測器持續異常導致按鈕無限重置
     if (DOM.zoneATemp || DOM.zoneBStatus) {
+        // ----- 手動關閉按鈕點擊事件 -----
+        if (DOM.manualCloseAlarmBtn) {
+            DOM.manualCloseAlarmBtn.addEventListener('click', async () => {
+                await FireStatusClose(); // 呼叫後端 API
+                manualMuted = true;      // 標記為已手動靜音
+                DOM.manualCloseAlarmBtn.style.display = 'none'; // 讓按鈕消失
+                alert('火災警報已手動關閉');
+            });
+        }
+
         // ----- 警告樣式更新 -----
         function updateZoneWarning(zoneCard, isWarning) {
             if (isWarning) {
@@ -223,10 +234,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!isABWarning) { // 確保只在未觸發警報時執行
                         await FireStatusDanger(); // 開啟警報(交給後端處理)
                         isABWarning = true;
-                }
+                        manualMuted = false; // 新的警報觸發，重置靜音狀態
+                        // 警報觸發時顯示按鈕
+                        if (DOM.manualCloseAlarmBtn && !manualMuted) {
+                            DOM.manualCloseAlarmBtn.style.display = 'block';
+                        }
+                    }
                 } else if (isABWarning) { // 確保有觸發警報時才執行關閉
                     await FireStatusSafe(); // 關閉警報(交給後端處理)
                     isABWarning = false;
+                    manualMuted = false; // 恢復安全狀態，重置靜音標記
+                    // 警報解除時隱藏按鈕
+                    if (DOM.manualCloseAlarmBtn) {
+                        DOM.manualCloseAlarmBtn.style.display = 'none';
+                    }
                 }
 
             } catch (error) {

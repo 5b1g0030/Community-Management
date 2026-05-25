@@ -84,6 +84,7 @@ export const zoneATemp = document.getElementById('zoneATemp');             // �
 export const zoneBStatus = document.getElementById('zoneBStatus');         // 火災監測 B區 數值
 export const Acard = document.getElementById('Acard');                     // 火災監測 A區 面板
 export const Bcard = document.getElementById('Bcard');                     // 火災監測 B區 面板
+export const manualCloseAlarmBtn = document.getElementById('manualCloseAlarmBtn'); // 手動關閉警報按鈕
 
 // ================
 // 匯出元素 
@@ -94,6 +95,7 @@ const DOM = {
     zoneBStatus,
     Acard,
     Bcard,
+    manualCloseAlarmBtn,
     addFaceBtn,
     testFaceBtn,
     viewFaceDbBtn,
