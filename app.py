@@ -618,6 +618,7 @@ def fire_status_safe():
 # 包括關閉蜂鳴器、關閉大門、重新開啟人臉辨識
 @app.route('/api/fire_status/close')
 def fire_status_close():
+    print("觸發手動關閉警報")
     if RPI:
         # 【蜂鳴器靜音】
         rpi_to_buzzer('off')
