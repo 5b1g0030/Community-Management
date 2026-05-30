@@ -1,6 +1,6 @@
 """ Flask 網頁後端"""
 
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, redirect, session
 from modules.faceRecognition import refresh_face_cache
 from utils.camera_utils import CameraManager
 import os
@@ -15,10 +15,15 @@ from modules.resberryPi import rpi_to_dht22, rpi_to_mq135, rpi_to_buzzer, rpi_to
 from modules.config import RPI
 import cv2
 
+# 設定 secret_key (設定一個複雜的以便加密)
+app.secret_key = 'MySecretKey950907' 
 
 # ===== 管理者端 =====
 @app.route('/manager')
 def manager():
+    # 檢查是否為管理員
+    if session.get('role') != '管理員':
+        return redirect('/login') 
     return render_template('manager.html')
 
 # ===== 登入(首頁) =====
@@ -37,6 +42,10 @@ def login():
     role = user.login_user(username, password)  # 修改引用
     print(f"login_user returned role: {repr(role)} By app") # 除錯
     if role:
+        # --- 記錄使用者的登入狀態 ---
+        session['username'] = username
+        session['role'] = role
+
         # --- 根據身分導向不同頁面 ---
         print('根據身分導向不同頁面 By app') # 除錯
         if role == '管理員':
@@ -82,6 +91,11 @@ def register():
     else:
         return jsonify({'message': message}), 400
 
+# ===== 登出 =====
+@app.route('/logout')
+def logout():
+    session.clear() # 清除所有會話紀錄，讓之前的登入資料失效
+    return redirect('/login')
 
 # ===== 鏡頭影像顯示 =====
 @app.route('/video_feed')
@@ -411,6 +425,9 @@ def get_recognition_logs_datatables():
 # ===== 住戶頁面路由 =====
 @app.route('/residents')
 def residents():
+    # 檢查是否有登入 (只有住戶能進)
+    if not session.get('role') == "住戶":
+        return redirect('/login')
     return render_template('residents.html')
 
 # ===== 生成訪客預約通行證 =====
