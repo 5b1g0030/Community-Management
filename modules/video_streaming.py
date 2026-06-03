@@ -249,7 +249,7 @@ def gen_frames():
                 
                 # ----- 人臉辨識部分(只在警報關閉時啟用) -----
                 # --- 如果幀數好是 FACE_RECOGNITION_FRAME_SKIP 的倍數時，才執行辨識 ---
-                if config.fire_status_is_open:
+                if config.fire_status_is_open == False:
                     if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
                         results = face_recognizer.recognize_face_from_frame(db_manager, frame, use_cache=True)
                         last_results = results
