@@ -1,5 +1,5 @@
 import * as DOM from "./dom.js" // 引入網頁元素
-import { addFace, testFace, getFace, generateBookingCode, getLockerStatus, registerPackage, clearLocker } from "./api.js"; // 引入後端api溝通函式
+import { addFace, testFace, getFace, generateBookingCode, getLockerStatus, registerPackage, clearLocker, deleteFaces } from "./api.js"; // 引入後端api溝通函式
 
 // ===== 加入人臉按鈕 =====
 export async function addFaceModal() {
@@ -170,32 +170,106 @@ export async function testFaceModal() {
 }
 
 // ===== 查看資料庫彈出視窗 =====
+let isDeleteMode = false; // 紀錄目前是否處於刪除模式
 export async function viewFace() {
-    DOM.viewFaceDbBtn.onclick = async () => {
-        DOM.viewDbModal.style.display = 'block';
-        setTimeout(() => centerModal(DOM.viewDbModal), 0); // 視窗置中
-
+    // 獨立成一個函式，方便刪除後重新載入表格
+    const loadFaceTable = async () => {
         try {
             const result = await getFace(); // 呼叫 api 程式
             DOM.modalTableBody.innerHTML = '';
+            
             // 檢查回應是否成功且有 faces 陣列
             if (result.success && result.faces && Array.isArray(result.faces)) {
                 result.faces.forEach(face => {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td>${face.id}</td><td>${face.name}</td><td>${face.created_date || '無'}</td>`;
+                    // 根據 isDeleteMode 判斷是否顯示 checkbox
+                    const checkboxDisplay = isDeleteMode ? 'table-cell' : 'none';
+                    
+                    row.innerHTML = `
+                        <td class="delete-checkbox-col" style="display: ${checkboxDisplay}; text-align: center;">
+                            <input type="checkbox" class="face-delete-cb" value="${face.id}" style="transform: scale(1.5);">
+                        </td>
+                        <td>${face.id}</td>
+                        <td>${face.name}</td>
+                        <td>${face.created_date || '無'}</td>`;
                     DOM.modalTableBody.appendChild(row);
                 });
             } else {
-                DOM.modalTableBody.innerHTML = `<tr><td colspan="3">無人臉資料</td></tr>`;
+                DOM.modalTableBody.innerHTML = `<tr><td colspan="4">無人臉資料</td></tr>`;
             }
         } catch (error) {
-            DOM.modalTableBody.innerHTML = `<tr><td colspan="3">獲取資料失敗: ${error.message}</td></tr>`;
+            DOM.modalTableBody.innerHTML = `<tr><td colspan="4">獲取資料失敗: ${error.message}</td></tr>`;
         }
     };
+
+    // 更新刪除模式下的 UI (包含按鈕與欄位顯示/隱藏)
+    const updateDeleteModeUI = () => {
+        const cols = document.querySelectorAll('.delete-checkbox-col');
+        if (isDeleteMode) {
+            DOM.toggleDeleteModeBtn.textContent = '刪除確認';
+            DOM.toggleDeleteModeBtn.style.backgroundColor = '#f44336'; // 變成紅色警告
+            cols.forEach(col => col.style.display = 'table-cell');
+        } else {
+            DOM.toggleDeleteModeBtn.textContent = '刪除指定人臉';
+            DOM.toggleDeleteModeBtn.style.backgroundColor = ''; // 恢復原按鈕顏色
+            cols.forEach(col => col.style.display = 'none');
+        }
+    };
+
+    // 點擊「查看已登錄人臉」按鈕
+    DOM.viewFaceDbBtn.onclick = async () => {
+        console.log("查詢資料中")
+        DOM.viewDbModal.style.display = 'block';
+        setTimeout(() => centerModal(DOM.viewDbModal), 0); // 視窗置中
+        
+        isDeleteMode = false; // 每次開啟預設為非刪除模式
+        updateDeleteModeUI();
+        await loadFaceTable();
+    };
+
+    // 點擊「刪除指定人臉/刪除確認」按鈕
+    if (DOM.toggleDeleteModeBtn) {
+        DOM.toggleDeleteModeBtn.onclick = async () => {
+            if (!isDeleteMode) {
+                // 進入刪除模式
+                isDeleteMode = true;
+                updateDeleteModeUI();
+            } else {
+                // 執行刪除動作
+                const checkedBoxes = document.querySelectorAll('.face-delete-cb:checked');
+                const selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+                if (selectedIds.length === 0) {
+                    alert('請先勾選要刪除的人臉');
+                    return;
+                }
+
+                // 彈出確認對話框
+                if (confirm(`確定要刪除這 ${selectedIds.length} 筆人臉資料嗎？(該動作無法復原)`)) {
+                    try {
+                        const res = await deleteFaces(selectedIds);
+                        if (res.success) {
+                            alert('刪除成功！');
+                            isDeleteMode = false; // 刪除完畢退出刪除模式
+                            updateDeleteModeUI();
+                            await loadFaceTable(); // 重新整理表格
+                        } else {
+                            alert('刪除失敗：' + res.message);
+                        }
+                    } catch (e) {
+                        alert('發生錯誤：' + e.message);
+                    }
+                }
+            }
+        };
+    }
+
     // ===== 關閉資料庫彈出視窗 =====
     DOM.closeViewDbModal.onclick = () => {
-        viewDbModal.style.display = 'none'; // 隱藏彈出視窗
-        modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
+        DOM.viewDbModal.style.display = 'none'; // 隱藏彈出視窗
+        DOM.modalTableBody.innerHTML = '';      // 清除表格殘留的程式碼
+        isDeleteMode = false;                   // 重置刪除模式狀態
+        updateDeleteModeUI();
     };
 }
 

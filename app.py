@@ -393,6 +393,36 @@ def get_faces():
     except Exception as e:
         return jsonify({'success': False, 'message': f'錯誤: {str(e)}'})
 
+# ===== 刪除人臉資料 =====
+@app.route('/api/delete_faces', methods=['POST'])
+def delete_faces():
+    try:
+        data = request.get_json()
+        face_ids = data.get('ids', [])
+
+        if not face_ids:
+            return jsonify({'success': False, 'message': '未提供需刪除的 ID'})
+
+        conn, cursor = db_manager.get_db_connection()
+        
+        # 刪除多筆資料，SQL語法如 DELETE FROM face_recognition WHERE id IN (1, 2, 3)
+        placeholders = ','.join(['?'] * len(face_ids))
+        cursor.execute(f"DELETE FROM face_recognition WHERE id IN ({placeholders})", tuple(face_ids))
+        conn.commit()
+        
+        deleted_count = cursor.rowcount
+        conn.close()
+
+        # 刷新辨識用的快取，避免被刪除的人臉仍然認得出來
+        refresh_face_cache(db_manager)
+
+        return jsonify({
+            'success': True, 
+            'message': f'成功刪除 {deleted_count} 筆記錄'
+        }), 200
+    except Exception as e:
+        print(f"[錯誤] 刪除人臉失敗: {e}")
+        return jsonify({'success': False, 'message': f'刪除失敗: {str(e)}'}), 500
 
 # ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
 @app.route('/api/recognition_logs')

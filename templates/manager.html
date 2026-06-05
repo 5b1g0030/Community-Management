@@ -166,9 +166,15 @@
                 style="position:fixed; left:60vw; top:15vh; z-index:2000; min-width:350px; min-height:200px; max-height:80vh; resize:both; overflow:auto; box-shadow:0 2px 16px rgba(0,0,0,0.2);">
                 <span class="close" id="closeViewDbModal">&times;</span>
                 <h2>人臉資料庫</h2>
+                <!-- 新增：用 div 包起來讓標題和按鈕可以並排 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <!-- 刪除按鈕 -->
+                    <button id="toggleDeleteModeBtn" style="padding: 5px 10px; cursor: pointer;">刪除指定人臉</button>
+                </div>
                 <table style="width:100%;">
                     <thead>
                         <tr>
+                            <th class="delete-checkbox-col" style="display: none;">選擇</th> <!-- 刪除勾選欄 -->
                             <th>ID</th>
                             <th>姓名</th>
                             <th>建立時間</th>

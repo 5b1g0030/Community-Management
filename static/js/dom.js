@@ -32,6 +32,7 @@ export const testResult = document.getElementById('testResult');                
 export const viewDbModal = document.getElementById('viewDbModal');             // 人臉資料庫彈出視窗容器
 export const closeViewDbModal = document.getElementById('closeViewDbModal');   // 關閉按鈕(人臉資料庫)
 export const modalTableBody = document.getElementById('modalTableBody');       // 資料庫查詢表格
+export const toggleDeleteModeBtn = document.getElementById('toggleDeleteModeBtn'); // 刪除資料按鈕
 
 // ====== 查看辨識紀錄的所有資料 =====
 export const viewLogDbModal = document.getElementById('viewLogDbModal');       // 辨識紀錄 Modal(彈出視窗)
@@ -126,6 +127,7 @@ const DOM = {
     viewDbModal,
     closeViewDbModal,
     modalTableBody,
+    toggleDeleteModeBtn,
 
     viewLogDbModal,
     closeViewLogDbModal,

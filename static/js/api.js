@@ -71,6 +71,18 @@ export async function getFace() {
     return await parseJsonResponse(response);
 }
 
+// ===== 刪除多筆人臉資料 API =====
+export async function deleteFaces(faceIds) {
+    const response = await fetch('/api/delete_faces', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: faceIds }) // 將陣列轉換為 JSON 傳遞
+    });
+    return await parseJsonResponse(response);
+}
+
 // ===== 訪客驗證碼驗證api =====
 export async function generateBookingCode(formData) {
     // 把表單提交到後端，目的: '/verify_booking_code'，等待回應
