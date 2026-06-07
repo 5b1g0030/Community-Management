@@ -25,9 +25,9 @@ PICKUP_FACE_DETECTED = False  # 標記是否辨識到人臉
 
 # ====== 樹梅派 =====
 # !!! 請務必將此 IP 位址替換為你樹莓派的實際 IP 位址 !!!
-RPI_IP_ADDRESS = "192.168.5.107" 
+RPI_IP_ADDRESS = "192.168.5.109" 
 RPI_PORT = 5000
-RPI = False # 是否開啟樹梅派
+RPI = True # 是否開啟樹梅派
 
 # ===== 樹梅派-硬體狀態 =====
 door_open = False # 馬達是否執行開門動作
@@ -37,4 +37,4 @@ door_start_time = None # 馬達上次開啟時間
 rgbled_color = None # LED顏色
 rgbled_start_time = None # LED上次開啟時間
 
-fire_status_is_open = True # 火災警報狀態(開/關)
+fire_status_is_open = False # 火災警報狀態(開/關)

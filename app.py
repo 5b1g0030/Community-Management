@@ -214,7 +214,7 @@ def test_face():
         temp_dir = os.path.join('static', 'temp_uploads')
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
-            print(f"[測試辨識] 建立資料夾：{temp_dir}")
+            # print(f"[測試辨識] 建立資料夾：{temp_dir}")
         
         # 準備檔案路徑
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -227,22 +227,22 @@ def test_face():
             
             # 讀取上傳的圖片（重要：在任何操作前先讀取）
             image_data = image_file.read()
-            print(f"[測試辨識] 讀取圖片資料，大小：{len(image_data)} bytes")
+            # print(f"[測試辨識] 讀取圖片資料，大小：{len(image_data)} bytes")
             
             # 驗證圖片是否有效
             import io
             img = Image.open(io.BytesIO(image_data))
-            print(f"[測試辨識] 圖片資訊 - 格式：{img.format}, 尺寸：{img.size}, 模式：{img.mode}")
+            # print(f"[測試辨識] 圖片資訊 - 格式：{img.format}, 尺寸：{img.size}, 模式：{img.mode}")
             
             # 轉換為 RGB 模式（如果是 RGBA 或其他格式）
             if img.mode != 'RGB':
-                print(f"[測試辨識] 轉換圖片模式從 {img.mode} 到 RGB")
+                # print(f"[測試辨識] 轉換圖片模式從 {img.mode} 到 RGB")
                 img = img.convert('RGB')
             
             # ===== 調整圖片大小（重要：避免圖片過大） =====
             max_size = FACE_RECOGNITION_RESIZE_WIDTH  # 最大寬度或高度
             if img.width > max_size or img.height > max_size:
-                print(f"[測試辨識] 圖片過大，正在縮小...")
+                # print(f"[測試辨識] 圖片過大，正在縮小...")
                 # 計算縮放比例
                 if img.width > img.height:
                     new_width = max_size
@@ -252,7 +252,7 @@ def test_face():
                     new_width = int(img.width * (max_size / img.height))
                 
                 img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                print(f"[測試辨識] 圖片已調整為：{img.size}")
+                # print(f"[測試辨識] 圖片已調整為：{img.size}")
             
             # 儲存處理後的圖片
             img.save(temp_path, 'JPEG', quality=95)
@@ -284,8 +284,10 @@ def test_face():
             })
 
             # --- 儲存辨識紀錄 ---
-            face_id = result.get('id')
-            conf = float(result.get('confidence', 0.0))
+            face_id = frist_result.get('id')
+            # 解析信心值
+            confidence_str = frist_result.get('confidence', '0.0%')  # 預設為 '0.0%'
+            conf = float(confidence_str.strip('%')) / 100  # 移除 '%' 並轉換為小數
             if face_id:
                 recognition_Logs.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
                 print("辨識紀錄已儲存 by app")

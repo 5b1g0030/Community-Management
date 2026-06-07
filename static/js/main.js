@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFireStatus();
 
         // 設定定時器：每隔 3000 毫秒（3秒），就自動再執行一次 updateFireStatus 函式
-        setInterval(updateFireStatus, 3000);
+        setInterval(updateFireStatus, 5000);
     }
 
     // *************************

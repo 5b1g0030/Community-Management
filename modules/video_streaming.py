@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 import time
 from modules.config import RPI
+import threading
 
 # ===== 推送辨識訊息(已知, 未知, 訪客) =====
 # 【建立一個door_is_open的變數，來控制伺服馬達，需要有判斷式來防止開門後又呼叫開門的情況】
@@ -101,11 +102,13 @@ def face_message(results, frame):
             if config.rgbled_color:
                 print(f"RGBLED切換為 {config.rgbled_color} by video_streaming")
                 config.rgbled_start_time = time.time()
-                rpi_to_rgbled(config.rgbled_color)  
+                # rpi_to_rgbled(config.rgbled_color)
+                threading.Thread(target=rpi_to_rgbled, args=(config.rgbled_color,), daemon=True).start()
             if config.door_open == True and config.door_last_state == False:
                 print("發送開門指令 by video_streaming")
                 config.door_start_time = time.time() # 紀錄開門時間
-                rpi_to_servo('0') # 馬達開門
+                # rpi_to_servo('0') # 馬達開門
+                threading.Thread(target=rpi_to_servo, args=('0',), daemon=True).start()
                 config.door_last_state = config.door_open # 紀錄這次狀態
             config.door_open = False
             print(f"開門狀態: {config.door_last_state} by video_streaming")      

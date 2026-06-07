@@ -7,6 +7,7 @@
 
 輸出虛擬環境設定: pip freeze > requirements.txt
 
+dlib(windows優化版): pip install dlib-bin
 
 ** 需要安裝的模組 **
 
