@@ -31,4 +31,25 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 
+** logging 設定說明 **
+"""
+常用格式化欄位：
+%(asctime)s：人類可讀的執行時間。
+%(levelname)s：日誌層級名稱（如 INFO, ERROR）。
+%(filename)s：引發日誌的 Python 原始碼檔名。
+%(lineno)d：引發日誌的程式碼行號。
+%(message)s：你輸入的日誌訊息。
 
+方法一：使用 __init__.py 或主程式進行根記錄器（Root）初始化
+這是最簡單的做法。你只需要在主程式一開始呼叫 logging.basicConfig() 
+或設定好 Logger，其他檔案直接使用 logging.getLogger(__name__) 即可。
+
+# 這些預設不會印出（因為層級低於 WARNING）
+logging.debug("這是一條 DEBUG 訊息")
+logging.info("這是一條 INFO 訊息")
+
+# 這些預設會印出
+logging.warning("這是一條 WARNING 警告")
+logging.error("這是一條 ERROR 錯誤")
+logging.critical("這是一條 CRITICAL 嚴重錯誤")
+"""

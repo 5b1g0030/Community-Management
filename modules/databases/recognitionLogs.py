@@ -2,6 +2,7 @@
 from .databaseManager import DatabaseManager # 從同一層資料夾中匯入該模組
 import sqlite3
 from datetime import datetime
+import logging as log
 
 # ===== 辨識紀錄類別 =====
 class RecognitionLogs:
@@ -72,17 +73,17 @@ class RecognitionLogs:
             ''', (created_date, event_type, event_message, face_id, confidence))
             
             conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-            print(f"事件紀錄已儲存: {event_type} - {event_message} by recognitionLogs") # 成功訊息
+            log.info(f"事件紀錄已儲存: {event_type} - {event_message} by recognitionLogs") # 成功訊息
             
             # 推送訊息給前端，讓前端自動更新表格
             from modules import socketio # 延遲匯入
-            print("事件紀錄已更新: 正在發送更新訊息...  by recognitionLogs")
+            log.info("事件紀錄已更新: 正在發送更新訊息...  by recognitionLogs")
             socketio.emit('update-log', {'message': f'辨識紀錄資料已更新'})
-            print("事件紀錄已更新: 已發送更新訊息!  by recognitionLogs")
+            log.info("事件紀錄已更新: 已發送更新訊息!  by recognitionLogs")
         
         # 例外錯誤處理
         except Exception as e:
-            print(f"儲存事件紀錄失敗 by recognitionLogs: {e}")
+            log.error(f"儲存事件紀錄失敗 by recognitionLogs: {e}")
             raise   # 重新拋出相同的例外，讓上層程式碼也能處理
         
         # 無論如何都會執行的程式碼

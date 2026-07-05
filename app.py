@@ -9,7 +9,7 @@ import random
 import time
 from modules.config import FACE_RECOGNITION_RESIZE_WIDTH #FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config # 給相機做同步修改
-from modules.video_streaming import gen_frames, pick_up_frame
+from modules.video_streaming.video_streaming import gen_frames, pick_up_frame
 from modules import app, socketio, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
 from modules.resberryPi import rpi_to_dht22, rpi_to_mq135, rpi_to_buzzer, rpi_to_redled,rpi_to_servo
 from modules.config import RPI

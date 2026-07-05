@@ -1,13 +1,14 @@
 """
 ====== 樹莓派元件控制(電腦端) =====
 """
-
 import msvcrt
 import requests
 import time
 import modules.config as config
 from .config import RPI_IP_ADDRESS, RPI_PORT
-import asyncio # 非同步處理
+import asyncio  # 非同步處理
+from modules.config import RPI
+import threading
 
 # ===== 樹梅派元件延遲關閉 =====
 def rpi_time_check():
@@ -15,14 +16,14 @@ def rpi_time_check():
     # print(config.door_start_time)
     if config.door_start_time and time.time() - config.door_start_time >= 3:  # 維持3秒後切回
         print("發送關門指令 by resberryPi")
-        rpi_to_servo('90') # 馬達關門
+        rpi_to_servo('90')  # 馬達關門
         config.door_start_time = None
         config.door_last_state = False
         print(f"開門狀態: {config.door_last_state} by resberryPi")
     # ----- RBGLED關閉時間檢查 -----
     if config.rgbled_start_time and time.time() - config.rgbled_start_time >= 2:  # 維持2秒後切回
         print(f"RGBLED切換為 {config.rgbled_color} by resberryPi")
-        rpi_to_rgbled('yellow') # RGBLED切換為黃色
+        rpi_to_rgbled('yellow')  # RGBLED切換為黃色
         config.rgbled_start_time = None
 
 # ===== 發送訊息給伺服馬達 =====
@@ -31,11 +32,11 @@ def rpi_time_check():
 def rpi_to_servo(command):
     # 根據指令 1 或 0 構造 URL
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/servo/{command}"
-    
+
     try:
         # 發送 GET 請求
-        response = requests.get(url, timeout=2) # 設定 2 秒超時
-        
+        response = requests.get(url, timeout=2)  # 設定 2 秒超時
+
         # 檢查 HTTP 狀態碼
         if response.status_code == 200:
             print(f"✅ 樹莓派回傳: {response.text}")
@@ -55,11 +56,11 @@ def rpi_to_servo(command):
 def rpi_to_rgbled(command):
     # 根據指令 1 或 0 構造 URL
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/rgb/{command}"
-    
+
     try:
         # 發送 GET 請求
-        response = requests.get(url, timeout=2) # 設定 5 秒超時
-        
+        response = requests.get(url, timeout=2)  # 設定 5 秒超時
+
         # 檢查 HTTP 狀態碼
         if response.status_code == 200:
             print(f"✅ 樹莓派回傳: {response.text}")
@@ -78,14 +79,15 @@ def rpi_to_rgbled(command):
 # 【每兩秒呼叫一次，更新資料】
 def rpi_to_dht22():
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/dht22/data"
-    
+
     try:
         response = requests.get(url, timeout=2)
-        
+
         if response.status_code == 200:
             data = response.json()
-            print(f"✅ DHT22讀取成功 - 溫度: {data['temperature']}°C, 濕度: {data['humidity']}%")
-            return {"success": True, "data": data} # 只回傳溫度
+            print(
+                f"✅ DHT22讀取成功 - 溫度: {data['temperature']}°C, 濕度: {data['humidity']}%")
+            return {"success": True, "data": data}  # 只回傳溫度
         else:
             error_message = response.json().get('message', '未知錯誤')
             return {"success": False, "error": error_message}
@@ -96,21 +98,22 @@ def rpi_to_dht22():
         return {"success": False, "error": error_message}
     except Exception as e:
         error_message = f"❌ 發生錯誤: {e}"
-        #print(error_message)
+        # print(error_message)
         return {"success": False, "error": str(e)}
 
 # ===== 發送訊息給MQ135 =====
 # 【每兩秒呼叫一次，更新資料】
 def rpi_to_mq135():
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/mq135/data"
-    
+
     try:
         response = requests.get(url, timeout=5)
         print(f"樹莓派回應: {response}")
         if response.status_code == 200:
             data = response.json()
-            print(f"MQ135[{data['timestamp']}] 狀態: {data['message']} ({data['status']})")
-            
+            print(
+                f"MQ135[{data['timestamp']}] 狀態: {data['message']} ({data['status']})")
+
             return {"success": True, "data": data}
         else:
             error_message = f"伺服器錯誤: {response.status_code} by mq135"
@@ -130,7 +133,7 @@ def rpi_to_mq135():
 # 輸入 'on', 'off'
 def rpi_to_buzzer(command):
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/bz/{command}"
-    
+
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
@@ -153,7 +156,7 @@ def rpi_to_buzzer(command):
 # 輸入 'on', 'off'
 def rpi_to_redled(command):
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/redled/{command}"
-    
+
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
@@ -172,6 +175,26 @@ def rpi_to_redled(command):
         print(error_message)
         return {"success": False, "error": str(e)}
 
+
+# ===== 開關門+RGBLED亮燈
+def open_door_and_rbgled():
+    if RPI:
+        # 下達LED顏色指令
+        if config.rgbled_color:
+            print(f"RGBLED切換為 {config.rgbled_color} by video_streaming")
+            config.rgbled_start_time = time.time()
+            # rpi_to_rgbled(config.rgbled_color)
+            threading.Thread(target=rpi_to_rgbled, args=(
+                config.rgbled_color,), daemon=True).start()
+        if config.door_open == True and config.door_last_state == False:
+            print("發送開門指令 by video_streaming")
+            config.door_start_time = time.time()  # 紀錄開門時間
+            # rpi_to_servo('0') # 馬達開門
+            threading.Thread(target=rpi_to_servo,
+                             args=('0',), daemon=True).start()
+            config.door_last_state = config.door_open  # 紀錄這次狀態
+        config.door_open = False
+        print(f"開門狀態: {config.door_last_state} by video_streaming")
 
 def main():
     print("--- 樹莓派伺服馬達遙控程式(功能測試) ---")
