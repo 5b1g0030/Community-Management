@@ -2,126 +2,18 @@
 import os
 import numpy as np
 import face_recognition
-from PIL import Image
+import logging as log
 import cv2  
-from .config import FACE_RECOGNITION_TOLERANCE, FACE_RECOGNITION_RESIZE_WIDTH, FACE_RECOGNITION_MODEL
-
-# ===== 人臉資料快取類別 =====
-class FaceRecognitionCache:
-    """人臉辨識快取，避免每幀都查詢資料庫"""
-    
-    def __init__(self):
-        self.known_ids = []
-        self.known_names = []
-        self.known_encodings = []
-        self.last_update = None
-    
-    def load_from_database(self, db_manager):
-        """從資料庫載入所有已知人臉資料到記憶體"""
-        try:
-            conn, cursor = db_manager.get_db_connection()
-            cursor.execute("SELECT id, name, encoding FROM face_recognition")
-            data = cursor.fetchall()
-            conn.close()
-            
-            if not data:
-                self.known_ids = []
-                self.known_names = []
-                self.known_encodings = []
-                print("[快取] 資料庫中無人臉資料")
-                return
-            
-            # 載入資料到記憶體
-            self.known_ids = [row[0] for row in data]
-            self.known_names = [row[1] for row in data]
-            self.known_encodings = [np.frombuffer(row[2], dtype=np.float64) for row in data]
-            
-            from datetime import datetime
-            self.last_update = datetime.now()
-            print(f"[快取] 成功載入 {len(self.known_ids)} 筆人臉資料")
-            
-        except Exception as e:
-            print(f"[快取] 載入失敗: {e}")
-            self.known_ids = []
-            self.known_names = []
-            self.known_encodings = []
-    
-    def is_empty(self):
-        """檢查快取是否為空"""
-        return len(self.known_ids) == 0
-    
-
-# 建立全域快取實例
-_face_cache = FaceRecognitionCache()
-
-# ===== 初始化快取（全域函式）=====
-def init_face_cache(db_manager):
-    """初始化人臉快取（在應用啟動時呼叫）"""
-    print("[快取] 正在初始化...")
-    _face_cache.load_from_database(db_manager)
-
-# ===== 重新整理快取（全域函式）=====
-def refresh_face_cache(db_manager):
-    """重新整理人臉快取（新增人臉後呼叫）"""
-    print("[快取] 正在重新整理...")
-    _face_cache.load_from_database(db_manager)
+from ..config import FACE_RECOGNITION_TOLERANCE, FACE_RECOGNITION_RESIZE_WIDTH, FACE_RECOGNITION_MODEL
+from .image_processor import changeRGB
+from modules.face.face_cache import face_cache
+from modules.databases.face_repository import get_all_face, insert_face
 
 # ===== 人臉註冊&辨識類別 =====
 class FaceRecognition:
 
-    # ===== 圖片轉RGB三通道（私有方法）=====
-    def _changeRGB(self, input_data):
-        """
-        將圖片轉換為 RGB 格式並確保記憶體連續
-        
-        參數:
-            input_data: 可以是圖片路徑(str) 或 numpy array (OpenCV frame)
-        
-        返回:
-            numpy array: RGB 格式的圖片，記憶體連續
-        """
-        try:
-            # 判斷輸入類型
-            if isinstance(input_data, str):
-                # 輸入是檔案路徑
-                pil_image = Image.open(input_data).convert('RGB')
-                
-                # 限制圖片大小
-                max_width = 1000
-                if pil_image.width > max_width:
-                    ratio = max_width / float(pil_image.width)
-                    new_height = int(float(pil_image.height) * ratio)
-                    pil_image = pil_image.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                
-                image = np.array(pil_image)
-                
-            elif isinstance(input_data, np.ndarray):
-                # 輸入是 numpy array (OpenCV frame, BGR 格式)
-                image = cv2.cvtColor(input_data, cv2.COLOR_BGR2RGB)
-                
-            else:
-                raise ValueError(f"不支援的輸入類型: {type(input_data)}")
-            
-            # 確保數據類型為 uint8 且記憶體是連續的
-            image = np.ascontiguousarray(image, dtype=np.uint8)
-            
-            return image
-            
-        except Exception as e:
-            print(f"[changeRGB] [錯誤] changeRGB 失敗: {e}")
-            return None
-
-    # ===== 獲取資料夾內的圖片檔案（私有方法）=====
-    def _getFiles(self, folder_path):
-        """掃描資料夾內的圖片檔案"""
-        files = []
-        for f in os.listdir(folder_path):
-            if f.lower().endswith(('.jpg', '.png', '.jpeg')):
-                files.append(f)
-        return files
-
     # ===== 註冊人臉到資料庫(住戶加入) =====
-    def register_faces(self, db_manager, name, folder_path, files):
+    def register_faces(self, name, folder_path, files):
         """
         註冊人臉到資料庫
         
@@ -135,24 +27,24 @@ class FaceRecognition:
             dict: {'success': bool, 'message': str, 'count': int}
         """
         try:
-            conn, cursor = db_manager.get_db_connection()
+            
             count = 0
             
             for f in files:
                 img_path = os.path.join(folder_path, f)
                 
                 # 加載圖片+轉RGB三通道
-                print(f"[註冊] 處理圖片: {f}")
-                image = self._changeRGB(img_path)
+                log.info(f"[註冊] 處理圖片: {f}")
+                image = changeRGB(img_path)
                 
                 if image is None:
-                    print(f"[警告] 圖片 {f} 載入失敗，跳過。")
+                    log.warning(f"[警告] 圖片 {f} 載入失敗，跳過。")
                     continue
                 
                 # 提取特徵向量
-                print("  [步驟] 手動定位人臉位置...")
+                log.info("  [步驟] 手動定位人臉位置...")
                 face_locations = face_recognition.face_locations(image)
-                print(f"  [步驟] 提取特徵向量 (偵測到 {len(face_locations)} 張臉)...")
+                log.info(f"  [步驟] 提取特徵向量 (偵測到 {len(face_locations)} 張臉)...")
                 encodings = face_recognition.face_encodings(image, known_face_locations=face_locations)
                 
                 # 如果有特徵向量
@@ -160,29 +52,25 @@ class FaceRecognition:
                     # 將 numpy array 轉成二進位 BLOB
                     encoding_blob = encodings[0].tobytes()
                     # 插入到 face_recognition 表格
-                    cursor.execute(
-                        "INSERT INTO face_recognition (name, encoding, created_date, updated_date) VALUES (?, ?, datetime('now'), datetime('now'))", 
-                        (name, encoding_blob)
-                    )
+                    insert_face(name, encoding_blob)
+
                     count += 1
                 else:
-                    print(f"[警告] 圖片 {f} 未偵測到人臉，跳過。")
+                    log.warning(f"[警告] 圖片 {f} 未偵測到人臉，跳過。")
             
-            conn.commit()
-            conn.close()
             
             if count > 0:
-                print(f"[系統] 成功為 {name} 註冊了 {count} 筆特徵數據。")
+                log.info(f"[系統] 成功為 {name} 註冊了 {count} 筆特徵數據。")
                 return {'success': True, 'message': f'成功註冊 {count} 筆人臉資料', 'count': count}
             else:
                 return {'success': False, 'message': '所有圖片都未偵測到人臉', 'count': 0}
                 
         except Exception as e:
-            print(f"[錯誤] 註冊人臉失敗: {e}")
+            log.error(f"[錯誤] 註冊人臉失敗: {e}")
             return {'success': False, 'message': f'註冊失敗: {str(e)}', 'count': 0}
 
     # ===== 辨識邏輯 =====
-    def recognize_face(self, db_manager, test_img_path):
+    def recognize_face(self, test_img_path):
         """
         辨識靜態圖片中的人臉
         
@@ -195,10 +83,7 @@ class FaceRecognition:
         """
         try:
             # 從資料庫讀取所有已知資料
-            conn, cursor = db_manager.get_db_connection()
-            cursor.execute("SELECT id, name, encoding FROM face_recognition")
-            data = cursor.fetchall()
-            conn.close()
+            data = get_all_face()
             
             # 如果沒有任何已註冊人臉
             if not data:
@@ -214,7 +99,7 @@ class FaceRecognition:
                 return {'success': False, 'message': '找不到測試圖片路徑'}
             
             # 加載圖片+轉RGB三通道
-            test_image = self._changeRGB(test_img_path)
+            test_image = changeRGB(test_img_path)
             
             if test_image is None:
                 return {'success': False, 'message': '測試圖片載入失敗'}
@@ -249,7 +134,7 @@ class FaceRecognition:
                             'confidence': f'{confidence:.2%}',
                             'distance': float(face_distances[best_match_index])
                         })
-                        print(f"[結果] 辨識成功！此人是: {name} (ID: {face_id}, 信心距離: {face_distances[best_match_index]:.4f})")
+                        log.info(f"[結果] 辨識成功！此人是: {name} (ID: {face_id}, 信心距離: {face_distances[best_match_index]:.4f})")
                     else:
                         results.append({'id': None, 'name': '未知', 'confidence': 'N/A'})
                 else:
@@ -257,7 +142,7 @@ class FaceRecognition:
 
                 return {'success': True, 'message': '辨識成功', 'results': results}
         except Exception as e:
-            print(f"[錯誤] 辨識失敗: {e}")
+            log.error(f"[錯誤] 辨識失敗: {e}")
             return {'success': False, 'message': f'辨識失敗: {str(e)}'}
 
     # ===== 針對即時影像幀進行人臉辨識（優化版）=====
@@ -279,18 +164,15 @@ class FaceRecognition:
         # === 1. 取得已知人臉資料（使用快取或即時查詢）===
         if use_cache:
             # 如果快取是空的，先載入
-            if _face_cache.is_empty():
-                _face_cache.load_from_database(db_manager)
+            if face_cache.is_empty():
+                face_cache.load_from_database(db_manager)
             
-            known_ids = _face_cache.known_ids
-            known_names = _face_cache.known_names
-            known_encodings = _face_cache.known_encodings
+            known_ids = face_cache.known_ids
+            known_names = face_cache.known_names
+            known_encodings = face_cache.known_encodings
         else:
             # 即時查詢資料庫
-            conn, cursor = db_manager.get_db_connection()
-            cursor.execute("SELECT id, name, encoding FROM face_recognition")
-            data = cursor.fetchall()
-            conn.close()
+            data = get_all_face()
             
             if not data:
                 return []
@@ -320,7 +202,7 @@ class FaceRecognition:
             small_frame = frame
         
         # === 3. 使用 changeRGB 處理 frame (BGR -> RGB) ===
-        rgb_frame = self._changeRGB(small_frame)
+        rgb_frame = changeRGB(small_frame)
         if rgb_frame is None:
             return []
         
@@ -395,7 +277,7 @@ class FaceRecognition:
                     continue
                 
                 # 轉換為 RGB
-                rgb_image = self._changeRGB(image)
+                rgb_image = changeRGB(image)
                 
                 if rgb_image is None:
                     failed_images.append(position)
@@ -435,7 +317,7 @@ class FaceRecognition:
             }
 
     # ===== 註冊訪客人臉（從上傳的檔案）=====
-    def register_visitor_faces(self, db_manager, visitor_name, image_files):
+    def register_visitor_faces(self, visitor_name, image_files):
         """
         註冊訪客人臉到資料庫（從上傳的檔案物件）
         
@@ -448,7 +330,6 @@ class FaceRecognition:
             dict: {'success': bool, 'message': str, 'visitor_face_id': int}
         """
         try:
-            conn, cursor = db_manager.get_db_connection()
             count = 0
             first_face_id = None
             
@@ -459,7 +340,7 @@ class FaceRecognition:
                 image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
                 
                 # 轉換為 RGB
-                rgb_image = self._changeRGB(image)
+                rgb_image = changeRGB(image)
                 
                 if rgb_image is None:
                     continue
@@ -470,21 +351,16 @@ class FaceRecognition:
                 
                 if len(encodings) > 0:
                     encoding_blob = encodings[0].tobytes()
-                    cursor.execute(
-                        "INSERT INTO face_recognition (name, encoding, created_date, updated_date) VALUES (?, ?, datetime('now'), datetime('now'))", 
-                        (visitor_name, encoding_blob)
-                    )
+                    face_id = insert_face(visitor_name, encoding_blob)
                     
                     if first_face_id is None:
-                        first_face_id = cursor.lastrowid
+                        first_face_id = face_id
                     
                     count += 1
             
-            conn.commit()
-            conn.close()
             
             if count > 0:
-                print(f"[註冊] 成功為訪客 {visitor_name} 註冊了 {count} 筆特徵數據")
+                log.info(f"[註冊] 成功為訪客 {visitor_name} 註冊了 {count} 筆特徵數據")
                 return {
                     'success': True,
                     'message': f'成功註冊 {count} 筆訪客人臉資料',
@@ -498,7 +374,7 @@ class FaceRecognition:
                 }
         
         except Exception as e:
-            print(f"[註冊] 註冊訪客人臉失敗: {e}")
+            log.error(f"[註冊] 註冊訪客人臉失敗: {e}")
             return {
                 'success': False,
                 'message': f'註冊失敗: {str(e)}',

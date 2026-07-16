@@ -1,7 +1,7 @@
 """ Flask 網頁後端"""
 
 from flask import Flask, render_template, request, jsonify, Response, redirect, session
-from modules.faceRecognition import refresh_face_cache
+from modules.face.face_cache import refresh_face_cache
 from utils.camera_utils import CameraManager
 import os
 from datetime import datetime
@@ -168,7 +168,7 @@ def add_face():
         image_file.save(temp_path)
         
         # 呼叫 register_faces 函式（使用實例方法）
-        result = face_recognizer.register_faces(db_manager, name, temp_dir, [filename])
+        result = face_recognizer.register_faces(name, temp_dir, [filename])
         
         if result['success']:
             # 重新整理快取
@@ -265,7 +265,7 @@ def test_face():
         
         # 呼叫 recognize_face 函式（使用實例方法）
         print("[測試辨識] 開始辨識人臉...")
-        result = face_recognizer.recognize_face(db_manager, temp_path)
+        result = face_recognizer.recognize_face(temp_path)
         print(f"[測試辨識] 辨識結果：{result}")
 
         # 提取第一個辨識結果
@@ -508,7 +508,6 @@ def generate_booking_code():
         
         # 註冊訪客人臉
         register_result = face_recognizer.register_visitor_faces(
-            db_manager, 
             visitor_name, 
             image_files
         )

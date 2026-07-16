@@ -2,8 +2,8 @@
 
 from flask import Flask
 from flask_socketio import SocketIO
-# from modules.database import DatabaseManager
-from modules.faceRecognition import FaceRecognition, init_face_cache
+from modules.face.faceRecognition import FaceRecognition
+from modules.face.face_cache import init_face_cache
 from modules.user import UserManager
 import os
 from modules.databases.databaseManager import DatabaseManager
@@ -16,7 +16,7 @@ import logging as log
 log.basicConfig(
     # filename='app.log',     # 日誌檔名，若不指定則預設輸出到主控台
     # filemode='w',           # 'w' 為覆寫，'a' 為接續寫入 (預設是 'a')
-    level=log.DEBUG,     # 將追蹤層級調低到 DEBUG，這樣所有訊息都會被記錄
+    # level=log.DEBUG,     # 將追蹤層級調低到 DEBUG，這樣所有訊息都會被記錄
     format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S' # 自訂時間格式
 )

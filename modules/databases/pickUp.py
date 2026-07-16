@@ -1,6 +1,7 @@
 # 【智慧取貨類別】
 from .databaseManager import DatabaseManager # 從同一層資料夾中匯入該模組
 from datetime import datetime
+import logging as log
 
 class PickUp:
 
@@ -20,6 +21,7 @@ class PickUp:
                 LIMIT 1
             """)
             result = cursor.fetchone()
+            log.info(f"[資料庫] 已蒐尋尚未被占用的櫃位，結果 {result}")
             return result[0] if result else None # 有結果回傳資料，沒有則回傳None
         finally:
             conn.close()
@@ -46,11 +48,11 @@ class PickUp:
             """, (recipient_name, registered_date, locker_number))
             conn.commit() # 更新資料庫
 
-            print(f"[資料庫] 包裹已登記至 {locker_number} 號櫃，收件人：{recipient_name} by pickUp")
+            log.info(f"[資料庫] 包裹已登記至 {locker_number} 號櫃，收件人：{recipient_name}")
             return True, locker_number, f"包裹已登記至 {locker_number} 號櫃"
         
         except Exception as e:
-            print(f"[資料庫] 登記包裹失敗: {e} by pickUp")
+            log.error(f"[資料庫] 登記包裹失敗: {e}")
             conn.rollback()
             return False, None, f"登記失敗: {str(e)}"
         finally:
@@ -66,6 +68,7 @@ class PickUp:
                 WHERE recipient_name = ? AND is_occupied = 1
             """, (name,))
             result = cursor.fetchone()
+            log.info(f"[資料庫] 已根據住戶名稱查詢櫃號，結果 {result}")
             return result[0] if result else None
         finally:
             conn.close()
@@ -82,10 +85,10 @@ class PickUp:
             """, (locker_number,))
             conn.commit()
 
-            print(f"[資料庫] {locker_number} 號櫃已清除 by pickUp")
+            log.info(f"[資料庫] {locker_number} 號櫃已清除")
             return True, "櫃位已清除"
         except Exception as e:
-            print(f"[資料庫] 清除櫃位失敗: {e} by pickUp")
+            log.error(f"[資料庫] 清除櫃位失敗: {e}")
             conn.rollback()
             return False, f"清除失敗: {str(e)}"
         finally:
@@ -111,6 +114,8 @@ class PickUp:
                     'registered_date': row[2],
                     'is_occupied': bool(row[3])
                 })
+
+            log.info(f"已取得所有櫃位狀態: {lockers}")
             return lockers
         finally:
             conn.close()

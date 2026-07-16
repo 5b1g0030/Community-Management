@@ -1,5 +1,5 @@
 from modules import socketio, db_manager, recognition_Logs, visitor_Booking
-from modules.faceRecognition import refresh_face_cache
+from modules.face.face_cache import refresh_face_cache
 import modules.config as config  # 給相機同步修改用
 from modules.resberryPi import open_door_and_rbgled  # 樹梅派函式
 import cv2

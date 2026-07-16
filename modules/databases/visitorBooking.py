@@ -1,6 +1,7 @@
 # 【訪客預約類別】
 from .databaseManager import DatabaseManager # 從同一層資料夾中匯入該模組
 from datetime import datetime
+import logging as log
 
 class VisitorBooking:
     # ===== 初始化 =====
@@ -37,11 +38,11 @@ class VisitorBooking:
             conn.commit()
             conn.close()
             
-            print(f"[資料庫] 成功儲存訪客預約: {username} -> {visitor_face_name} by visitorBooking")
+            log.info(f"[資料庫] 成功儲存訪客預約: {username} -> {visitor_face_name}")
             return True, f'訪客預約成功，訪客可直接到門口進行人臉辨識'
         
         except Exception as e:
-            print(f"[資料庫] 儲存訪客預約失敗: {e} by visitorBooking")
+            log.error(f"[資料庫] 儲存訪客預約失敗: {e}")
             return False, f'儲存失敗: {str(e)}'
 
     # ===== 根據訪客人臉名稱查詢住戶名稱 =====
@@ -60,14 +61,14 @@ class VisitorBooking:
         try:
             conn, cursor = self.db_manager.get_db_connection()
             
-            print("查詢對應訪客資料中... by visitorBooking")
+            log.info("查詢對應訪客資料中...")
             cursor.execute('''
                 SELECT username FROM visitor_bookings 
                 WHERE visitor_face_name = ? AND used = FALSE
             ''', (visitor_face_name,))
             
             result = cursor.fetchone()
-            print(f"已查詢到訪客資料{result} by visitorBooking")
+            log.info(f"已查詢到訪客資料{result}")
 
             conn.close()
             
@@ -76,7 +77,7 @@ class VisitorBooking:
             return None
         
         except Exception as e:
-            print(f"[資料庫] 查詢訪客住戶失敗: {e} by visitorBooking")
+            log.error(f"[資料庫] 查詢訪客住戶失敗: {e}")
             return None
 
     # ===== 清除訪客人臉資料 =====
@@ -108,11 +109,11 @@ class VisitorBooking:
             conn.commit()
             conn.close()
             
-            print(f"[資料庫] 成功清除訪客人臉資料: {visitor_face_name} by visitorBooking")
+            log.info(f"[資料庫] 成功清除訪客人臉資料: {visitor_face_name}")
             return True
         
         except Exception as e:
-            print(f"[資料庫] 清除訪客人臉資料失敗: {e} by visitorBooking")
+            log.error(f"[資料庫] 清除訪客人臉資料失敗: {e}")
             return False
 
     

@@ -44,11 +44,11 @@ class RecognitionLogs:
         
         # 查詢資料庫時的例外錯誤(資料庫檔案不存在、權限問題、資料庫鎖定等)
         except sqlite3.DatabaseError as e:
-            print(f"查詢時發生錯誤 by database: {e}")
+            log.error(f"查詢時發生錯誤: {e}")
         
         # 查詢辨識紀錄時發生的例外錯誤
         except Exception as e:
-            print(f"查詢辨識紀錄時發生錯誤 by database: {e}")
+            log.error(f"查詢辨識紀錄時發生錯誤: {e}")
         
         # 一定會執行的部分
         finally:
@@ -73,17 +73,17 @@ class RecognitionLogs:
             ''', (created_date, event_type, event_message, face_id, confidence))
             
             conn.commit() # 提交變更、確保資料真的儲存到資料庫。
-            log.info(f"事件紀錄已儲存: {event_type} - {event_message} by recognitionLogs") # 成功訊息
+            log.info(f"事件紀錄已儲存: {event_type} - {event_message}") # 成功訊息
             
             # 推送訊息給前端，讓前端自動更新表格
             from modules import socketio # 延遲匯入
-            log.info("事件紀錄已更新: 正在發送更新訊息...  by recognitionLogs")
+            log.info("事件紀錄已更新: 正在發送更新訊息...")
             socketio.emit('update-log', {'message': f'辨識紀錄資料已更新'})
-            log.info("事件紀錄已更新: 已發送更新訊息!  by recognitionLogs")
+            log.info("事件紀錄已更新: 已發送更新訊息!")
         
         # 例外錯誤處理
         except Exception as e:
-            log.error(f"儲存事件紀錄失敗 by recognitionLogs: {e}")
+            log.error(f"儲存事件紀錄失敗: {e}")
             raise   # 重新拋出相同的例外，讓上層程式碼也能處理
         
         # 無論如何都會執行的程式碼
