@@ -13,12 +13,13 @@ import logging as log # 除錯用
 """ ===== 這裡放人臉判斷+訊息分送邏輯+紀錄資料流程 ===== """
 
 # ===== 儲存辨識紀錄流程 =====
-def save_log(messageType, message, result):
+def save_log(messageType, message, result=None):
     # 取得人臉索引+信心值
     if messageType == "未知":
         face_id = None
         conf = None
     else:
+        if result is None: return # 確保result不是空值
         face_id = result.get('id')
         conf = float(result.get('confidence', 0.0))
     # 儲存紀錄

@@ -1,6 +1,7 @@
 # 【資料庫初始化類別】
 from modules.config import DATABASE # 從上一層資料夾中匯入該模組
 import sqlite3
+import logging as log
 
 # ===== 資料庫初始化類別 =====
 # 提供資料庫連接函式、初始化資料表
@@ -50,7 +51,7 @@ class DatabaseManager:
                 event_message TEXT NOT NULL,
                 face_id INTEGER,
                 confidence REAL,
-                FOREIGN KEY (face_id) REFERENCES faces (id)
+                FOREIGN KEY (face_id) REFERENCES face_recognition (id)
             )
         ''')
 
@@ -105,7 +106,7 @@ class DatabaseManager:
 
         conn.commit() # 確認變更(寫入磁碟)
         conn.close() # 關閉連接
-        print("資料庫初始化完成 by databaseManager")
+        log.info("資料庫初始化完成 by databaseManager")
 
     # ===== 建立資料庫連接與游標 =====
     # 回傳 連接物件和游標物件
