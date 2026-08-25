@@ -5,8 +5,6 @@ from modules.resberryPi import open_door_and_rbgled  # 樹梅派函式
 import cv2
 import os
 from datetime import datetime
-# import time
-# from modules.config import RPI
 import logging as log # 除錯用
 
 
@@ -30,13 +28,6 @@ def save_log(messageType, message, result=None):
         conf
     )
 
-# ===== 發送辨識訊息 =====
-def send_recognition_message(message):
-    log.info(f"[推送辨識訊息] => {message}")
-    socketio.emit('recognition', {
-            'type': 'recognition',
-            'message': message
-        })
 
 # ===== 樹莓派-不開門參數設定 ======
 def deny_open_door():

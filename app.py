@@ -15,7 +15,8 @@ from modules import app, socketio, db_manager, face_recognizer, user, recognitio
 from modules.resberryPi import rpi_to_dht22, rpi_to_mq135, rpi_to_buzzer, rpi_to_redled,rpi_to_servo
 from modules.cameraController import set_camera_state
 from modules.video_streaming.faceMessage import save_log
-from utils.response_utils import success_response, error_response
+from utils.response_utils import *
+from utils.directory_utils import make_new_dir
 import cv2
 import logging as log
 
@@ -150,7 +151,7 @@ def stop_camera():
 def camera_status():
     return jsonify({'active': config.CAMERA_ACTIVE}), 200
 
-# ===== 加入人臉到資料庫 =====
+# ===== 加入人臉到資料庫 =====***
 @app.route('/add_face', methods=['POST'])
 def add_face():
     try:
@@ -160,10 +161,9 @@ def add_face():
         if not name or not image_file:
             return error_response('請提供姓名和照片')
         
-        # 建立臨時資料夾
+        # 建立臨時資料夾**
         temp_dir = os.path.join('static', 'temp_uploads')
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
+        make_new_dir(temp_dir)
         
         # 儲存上傳的圖片到臨時資料夾
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -185,7 +185,7 @@ def add_face():
     except Exception as e:
         return error_response(f'錯誤: {str(e)}')
 
-# ===== 測試辨識人臉 =====
+# ===== 測試辨識人臉 =====***
 @app.route('/test_face', methods=['POST'])
 def test_face():
     try:
@@ -205,7 +205,7 @@ def test_face():
         if not valid:
             return error_response(error)
 
-        # 建立臨時資料夾
+        # 建立臨時資料夾**
         temp_dir = os.path.join('static', 'temp_uploads')
         if not os.path.exists(temp_dir):
             os.makedirs(temp_dir)
@@ -231,11 +231,7 @@ def test_face():
         if name and name.startswith('visitor_'):
             username = visitor_Booking.get_visitor_by_face_name(name) # 查詢申請此訪客的住戶
             # 推送訊息
-            log.info("[推送辨識訊息] 辨識為訪客")
-            socketio.emit('recognition', {
-                    'type': 'recognition',
-                    'message': f'偵測到{username}住戶的訪客已到大門'
-            })
+            send_recognition_message(f'偵測到{username}住戶的訪客已到大門')
 
             # --- 儲存辨識紀錄 ---
             face_id = frist_result.get('id')
@@ -254,22 +250,18 @@ def test_face():
                 log.info(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
             else:
                 log.error(f"[系統] 訪客 {name} 人臉資料清除失敗")
+                
         # 如果結果為未知
         elif name == "未知":
-            log.info("[推送辨識訊息] 辨識為未知")
-            socketio.emit('recognition', {
-                'type': 'recognition',
-                'message': '偵測到未知人物'
-            })
+            send_recognition_message('偵測到未知人物')
+        
             # --- 儲存辨識紀錄 ---
             save_log("未知", "偵測到未知人物")
-            # recognition_Logs.save_recognition_log("未知", "偵測到未知人物")
-            print("辨識紀錄已儲存 by app")
+            log.info("辨識紀錄已儲存 by app")
                     
-            # 儲存暫存圖片
+            # 儲存暫存圖片**
             temp_dir = os.path.join('static', 'temp')
-            if not os.path.exists(temp_dir):
-                os.makedirs(temp_dir)
+            make_new_dir(temp_dir)
             
             # 將 PIL 圖片轉換為 OpenCV 格式
             try:
@@ -280,22 +272,20 @@ def test_face():
                 print(f"[測試辨識] 未知人物圖片已儲存到：{img_path}")
             except Exception as save_error:
                 print(f"[測試辨識] 儲存未知人物圖片失敗：{save_error}")
+
         # 如果結果為住戶名稱(為排除例外情況，所以採用此判斷方式)
         elif name and name != "未知":
-            print("[推送辨識訊息] 辨識為住戶 by app")
-            socketio.emit('recognition', {
-                'type': 'recognition',
-                'message': f'偵測到{name}住戶來到大門'
-            })
+            send_recognition_message(f'偵測到{name}住戶來到大門')
+            
             # --- 儲存辨識紀錄 ---
             face_id = frist_result.get('id')
-            print(f"人臉索引: {face_id}")
+            log.info(f"人臉索引: {face_id}")
             # 解析信心值
             confidence_str = frist_result.get('confidence', '0.0%')  # 預設為 '0.0%'
             conf = float(confidence_str.strip('%')) / 100  # 移除 '%' 並轉換為小數
             if face_id:
                 recognition_Logs.save_recognition_log("住戶", f"住戶{name}已來到大門", face_id, conf)
-                print("辨識紀錄已儲存 by app")
+                log.info("辨識紀錄已儲存 by app")
 
         # 輸出結果
         if result['success']:
