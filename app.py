@@ -250,7 +250,7 @@ def test_face():
                 log.info(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
             else:
                 log.error(f"[系統] 訪客 {name} 人臉資料清除失敗")
-                
+
         # 如果結果為未知
         elif name == "未知":
             send_recognition_message('偵測到未知人物')
@@ -543,13 +543,30 @@ def get_fire_status():
     except Exception as e:
         return error_response(str(e))
 
+
+# ===== 火災警報共用函式 =====
+def set_fire_status(is_danger):
+    # 確認是否啟用樹梅派
+    if not RPI:
+        return
+
+    # 開啟警報
+    if is_danger:
+        rpi_to_buzzer('on') # 蜂鳴器鳴叫
+        rpi_to_servo('0') # 開啟大門
+        rpi_to_redled('on') # 紅燈長亮
+
+    # 關閉警報
+    else:
+        rpi_to_buzzer('off') # 蜂鳴器靜音
+        rpi_to_servo('90') # 關閉大門
+        rpi_to_redled('off') # 紅燈關閉
+
 # ===== 火災警報開啟 API 【由前端呼叫】 ======
 @app.route('/api/fire_status/danger')
 def fire_status_danger():
-    if RPI:
-        rpi_to_buzzer('on') # 蜂鳴器鳴叫
-        rpi_to_servo('0') # 開啟大門(不記錄時間)
-        rpi_to_redled('on') # REDLED，長亮
+    set_fire_status(is_danger=True)
+
     config.fire_status_is_open = True
 
     return success_response('火災警報已啟動')
@@ -557,10 +574,8 @@ def fire_status_danger():
 # ===== 火災警報關閉 API 【由前端呼叫】 ======
 @app.route('/api/fire_status/safe')
 def fire_status_safe():
-    if RPI:
-        rpi_to_buzzer('off') # 蜂鳴器靜音
-        rpi_to_servo('90') # 關閉大門(不記錄時間)
-        rpi_to_redled('off') # REDLED關閉
+    set_fire_status(is_danger=False)
+    
     config.fire_status_is_open = False # 提示警報已解除，重啟人臉辨識
 
     return success_response('火災警報已關閉')
@@ -569,10 +584,8 @@ def fire_status_safe():
 # 包括關閉蜂鳴器、關閉大門、重新開啟人臉辨識
 @app.route('/api/fire_status/close')
 def fire_status_close():
-    # print("觸發手動關閉警報")
-    if RPI:
-        rpi_to_buzzer('off') # 蜂鳴器靜音
-        rpi_to_servo('90') # 關閉大門(不記錄時間)
+    set_fire_status(is_danger=False)
+    
     config.fire_status_is_open = False # 提示警報已解除，重啟人臉辨識
 
     return success_response('火災警報已手動關閉')
