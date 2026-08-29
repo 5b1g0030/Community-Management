@@ -14,6 +14,8 @@ dlib(windows優化版): pip install dlib-bin
 # OpenCV（含人臉辨識模組）、Flask、NumPy
 python -m pip install flask flask-socketio opencv-contrib-python numpy tabulate requests
 python -m pip install face_recognition --no-cache-dir
+pip install quart
+pip install hypercorn
 
 # 安裝官方發佈版（這個版本通常比 git 下載更穩定）
 python -m pip install face_recognition_models --no-cache-dir

@@ -1,24 +1,21 @@
-# Models 套件初始化檔案
+import os
+import logging as log
+from quart import Quart
+import socketio
 
-from flask import Flask
-from flask_socketio import SocketIO
+# 模組引入
 from modules.face.faceRecognition import FaceRecognition
 from modules.face.face_cache import init_face_cache
 from modules.user import UserManager
-import os
 from modules.databases.databaseManager import DatabaseManager
 from modules.databases.recognitionLogs import RecognitionLogs
 from modules.databases.visitorBooking import VisitorBooking
 from modules.databases.pickUp import PickUp
-import logging as log
 
 # 初始化紀錄訊息設定
 log.basicConfig(
-    # filename='app.log',     # 日誌檔名，若不指定則預設輸出到主控台
-    # filemode='w',           # 'w' 為覆寫，'a' 為接續寫入 (預設是 'a')
-    # level=log.DEBUG,     # 將追蹤層級調低到 DEBUG，這樣所有訊息都會被記錄
     format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S' # 自訂時間格式
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
 """
 常用格式化欄位：
@@ -42,25 +39,32 @@ logging.error("這是一條 ERROR 錯誤")
 logging.critical("這是一條 CRITICAL 嚴重錯誤")
 """
 
-# 初始化 Flask 應用程式
-
-# 合出專案根目錄下的 templates 和 static 資料夾的絕對路徑
+# 取得根目錄絕對路徑
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-app = Flask(__name__, template_folder=os.path.join(BASE_DIR, 'templates'), static_folder=os.path.join(BASE_DIR, 'static'))
 
-# 初始化 SocketIO
-socketio = SocketIO(app)
+# 1. 初始化 Quart 應用程式
+quart_app = Quart(
+    __name__, 
+    template_folder=os.path.join(BASE_DIR, 'templates'), 
+    static_folder=os.path.join(BASE_DIR, 'static')
+)
 
-# 初始化其他全域變數
-db_manager = DatabaseManager() # 原資料庫類別
-face_recognizer = FaceRecognition() # 人臉識別
-user = UserManager() # 使用者操作類別
-recognition_Logs = RecognitionLogs() # 辨識紀錄類別
-visitor_Booking = VisitorBooking() # 訪客預約類別
-pick_up = PickUp() # 智慧取貨類別
+# 2. 初始化 Async SocketIO，並封裝成 ASGI 應用程式
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+app = socketio.ASGIApp(sio, quart_app)
 
-# 初始化人臉辨識快取
-init_face_cache(db_manager)
+# 3. 初始化商務邏輯類別
+db_manager = DatabaseManager()
+face_recognizer = FaceRecognition()
+user = UserManager()
+recognition_Logs = RecognitionLogs()
+visitor_Booking = VisitorBooking()
+pick_up = PickUp()
 
-# 初始化資料庫
-db_manager.init_database()
+# 4. 利用 Quart 生命週期管理 I/O 初始化
+@quart_app.before_serving
+async def startup():
+    # 若 db 或 cache 內部有非同步方法，可在此使用 await
+    # 例如：await db_manager.init_database()
+    db_manager.init_database()
+    init_face_cache(db_manager)
