@@ -15,7 +15,8 @@ from modules.databases.pickUp import PickUp
 # 初始化紀錄訊息設定
 log.basicConfig(
     format='%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=log.INFO
 )
 """
 常用格式化欄位：
@@ -48,6 +49,8 @@ quart_app = Quart(
     template_folder=os.path.join(BASE_DIR, 'templates'), 
     static_folder=os.path.join(BASE_DIR, 'static')
 )
+# 【修改 2】把 session 必須的金鑰設定給 quart_app[cite: 13]
+quart_app.secret_key = 'MySecretKey950907'
 
 # 2. 初始化 Async SocketIO，並封裝成 ASGI 應用程式
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')

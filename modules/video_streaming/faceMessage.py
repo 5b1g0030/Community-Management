@@ -73,6 +73,7 @@ async def process_visitor(name, result):
 # ===== 處理已知(住戶) =====
 # 【修改 5】改為 async def
 async def process_resident(name, result):
+    log.info("處理已知")
     # 樹梅派操作
     allow_open_door()
 
@@ -109,6 +110,7 @@ async def process_unknown(frame):
 # ===== 推送辨識訊息(已知, 未知, 訪客) =====
 # 【修改 7】整個流程入口改為 async def，讓內部所有的 await 可以順利執行
 async def face_message(results, frame):
+    log.info("已進入 face_message ...")
     for result in results:
         name = result['name']
         log.info(f"[推送辨識訊息] 檢查是否為訪客? name: {name} by video_streaming")

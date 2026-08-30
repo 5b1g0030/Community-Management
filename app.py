@@ -11,7 +11,7 @@ import random
 from modules.config import RPI
 import modules.config as config  # 給相機做同步修改
 from modules.video_streaming.video_streaming import gen_frames, pick_up_frame
-from modules import app, socketio, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
+from modules import app, quart_app, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
 from modules.resberryPi import rpi_to_dht22, rpi_to_mq135, rpi_to_buzzer, rpi_to_redled, rpi_to_servo
 from modules.cameraController import set_camera_state
 from modules.video_streaming.faceMessage import save_log
@@ -20,19 +20,20 @@ from utils.directory_utils import make_new_dir
 import cv2
 import logging as log
 
-app = Quart(__name__)
-app.secret_key = 'MySecretKey950907' 
+# app = Quart(__name__)
+# app.secret_key = 'MySecretKey950907' 
 
 # ===== 管理者端 =====
-@app.route('/manager')
+@quart_app.route('/manager')
 async def manager():
     if session.get('role') != '管理員':
         return redirect('/login') 
     return await render_template('manager.html')
 
 # ===== 登入(首頁) =====
-@app.route('/')
-@app.route('/login', methods=['GET', 'POST'])
+@quart_app.route('/')
+
+@quart_app.route('/login', methods=['GET', 'POST'])
 async def login():
     if request.method == 'GET':
         return await render_template('login.html')
@@ -59,7 +60,7 @@ async def login():
         return error_response('使用者名稱或密碼錯誤', status=401)
 
 # ===== 註冊 =====
-@app.route('/register', methods=['GET', 'POST'])
+@quart_app.route('/register', methods=['GET', 'POST'])
 async def register():
     if request.method == 'GET':
         return await render_template('register.html')
@@ -93,19 +94,19 @@ async def register():
         return error_response(message)
 
 # ===== 登出 =====
-@app.route('/logout')
+@quart_app.route('/logout')
 async def logout():
     session.clear()
     return redirect('/login')
 
 # ===== 鏡頭影像顯示 =====
-@app.route('/video_feed')
+@quart_app.route('/video_feed')
 async def video_feed():
     # 確保 gen_frames 是 async generator 或相容的串流格式
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # ===== 開啟相機 API =====
-@app.route('/start_camera', methods=['POST'])
+@quart_app.route('/start_camera', methods=['POST'])
 async def start_camera():
     with config.CAMERA_LOCK:
         if config.CAMERA_ACTIVE:
@@ -115,7 +116,7 @@ async def start_camera():
     return success_response('相機已開啟')
 
 # ===== 關閉相機 API =====
-@app.route('/stop_camera', methods=['POST'])
+@quart_app.route('/stop_camera', methods=['POST'])
 async def stop_camera():
     try:
         with config.CAMERA_LOCK:
@@ -141,12 +142,12 @@ async def stop_camera():
         return error_response(f'關閉失敗: {str(e)}', status=500)
 
 # ===== 取得相機狀態 API =====
-@app.route('/camera_status', methods=['GET'])
+@quart_app.route('/camera_status', methods=['GET'])
 async def camera_status():
     return jsonify({'active': config.CAMERA_ACTIVE}), 200
 
 # ===== 加入人臉到資料庫 =====
-@app.route('/add_face', methods=['POST'])
+@quart_app.route('/add_face', methods=['POST'])
 async def add_face():
     try:
         form = await request.form
@@ -179,7 +180,7 @@ async def add_face():
         return error_response(f'錯誤: {str(e)}')
 
 # ===== 測試辨識人臉 =====
-@app.route('/test_face', methods=['POST'])
+@quart_app.route('/test_face', methods=['POST'])
 async def test_face():
     temp_path = None
     try:
@@ -281,7 +282,7 @@ async def test_face():
             log.error(f"[測試辨識] 清理臨時檔案失敗：{cleanup_error}")
 
 # ===== 取得人臉資料 =====
-@app.route('/get_faces')
+@quart_app.route('/get_faces')
 async def get_faces():
     try:
         conn, cursor = db_manager.get_db_connection()
@@ -295,7 +296,7 @@ async def get_faces():
         return error_response(f'錯誤: {str(e)}')
 
 # ===== 刪除人臉資料 =====
-@app.route('/api/delete_faces', methods=['POST'])
+@quart_app.route('/api/delete_faces', methods=['POST'])
 async def delete_faces():
     try:
         data = await request.get_json()
@@ -319,7 +320,7 @@ async def delete_faces():
         return error_response(f'刪除失敗: {str(e)}', status=500)
 
 # ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
-@app.route('/api/recognition_logs')
+@quart_app.route('/api/recognition_logs')
 async def get_recognition_logs_datatables():
     logs = recognition_Logs.get_all_recognition_logs()
     
@@ -342,14 +343,14 @@ async def get_recognition_logs_datatables():
     return response
 
 # ===== 住戶頁面路由 =====
-@app.route('/residents')
+@quart_app.route('/residents')
 async def residents():
     if not session.get('role') == "住戶":
         return redirect('/login')
     return await render_template('residents.html')
 
 # ===== 生成訪客預約通行證 =====
-@app.route('/generate_booking_code', methods=['POST'])
+@quart_app.route('/generate_booking_code', methods=['POST'])
 async def generate_booking_code():
     try:
         form = await request.form
@@ -400,12 +401,12 @@ async def generate_booking_code():
         return error_response(f'預約失敗: {str(e)}', status=500)
 
 # ===== 取貨影像串流 =====
-@app.route('/pick_up_feed')
+@quart_app.route('/pick_up_feed')
 async def pick_up_feed():
     return Response(pick_up_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # ===== 取得櫃位狀態 API =====
-@app.route('/api/locker_status', methods=['GET'])
+@quart_app.route('/api/locker_status', methods=['GET'])
 async def get_locker_status():
     try:
         lockers = pick_up.get_all_lockers_status()
@@ -415,7 +416,7 @@ async def get_locker_status():
         return error_response(f'取得失敗: {str(e)}')
 
 # ===== 登記包裹 API =====
-@app.route('/api/register_package', methods=['POST'])
+@quart_app.route('/api/register_package', methods=['POST'])
 async def register_package():
     try:
         data = await request.get_json()
@@ -434,7 +435,7 @@ async def register_package():
         return error_response(f'登記失敗: {str(e)}', status=500)
 
 # ===== 手動清除櫃位 API =====
-@app.route('/api/clear_locker/<int:locker_number>', methods=['POST'])
+@quart_app.route('/api/clear_locker/<int:locker_number>', methods=['POST'])
 async def clear_locker(locker_number):
     try:
         if locker_number not in [1, 2]:
@@ -450,7 +451,7 @@ async def clear_locker(locker_number):
         return error_response(f'清除失敗: {str(e)}', status=500)
 
 # ===== 取得火災監測狀態 API =====
-@app.route('/api/fire_status', methods=['GET'])
+@quart_app.route('/api/fire_status', methods=['GET'])
 async def get_fire_status():
     try:
         if RPI:
@@ -484,21 +485,21 @@ def set_fire_status(is_danger):
         rpi_to_redled('off')
 
 # ===== 火災警報開啟 API ======
-@app.route('/api/fire_status/danger')
+@quart_app.route('/api/fire_status/danger')
 async def fire_status_danger():
     set_fire_status(is_danger=True)
     config.fire_status_is_open = True
     return success_response('火災警報已啟動')
 
 # ===== 火災警報關閉 API ======
-@app.route('/api/fire_status/safe')
+@quart_app.route('/api/fire_status/safe')
 async def fire_status_safe():
     set_fire_status(is_danger=False)
     config.fire_status_is_open = False
     return success_response('火災警報已關閉')
 
 # ===== 手動關閉警報 API =====
-@app.route('/api/fire_status/close')
+@quart_app.route('/api/fire_status/close')
 async def fire_status_close():
     set_fire_status(is_danger=False)
     config.fire_status_is_open = False
