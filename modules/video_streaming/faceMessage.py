@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 import logging as log # 除錯用
 import asyncio # 【修改 2】匯入 asyncio 處理非同步背景轉執行緒
+from modules.config import RPI
 
 
 """ ===== 這裡放人臉判斷+訊息分送邏輯+紀錄資料流程 ===== """
@@ -130,4 +131,5 @@ async def face_message(results, frame):
         # ===== 樹梅派操作 =====
         # 當下達開門指令 and 門的上一次狀態為關
         # (假設 open_door_and_rbgled 若為一般 GPIO 脈衝，通常很短，若會卡住也可考慮放入 thread)
-        open_door_and_rbgled()
+        if RPI:
+            await open_door_and_rbgled()

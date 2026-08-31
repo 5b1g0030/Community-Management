@@ -455,8 +455,12 @@ async def clear_locker(locker_number):
 async def get_fire_status():
     try:
         if RPI:
-            dht22 = rpi_to_dht22()
-            mq135 = rpi_to_mq135()
+            # 【修改核心】使用 asyncio.gather 將兩個請求打包，同時發出！
+            # 它會回傳一個列表，我們可以利用 Python 的解構賦值，直接對應給 dht22 和 mq135
+            dht22, mq135 = await asyncio.gather(
+                rpi_to_dht22(),
+                rpi_to_mq135()
+            )
 
             dht22_data = dht22['data'] if dht22['success'] else {'error': dht22['error']}
             mq135_data = mq135['data'] if mq135['success'] else {'error': mq135['error']}
@@ -472,36 +476,43 @@ async def get_fire_status():
         return error_response(str(e))
 
 # ===== 火災警報共用函式 =====
-def set_fire_status(is_danger):
+async def set_fire_status(is_danger):
     if not RPI:
         return
+        
     if is_danger:
-        rpi_to_buzzer('on')
-        rpi_to_servo('0')
-        rpi_to_redled('on')
+        # 將三個任務打包，同時發射出去，不互相等待
+        await asyncio.gather(
+            rpi_to_buzzer('on'),
+            rpi_to_servo('0'),
+            rpi_to_redled('on')
+        )
     else:
-        rpi_to_buzzer('off')
-        rpi_to_servo('90')
-        rpi_to_redled('off')
+        # 解除警報時也一樣，同時發送關閉指令
+        await asyncio.gather(
+            rpi_to_buzzer('off'),
+            rpi_to_servo('90'),
+            rpi_to_redled('off')
+        )
 
 # ===== 火災警報開啟 API ======
 @quart_app.route('/api/fire_status/danger')
 async def fire_status_danger():
-    set_fire_status(is_danger=True)
+    await set_fire_status(is_danger=True)
     config.fire_status_is_open = True
     return success_response('火災警報已啟動')
 
 # ===== 火災警報關閉 API ======
 @quart_app.route('/api/fire_status/safe')
 async def fire_status_safe():
-    set_fire_status(is_danger=False)
+    await set_fire_status(is_danger=False)
     config.fire_status_is_open = False
     return success_response('火災警報已關閉')
 
 # ===== 手動關閉警報 API =====
 @quart_app.route('/api/fire_status/close')
 async def fire_status_close():
-    set_fire_status(is_danger=False)
+    await set_fire_status(is_danger=False)
     config.fire_status_is_open = False
     return success_response('火災警報已手動關閉')
 

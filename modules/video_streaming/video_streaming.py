@@ -30,7 +30,7 @@ async def gen_frames(): # 修改為 async def[cite: 2]
                             b'Content-Type: image/jpeg\r\n\r\n' + not_found_frame + b'\r\n')
                         await asyncio.sleep(0.5) # 將 time.sleep 改為 await asyncio.sleep[cite: 2]
                         if RPI:
-                            rpi_time_check() 
+                            await rpi_time_check() 
                 continue  
 
             log.info("進入主串流迴圈...")

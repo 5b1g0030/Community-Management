@@ -21,7 +21,7 @@ async def wait_camera_open(): # 修改為 async def 產生器[cite: 1]
                 b'Content-Type: image/jpeg\r\n\r\n' + black_frame + b'\r\n')
         await asyncio.sleep(0.5) # 將 time.sleep 改為 await asyncio.sleep，避免阻塞事件迴圈[cite: 1]
         if RPI:
-            rpi_time_check() 
+            await rpi_time_check() 
 
 # ===== 尋找+開啟相機 (負責硬體 I/O，維持一般函式即可) =====
 def find_and_open_camera():
@@ -73,7 +73,7 @@ async def stream_camera(): # 修改為 async def 產生器[cite: 1]
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
         
         if RPI:
-            rpi_time_check()  
+            await rpi_time_check()  
             
         await asyncio.sleep(0) # 加入 await asyncio.sleep(0) 主動讓出控制權給 Quart 處理其他 HTTP 請求[cite: 1]
 
