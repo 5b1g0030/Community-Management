@@ -63,7 +63,7 @@ async def process_visitor(name, result):
         await save_log(messageType="訪客", message=f"{username}住戶的訪客已到大門", result=result)
 
         # 立即清除訪客人臉資料（同步 IO 包裝）
-        success = await asyncio.to_thread(visitor_Booking.clear_visitor_face_data, name)
+        success = await visitor_Booking.clear_visitor_face_data(name)
         if success:
             # 重新整理快取
             await asyncio.to_thread(refresh_face_cache, db_manager)

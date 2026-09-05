@@ -69,5 +69,5 @@ pick_up = PickUp()
 async def startup():
     # 若 db 或 cache 內部有非同步方法，可在此使用 await
     # 例如：await db_manager.init_database()
-    db_manager.init_database()
+    await db_manager.init_database()
     init_face_cache(db_manager)

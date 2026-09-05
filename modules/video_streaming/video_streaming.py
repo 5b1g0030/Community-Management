@@ -88,7 +88,7 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
                     name = result['name']
                     if name and name != '未知' and not name.startswith('visitor_'):
                         log.info(f"[取貨串流] 辨識到住戶：{name} by video_streaming")
-                        locker_number = pick_up.get_locker_by_name(name)
+                        locker_number = await pick_up.get_locker_by_name(name)
                         
                         if locker_number:
                             log.info(f"[取貨串流] {name} 有包裹在 {locker_number} 號櫃 by video_streaming")
@@ -103,9 +103,9 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
                             face_id = result.get('id')
                             conf = float(result.get('confidence', 0.0))
                             if face_id:
-                                recognition_Logs.save_recognition_log("取貨", f"{name}已到{locker_number}號櫃取貨", face_id, conf)
+                                await recognition_Logs.save_recognition_log("取貨", f"{name}已到{locker_number}號櫃取貨", face_id, conf)
                             
-                            pick_up.clear_locker(locker_number)
+                            await pick_up.clear_locker(locker_number)
                             log.info(f"[取貨串流] {locker_number} 號櫃已清除 by video_streaming")
                             
                             config.PICKUP_FACE_DETECTED = True

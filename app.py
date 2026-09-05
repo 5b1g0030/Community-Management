@@ -218,17 +218,17 @@ async def test_face():
         log.info(f"[測試辨識] 辨識結果：{name}")
 
         if name and name.startswith('visitor_'):
-            username = visitor_Booking.get_visitor_by_face_name(name)
+            username = await visitor_Booking.get_visitor_by_face_name(name)
             send_recognition_message(f'偵測到{username}住戶的訪客已到大門')
 
             face_id = frist_result.get('id')
             confidence_str = frist_result.get('confidence', '0.0%')
             conf = float(confidence_str.strip('%')) / 100
             if face_id:
-                recognition_Logs.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
+                await recognition_Logs.save_recognition_log("訪客", f"{username}住戶的訪客已到大門", face_id, conf)
                 log.info("辨識紀錄已儲存 by app")
                         
-            success = visitor_Booking.clear_visitor_face_data(name)   
+            success = await visitor_Booking.clear_visitor_face_data(name)   
             if success:
                 refresh_face_cache(db_manager)
                 log.info(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
@@ -285,7 +285,7 @@ async def test_face():
 @quart_app.route('/get_faces')
 async def get_faces():
     try:
-        conn, cursor = db_manager.get_db_connection()
+        conn, cursor = await db_manager.get_db_connection()
         cursor.execute("SELECT id, name, created_date, updated_date FROM face_recognition")
         faces = cursor.fetchall()
         conn.close()
@@ -305,7 +305,7 @@ async def delete_faces():
         if not face_ids:
             return error_response('未提供需刪除的 ID')
 
-        conn, cursor = db_manager.get_db_connection()
+        conn, cursor = await db_manager.get_db_connection()
         placeholders = ','.join(['?'] * len(face_ids))
         cursor.execute(f"DELETE FROM face_recognition WHERE id IN ({placeholders})", tuple(face_ids))
         conn.commit()
@@ -322,7 +322,7 @@ async def delete_faces():
 # ===== 取得辨識紀錄資料 (DataTables 篩選專用) =====
 @quart_app.route('/api/recognition_logs')
 async def get_recognition_logs_datatables():
-    logs = recognition_Logs.get_all_recognition_logs()
+    logs = await recognition_Logs.get_all_recognition_logs()
     
     data = []
     for item in logs:
@@ -385,7 +385,7 @@ async def generate_booking_code():
         if not register_result['success']:
             return error_response(register_result['message'])
         
-        success, message = visitor_Booking.save_visitor_booking(
+        success, message = await visitor_Booking.save_visitor_booking(
             username, 
             visitor_name, 
             register_result['visitor_face_id']
@@ -409,7 +409,7 @@ async def pick_up_feed():
 @quart_app.route('/api/locker_status', methods=['GET'])
 async def get_locker_status():
     try:
-        lockers = pick_up.get_all_lockers_status()
+        lockers = await pick_up.get_all_lockers_status()
         return success_response(lockers=lockers)
     except Exception as e:
         log.error(f"[錯誤] 取得櫃位狀態失敗: {e}")
@@ -425,7 +425,7 @@ async def register_package():
         if not recipient_name:
             return error_response('請輸入取件人姓名')
         
-        success, locker_number, message = pick_up.register_package(recipient_name)
+        success, locker_number, message = await pick_up.register_package(recipient_name)
         if success:
             return success_response(message, locker_number=locker_number)
         else:
@@ -441,7 +441,7 @@ async def clear_locker(locker_number):
         if locker_number not in [1, 2]:
             return error_response('無效的櫃號')
         
-        success, message = pick_up.clear_locker(locker_number)
+        success, message = await pick_up.clear_locker(locker_number)
         if success:
             return success_response(message)
         else:

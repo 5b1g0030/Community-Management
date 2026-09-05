@@ -52,7 +52,7 @@ class FaceRecognition:
                     # 將 numpy array 轉成二進位 BLOB
                     encoding_blob = encodings[0].tobytes()
                     # 插入到 face_recognition 表格
-                    insert_face(name, encoding_blob)
+                    await insert_face(name, encoding_blob)
 
                     count += 1
                 else:
@@ -70,7 +70,7 @@ class FaceRecognition:
             return {'success': False, 'message': f'註冊失敗: {str(e)}', 'count': 0}
 
     # ===== 辨識邏輯 =====
-    def recognize_face(self, test_img_path):
+    async def recognize_face(self, test_img_path):
         """
         辨識靜態圖片中的人臉
         
@@ -83,7 +83,7 @@ class FaceRecognition:
         """
         try:
             # 從資料庫讀取所有已知資料
-            data = get_all_face()
+            data = await get_all_face()
             
             # 如果沒有任何已註冊人臉
             if not data:
@@ -172,7 +172,7 @@ class FaceRecognition:
             known_encodings = face_cache.known_encodings
         else:
             # 即時查詢資料庫
-            data = get_all_face()
+            data = await get_all_face()
             
             if not data:
                 return []
@@ -351,7 +351,7 @@ class FaceRecognition:
                 
                 if len(encodings) > 0:
                     encoding_blob = encodings[0].tobytes()
-                    face_id = insert_face(visitor_name, encoding_blob)
+                    face_id = await insert_face(visitor_name, encoding_blob)
                     
                     if first_face_id is None:
                         first_face_id = face_id
