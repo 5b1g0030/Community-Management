@@ -1,5 +1,6 @@
 import numpy as np 
 import logging as log
+from modules.databases.databaseManager import DatabaseManager as db
 
 
 """ ===== 這裡放人臉辨識的快取邏輯 ===== """
@@ -14,12 +15,20 @@ class FaceRecognitionCache:
         self.last_update = None # 上次更新資訊
     
     # ===== 從資料庫載入所有已知人臉資料到記憶體 =====
-    def load_from_database(self, db_manager):
+    # [修改]：將一般函式改為非同步函式 (async def) 以配合 Quart 的事件迴圈，避免阻塞
+    async def load_from_database(self):
         try:
-            conn, cursor = db_manager.get_db_connection()
-            cursor.execute("SELECT id, name, encoding FROM face_recognition")
-            data = cursor.fetchall()
-            conn.close()
+            # [修改]：配合非同步資料庫連線 (例如 aiosqlite / aiomysql 等)，加上 await
+            conn, cursor = await db.get_db_connection()
+            
+            # [修改]：資料庫查詢操作改為非同步等待，加上 await
+            await cursor.execute("SELECT id, name, encoding FROM face_recognition")
+            
+            # [修改]：獲取資料操作改為非同步等待，加上 await
+            data = await cursor.fetchall()
+            
+            # [修改]：關閉連線也需視非同步套件實作加上 await (部分套件可不用，但建議保留 await 或使用 async with 語法)
+            await conn.close()
             
             if not data:
                 self.known_ids = []
@@ -52,11 +61,15 @@ class FaceRecognitionCache:
 face_cache = FaceRecognitionCache()
 
 # ===== 初始化快取（在應用啟動時呼叫）=====
-def init_face_cache(db_manager):
+# [修改]：由於內部呼叫了非同步的 load_from_database，此函式也必須改為 async def
+async def init_face_cache():
     log.info("[快取] 正在初始化...")
-    face_cache.load_from_database(db_manager)
+    # [修改]：呼叫非同步方法時必須加上 await
+    await face_cache.load_from_database()
 
 # ===== 重新整理快取（新增人臉後呼叫）=====
-def refresh_face_cache(db_manager):
+# [修改]：由於內部呼叫了非同步的 load_from_database，此函式也必須改為 async def
+async def refresh_face_cache():
     log.info("[快取] 正在重新整理...")
-    face_cache.load_from_database(db_manager)
+    # [修改]：呼叫非同步方法時必須加上 await
+    await face_cache.load_from_database()

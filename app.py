@@ -170,7 +170,7 @@ async def add_face():
         result = face_recognizer.register_faces(name, temp_dir, [filename])
         
         if result['success']:
-            refresh_face_cache(db_manager)
+            await refresh_face_cache()
             log.info(f"[系統] 已新增 {name} 並重新整理快取")
             return success_response(result['message'])
         else:
@@ -207,7 +207,7 @@ async def test_face():
         filename = f'test_{timestamp}.jpg'
         temp_path = os.path.join(temp_dir, filename)
         
-        img = process_uploaded_image(image_file, temp_path)
+        img = await process_uploaded_image(image_file, temp_path)
                 
         log.info("[測試辨識] 開始辨識人臉...")
         result = face_recognizer.recognize_face(temp_path)
@@ -230,7 +230,7 @@ async def test_face():
                         
             success = await visitor_Booking.clear_visitor_face_data(name)   
             if success:
-                refresh_face_cache(db_manager)
+                await refresh_face_cache()
                 log.info(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
             else:
                 log.error(f"[系統] 訪客 {name} 人臉資料清除失敗")
@@ -313,7 +313,7 @@ async def delete_faces():
         deleted_count = cursor.rowcount
         conn.close()
 
-        refresh_face_cache(db_manager)
+        await refresh_face_cache()
         return success_response(f'成功刪除 {deleted_count} 筆記錄')
     except Exception as e:
         log.error(f"[錯誤] 刪除人臉失敗: {e}")
@@ -393,7 +393,7 @@ async def generate_booking_code():
         if not success:
             return error_response(message)
         
-        refresh_face_cache(db_manager)
+        await refresh_face_cache()
         return success_response(message)
     
     except Exception as e:

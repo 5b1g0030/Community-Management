@@ -35,7 +35,7 @@ class FaceRecognition:
                 
                 # 加載圖片+轉RGB三通道
                 log.info(f"[註冊] 處理圖片: {f}")
-                image = changeRGB(img_path)
+                image = await changeRGB(img_path)
                 
                 if image is None:
                     log.warning(f"[警告] 圖片 {f} 載入失敗，跳過。")
@@ -99,7 +99,7 @@ class FaceRecognition:
                 return {'success': False, 'message': '找不到測試圖片路徑'}
             
             # 加載圖片+轉RGB三通道
-            test_image = changeRGB(test_img_path)
+            test_image = await changeRGB(test_img_path)
             
             if test_image is None:
                 return {'success': False, 'message': '測試圖片載入失敗'}
@@ -165,7 +165,7 @@ class FaceRecognition:
         if use_cache:
             # 如果快取是空的，先載入
             if face_cache.is_empty():
-                face_cache.load_from_database(db_manager)
+                await face_cache.load_from_database()
             
             known_ids = face_cache.known_ids
             known_names = face_cache.known_names
@@ -202,7 +202,7 @@ class FaceRecognition:
             small_frame = frame
         
         # === 3. 使用 changeRGB 處理 frame (BGR -> RGB) ===
-        rgb_frame = changeRGB(small_frame)
+        rgb_frame = await changeRGB(small_frame)
         if rgb_frame is None:
             return []
         
@@ -277,7 +277,7 @@ class FaceRecognition:
                     continue
                 
                 # 轉換為 RGB
-                rgb_image = changeRGB(image)
+                rgb_image = await changeRGB(image)
                 
                 if rgb_image is None:
                     failed_images.append(position)
@@ -340,7 +340,7 @@ class FaceRecognition:
                 image = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
                 
                 # 轉換為 RGB
-                rgb_image = changeRGB(image)
+                rgb_image = await changeRGB(image)
                 
                 if rgb_image is None:
                     continue
