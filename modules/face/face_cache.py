@@ -1,12 +1,14 @@
 import numpy as np 
 import logging as log
-from modules.databases.databaseManager import DatabaseManager as db
+from modules.databases.databaseManager import DatabaseManager
 
+db_manager = DatabaseManager()
 
 """ ===== 這裡放人臉辨識的快取邏輯 ===== """
 
 # ===== 人臉資料快取類別 =====
 class FaceRecognitionCache:
+
     """人臉辨識快取，避免每幀都查詢資料庫"""
     def __init__(self):
         self.known_ids = []     # 人臉id
@@ -19,7 +21,7 @@ class FaceRecognitionCache:
     async def load_from_database(self):
         try:
             # [修改]：配合非同步資料庫連線 (例如 aiosqlite / aiomysql 等)，加上 await
-            conn, cursor = await db.get_db_connection()
+            conn, cursor = await db_manager.get_db_connection()
             
             # [修改]：資料庫查詢操作改為非同步等待，加上 await
             await cursor.execute("SELECT id, name, encoding FROM face_recognition")

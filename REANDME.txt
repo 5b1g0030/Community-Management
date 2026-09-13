@@ -7,6 +7,9 @@
 
 輸出虛擬環境設定: pip freeze > requirements.txt
 
+# 執行方式
+hypercorn app:app --bind 127.0.0.1:5000 --reload 
+
 dlib(windows優化版): pip install dlib-bin
 
 ** 需要安裝的模組 **

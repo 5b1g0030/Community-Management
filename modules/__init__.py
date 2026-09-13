@@ -5,12 +5,12 @@ import socketio
 
 # 模組引入
 from modules.face.faceRecognition import FaceRecognition
-from modules.face.face_cache import init_face_cache
 from modules.user import UserManager
 from modules.databases.databaseManager import DatabaseManager
 from modules.databases.recognitionLogs import RecognitionLogs
 from modules.databases.visitorBooking import VisitorBooking
 from modules.databases.pickUp import PickUp
+from modules.face.face_cache import init_face_cache
 
 # 初始化紀錄訊息設定
 log.basicConfig(
