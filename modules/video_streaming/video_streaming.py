@@ -78,7 +78,7 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
             frame_count += 1
             
             if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
-                results = face_recognizer.recognize_face_from_frame(
+                results = await face_recognizer.recognize_face_from_frame(
                     db_manager, frame, use_cache=True
                 )
                 last_results = results

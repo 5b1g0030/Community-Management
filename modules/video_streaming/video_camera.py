@@ -53,7 +53,7 @@ async def stream_camera(): # 修改為 async def 產生器[cite: 1]
             if frame_count % FACE_RECOGNITION_FRAME_SKIP == 0:
                 log.info("人臉辨識中...")
                 # 建議：若 face_recognizer 運算極度耗時，未來可包裝為 asyncio.to_thread 執行
-                results = face_recognizer.recognize_face_from_frame(
+                results = await face_recognizer.recognize_face_from_frame(
                     db_manager, frame, use_cache=True)
                 last_results = results
                 frame_count = 0
