@@ -8,28 +8,7 @@
 輸出虛擬環境設定: pip freeze > requirements.txt
 
 # 執行方式
-hypercorn app:app --bind 127.0.0.1:5000 --reload 
-
-dlib(windows優化版): pip install dlib-bin
-
-** 需要安裝的模組 **
-
-# OpenCV（含人臉辨識模組）、Flask、NumPy
-python -m pip install flask flask-socketio opencv-contrib-python numpy tabulate requests
-python -m pip install face_recognition --no-cache-dir
-pip install quart
-pip install hypercorn
-pip install httpx
-pip install aiosqlite
-
-# 安裝官方發佈版（這個版本通常比 git 下載更穩定）
-python -m pip install face_recognition_models --no-cache-dir
-
-** 如果出現錯誤: AttributeError: module 'cv2' has no attribute 'face' **
-1. 先卸載現有的 OpenCV
-pip uninstall opencv-python opencv-contrib-python
-2. 安裝包含 face 模組的版本
-pip install opencv-contrib-python
+python -m hypercorn app:app --bind 127.0.0.1:5000 --reload 
 
 ** 如果 venv 無法啟動 (powershell) **
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
@@ -38,7 +17,36 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 
-** logging 設定說明 **
+
+
+== 需要安裝的模組 ==
+
+指令:
+--force-reinstall = 強行安裝+覆蓋
+
+dlib(windows優化版): pip install dlib-bin
+
+# OpenCV（含人臉辨識模組）、Flask、NumPy
+python -m pip install flask flask-socketio opencv-contrib-python numpy tabulate requests
+
+# quart 模組(同步架構相關)
+pip install quart
+pip install hypercorn
+pip install httpx
+pip install aiosqlite
+
+# face_recognition及其模型
+python -m pip install face_recognition --no-deps
+python -m pip install face_recognition_models --no-cache-dir
+
+** 如果出現錯誤: AttributeError: module 'cv2' has no attribute 'face' **
+1. 先卸載現有的 OpenCV
+pip uninstall opencv-python opencv-contrib-python
+2. 安裝包含 face 模組的版本
+pip install opencv-contrib-python
+
+
+== logging 設定說明 ==
 """
 常用格式化欄位：
 %(asctime)s：人類可讀的執行時間。
