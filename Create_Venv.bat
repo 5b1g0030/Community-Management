@@ -10,14 +10,27 @@ echo =============================================================
 echo 開始建立 Python 虛擬環境與安裝套件
 echo =============================================================
 
-:: 1. 檢查並建立虛擬環境
+:: 0. 檢查系統是否安裝 Python 3.11
+echo [0/5] 正在檢查 Python 3.11 環境...
+py -3.11 --version >nul 2>&1
+if errorlevel 1 (
+    echo [錯誤] 系統未檢測到 Python 3.11！
+    echo 請先安裝 Python 3.11（並勾選 Python Launcher / py.exe），再重新執行此批次檔。
+    goto failed
+) else (
+    for /f "tokens=*" %%v in ('py -3.11 --version 2^>^&1') do set "SYS_PY_VER=%%v"
+    echo [成功] 檢測到系統 Python 版本：!SYS_PY_VER!
+)
+
+:: 0-1. 檢查並建立虛擬環境 (指定使用 py -3.11 建立)
 if not exist "%PY%" (
-    echo [1/5] 正在建立虛擬環境 [%VENV_DIR%]...
-    python -m venv "%VENV_DIR%"
+    echo [1/5] 正在使用 Python 3.11 建立虛擬環境 [%VENV_DIR%]...
+    py -3.11 -m venv "%VENV_DIR%"
     if errorlevel 1 (
-        echo [錯誤] 建立虛擬環境失敗，請檢查 Python 是否已正確認設於系統變數中。
+        echo [錯誤] 建立虛擬環境失敗，請檢查 Python 權限與環境變數設定。
         goto failed
     )
+    *Verification:* 資料夾內應會生成包含 Python 3.11 執行檔的 `.venv` 目錄。
 ) else (
     echo [1/5] 已檢測到現有的虛擬環境 [%VENV_DIR%]，跳過建立步驟。
 )

@@ -30,9 +30,10 @@ async def manager():
         return redirect('/login') 
     return await render_template('manager.html')
 
-# ===== 登入(首頁) =====
+# ==== 首頁(預設登入) ====
 @quart_app.route('/')
 
+# ===== 登入 =====
 @quart_app.route('/login', methods=['GET', 'POST'])
 async def login():
     if request.method == 'GET':
@@ -45,7 +46,7 @@ async def login():
     if not username or not password:
         return error_response('請輸入使用者名稱和密碼')
     
-    role = user.login_user(username, password)
+    role = await user.login_user(username, password)
     log.info(f"login_user returned role: {repr(role)}")
     if role:
         session['username'] = username
@@ -86,7 +87,7 @@ async def register():
     if password != confirm_password:
         return error_response('兩次密碼不相同')
     
-    success, message = user.register_user(username, password, role)
+    success, message = await user.register_user(username, password, role)
 
     if success:
         return success_response(message, redirect='/login')
@@ -167,7 +168,7 @@ async def add_face():
         
         await image_file.save(temp_path)  # Quart 檔案儲存需 await
         
-        result = face_recognizer.register_faces(name, temp_dir, [filename])
+        result = await face_recognizer.register_faces(name, temp_dir, [filename])
         
         if result['success']:
             await refresh_face_cache()
@@ -219,7 +220,7 @@ async def test_face():
 
         if name and name.startswith('visitor_'):
             username = await visitor_Booking.get_visitor_by_face_name(name)
-            send_recognition_message(f'偵測到{username}住戶的訪客已到大門')
+            await send_recognition_message(f'偵測到{username}住戶的訪客已到大門')
 
             face_id = frist_result.get('id')
             confidence_str = frist_result.get('confidence', '0.0%')
@@ -236,7 +237,7 @@ async def test_face():
                 log.error(f"[系統] 訪客 {name} 人臉資料清除失敗")
 
         elif name == "未知":
-            send_recognition_message('偵測到未知人物')
+            await send_recognition_message('偵測到未知人物')
             save_log("未知", "偵測到未知人物")
             log.info("辨識紀錄已儲存 by app")
                     
@@ -286,9 +287,9 @@ async def test_face():
 async def get_faces():
     try:
         conn, cursor = await db_manager.get_db_connection()
-        cursor.execute("SELECT id, name, created_date, updated_date FROM face_recognition")
-        faces = cursor.fetchall()
-        conn.close()
+        await cursor.execute("SELECT id, name, created_date, updated_date FROM face_recognition")
+        faces = await cursor.fetchall()
+        await conn.close()
         
         face_list = [{'id': face[0], 'name': face[1], 'created_date': face[2], 'updated_date': face[3]} for face in faces]
         return success_response(faces=face_list)
@@ -373,7 +374,7 @@ async def generate_booking_code():
             'right': right_face
         }
         
-        validation_result = face_recognizer.validate_face_images(image_files)
+        validation_result = await face_recognizer.validate_face_images(image_files)
         if not validation_result['success']:
             return error_response(validation_result['message'])
         
@@ -381,7 +382,7 @@ async def generate_booking_code():
         random_suffix = random.randint(1000, 9999)
         visitor_name = f"visitor_{timestamp}_{random_suffix}"
         
-        register_result = face_recognizer.register_visitor_faces(visitor_name, image_files)
+        register_result = await face_recognizer.register_visitor_faces(visitor_name, image_files)
         if not register_result['success']:
             return error_response(register_result['message'])
         
