@@ -3,12 +3,12 @@
 ## 現狀: Flask->Quart 架構修改，確保能正確執行
 
 ## 一定需要修改的檔案
-1.  **app.py: 這是目前問題最多的檔案，仍有多處漏掉 await。**
+1.  **Vapp.py: 這是目前問題最多的檔案，仍有多處漏掉 await。**
 2. **modules/user.py**: 這個檔案完全仍是同步資料庫寫法
     如果要完整配合 Quart，建議：
         async def register_user(...)
         async def login_user(...)
-3. **modules/video_streaming/faceMessage.py: 這個檔案有兩個非同步使用錯誤。**
+3. **Vmodules/video_streaming/faceMessage.py: 這個檔案有兩個非同步使用錯誤。**
     *錯誤一：把 async 函式放進 asyncio.to_thread*
         username = await asyncio.to_thread(
                visitor_Booking.get_visitor_by_face_name,

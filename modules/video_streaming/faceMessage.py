@@ -50,10 +50,10 @@ def allow_open_door():
 async def process_visitor(name, result):
     # 查詢對應的住戶名稱（若資料庫查詢為同步，可用 asyncio.to_thread 包裝避免阻塞）
     log.info("[推送辨識訊息] 查詢對應的住戶名稱 by video_streaming")
-    username = await asyncio.to_thread(visitor_Booking.get_visitor_by_face_name, name)
+    username = await visitor_Booking.get_visitor_by_face_name(name)
 
     if username:
-        # 樹梅派操作
+        # 樹梅派傳送開門參數
         allow_open_door()
 
         # 推送訊息（非同步，需 await）
@@ -66,7 +66,7 @@ async def process_visitor(name, result):
         success = await visitor_Booking.clear_visitor_face_data(name)
         if success:
             # 重新整理快取
-            await asyncio.to_thread(refresh_face_cache, db_manager)
+            await refresh_face_cache()
             log.info(f"[系統] 訪客 {name} 已辨識並清除人臉資料 by video_streaming")
         else:
             log.error(f"[系統] 訪客 {name} 人臉資料清除失敗 by video_streaming")
@@ -75,7 +75,7 @@ async def process_visitor(name, result):
 # 【修改 5】改為 async def
 async def process_resident(name, result):
     log.info("處理已知")
-    # 樹梅派操作
+    # 樹梅派傳送開門參數
     allow_open_door()
 
     # 推送訊息（非同步，需 await）
@@ -88,7 +88,7 @@ async def process_resident(name, result):
 # 【修改 6】改為 async def
 async def process_unknown(frame):
     log.info("[推送辨識訊息] 辨識為未知 by video_streaming")
-    # 樹梅派操作
+    # 樹梅派傳送不開門參數
     deny_open_door()
 
     # 推送訊息（非同步，需 await）
@@ -105,7 +105,6 @@ async def process_unknown(frame):
         img_path = f'static/temp/unknown_{datetime.now().strftime("%Y%m%d%H%M%S")}.jpg'
         cv2.imwrite(img_path, frame)
         return img_path
-
     await asyncio.to_thread(_save_temp_image)
 
 # ===== 推送辨識訊息(已知, 未知, 訪客) =====

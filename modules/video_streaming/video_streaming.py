@@ -1,4 +1,4 @@
-from modules import socketio, db_manager, face_recognizer, recognition_Logs, pick_up
+from modules import sio, db_manager, face_recognizer, recognition_Logs, pick_up
 from utils.camera_utils import CameraManager
 from modules.config import FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config 
@@ -48,10 +48,11 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
     log.info("[取貨串流] 開始取貨串流")
     config.PICKUP_STREAM_ACTIVE = True
     config.PICKUP_FACE_DETECTED = False
+    camera = None
     
     try:
-        backends = CameraManager.get_camera_config()
-        camera_index, backend = CameraManager.find_camera(backends)
+        backends = await asyncio.to_thread(CameraManager.get_camera_config)
+        camera_index, backend = await asyncio.to_thread(CameraManager.find_camera, backends)
 
         if camera_index is None or backend is None:
             not_found_frame = create_message_frame("Camera Not Found")
@@ -59,7 +60,7 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
                    b'Content-Type: image/jpeg\r\n\r\n' + not_found_frame + b'\r\n')
             return
         
-        camera = CameraManager.open_camera(camera_index, backend)
+        camera = await asyncio.to_thread(CameraManager.open_camera, camera_index, backend)
 
         if not camera or not camera.isOpened():
             error_frame = create_message_frame("Camera Open Failed")
@@ -71,7 +72,7 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
         last_results = [] 
 
         while config.PICKUP_STREAM_ACTIVE:
-            ret, frame = camera.read()
+            ret, frame = await asyncio.to_thread(camera.read) # 讀取影像，使用非同步
             if not ret:
                 break
             
@@ -93,7 +94,7 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
                         if locker_number:
                             log.info(f"[取貨串流] {name} 有包裹在 {locker_number} 號櫃 by video_streaming")
                             # 若 socketio 也是非同步版本（如 quart-socketio），這裡可能需要加上 await
-                            socketio.emit('pickup_success', {
+                            await sio.emit('pickup_success', {
                                 'type': 'pickup',
                                 'name': name,
                                 'locker_number': locker_number,
@@ -136,7 +137,7 @@ async def pick_up_frame(): # 修改為 async def[cite: 2]
         log.error(f"[錯誤] 取貨串流處理失敗: {e} by video_streaming")
     finally:
         if camera is not None:
-            CameraManager.clean_camera(camera)
+            await asyncio.to_thread(CameraManager.clean_camera, camera)
             log.info("[取貨串流] 相機資源已釋放 by video_streaming")
         
         config.PICKUP_STREAM_ACTIVE = False

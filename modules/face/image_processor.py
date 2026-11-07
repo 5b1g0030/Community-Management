@@ -90,7 +90,7 @@ def validate_image_file(image_file):
 async def process_uploaded_image(image_file, temp_path):
     try:       
         # [修改]：在 Quart 中，request.files 物件的 read() 必須使用 await 來非同步讀取
-        image_data = await image_file.read()
+        image_data = await asyncio.to_thread(image_file.read)
         # print(f"[測試辨識] 讀取圖片資料，大小：{len(image_data)} bytes")
                     
         # [修改]：將 CPU 密集的圖片調整及 I/O 密集的圖片儲存包裝為內部函式

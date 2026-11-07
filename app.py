@@ -46,7 +46,7 @@ async def login():
     if not username or not password:
         return error_response('請輸入使用者名稱和密碼')
     
-    role = await user.login_user(username, password)
+    role = user.login_user(username, password)
     log.info(f"login_user returned role: {repr(role)}")
     if role:
         session['username'] = username
@@ -87,7 +87,7 @@ async def register():
     if password != confirm_password:
         return error_response('兩次密碼不相同')
     
-    success, message = await user.register_user(username, password, role)
+    success, message = user.register_user(username, password, role)
 
     if success:
         return success_response(message, redirect='/login')
@@ -171,7 +171,7 @@ async def add_face():
         result = await face_recognizer.register_faces(name, temp_dir, [filename])
         
         if result['success']:
-            await refresh_face_cache()
+            await refresh_face_cache() # 更新快取
             log.info(f"[系統] 已新增 {name} 並重新整理快取")
             return success_response(result['message'])
         else:
@@ -211,7 +211,7 @@ async def test_face():
         img = await process_uploaded_image(image_file, temp_path)
                 
         log.info("[測試辨識] 開始辨識人臉...")
-        result = face_recognizer.recognize_face(temp_path)
+        result = await face_recognizer.recognize_face(temp_path)
         log.info(f"[測試辨識] 辨識結果：{result}")
         
         frist_result = result['results'][0]
@@ -231,7 +231,7 @@ async def test_face():
                         
             success = await visitor_Booking.clear_visitor_face_data(name)   
             if success:
-                await refresh_face_cache()
+                await refresh_face_cache() # 更新快取
                 log.info(f"[系統] 訪客 {name} 已辨識並清除人臉資料")
             else:
                 log.error(f"[系統] 訪客 {name} 人臉資料清除失敗")
@@ -254,7 +254,7 @@ async def test_face():
                 print(f"[測試辨識] 儲存未知人物圖片失敗：{save_error}")
 
         elif name and name != "未知":
-            send_recognition_message(f'偵測到{name}住戶來到大門')
+            await send_recognition_message(f'偵測到{name}住戶來到大門')
             
             face_id = frist_result.get('id')
             log.info(f"人臉索引: {face_id}")
@@ -377,11 +377,13 @@ async def generate_booking_code():
         validation_result = await face_recognizer.validate_face_images(image_files)
         if not validation_result['success']:
             return error_response(validation_result['message'])
-        
+
+        # 產生訪客隨機編號
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         random_suffix = random.randint(1000, 9999)
         visitor_name = f"visitor_{timestamp}_{random_suffix}"
-        
+
+        # 註冊訪客人臉
         register_result = await face_recognizer.register_visitor_faces(visitor_name, image_files)
         if not register_result['success']:
             return error_response(register_result['message'])
@@ -468,6 +470,7 @@ async def get_fire_status():
 
             return success_response(dht22=dht22_data, mq135=mq135_data)
         else:
+            # 未啟用樹梅派之替代
             temp = random.randint(24, 28)
             return success_response(
                 dht22={'temperature': temp, 'status': 'Normal'},
@@ -484,16 +487,16 @@ async def set_fire_status(is_danger):
     if is_danger:
         # 將三個任務打包，同時發射出去，不互相等待
         await asyncio.gather(
-            rpi_to_buzzer('on'),
-            rpi_to_servo('0'),
-            rpi_to_redled('on')
+            rpi_to_buzzer('on'), # 蜂鳴器 開
+            rpi_to_servo('0'), # 馬達 開
+            rpi_to_redled('on') # 紅色LED 開
         )
     else:
         # 解除警報時也一樣，同時發送關閉指令
         await asyncio.gather(
-            rpi_to_buzzer('off'),
-            rpi_to_servo('90'),
-            rpi_to_redled('off')
+            rpi_to_buzzer('off'), # 蜂鳴器 關
+            rpi_to_servo('90'), # 馬達 關
+            rpi_to_redled('off') # 紅色LED 關
         )
 
 # ===== 火災警報開啟 API ======
@@ -519,4 +522,5 @@ async def fire_status_close():
 
 if __name__ == '__main__':
     # 本地直接執行 (生產環境建議使用 hypercorn app:app)
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    print("請按 START.bat 執行")
+    # app.run(debug=True, host='127.0.0.1', port=5000)
