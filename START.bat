@@ -21,10 +21,11 @@ if not exist "%PY%" (
 )
 
 :: 嘗試直接執行虛擬環境內的 hypercorn，若無則使用 python -m hypercorn
+:: -w 4: 指定使用 4 個工作進程(CPU)
 if exist "%HYPERCORN%" (
-    "%HYPERCORN%" app:app --bind 127.0.0.1:5000 --reload
+    "%HYPERCORN%" app:app --bind 127.0.0.1:5000 
 ) else (
-    "%PY%" -m hypercorn app:app --bind 127.0.0.1:5000 --reload
+    "%PY%" -m hypercorn app:app --bind 127.0.0.1:5000
 )
 
 if errorlevel 1 (

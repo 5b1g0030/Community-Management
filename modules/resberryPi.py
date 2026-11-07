@@ -35,7 +35,7 @@ async def rpi_to_servo(command):
     try:
         # [修改] 使用 httpx.AsyncClient 進行非同步 HTTP 請求
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=2.0) 
+            response = await client.get(url, timeout=10.0) 
 
         if response.status_code == 200:
             print(f"✅ 樹莓派回傳: {response.text}")
@@ -57,7 +57,7 @@ async def rpi_to_rgbled(command):
     try:
         # [修改] 非同步 HTTP 請求[cite: 1]
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=5.0) 
+            response = await client.get(url, timeout=10.0) 
 
         if response.status_code == 200:
             print(f"✅ 樹莓派回傳: {response.text}")
@@ -78,7 +78,7 @@ async def rpi_to_dht22():
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/dht22/data"
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=2.0)
+            response = await client.get(url, timeout=10.0)
 
         if response.status_code == 200:
             data = response.json()
@@ -101,7 +101,7 @@ async def rpi_to_mq135():
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/mq135/data"
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=5.0)
+            response = await client.get(url, timeout=10.0)
             
         print(f"樹莓派回應: {response}")
         if response.status_code == 200:
@@ -126,7 +126,7 @@ async def rpi_to_buzzer(command):
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/bz/{command}"
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=5.0)
+            response = await client.get(url, timeout=10.0)
             
         if response.status_code == 200:
             return {"success": True}
@@ -147,7 +147,7 @@ async def rpi_to_redled(command):
     url = f"http://{RPI_IP_ADDRESS}:{RPI_PORT}/redled/{command}"
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, timeout=5.0)
+            response = await client.get(url, timeout=10.0)
             
         if response.status_code == 200:
             return {"success": True}

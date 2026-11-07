@@ -14,11 +14,12 @@ python -m hypercorn app:app --bind 127.0.0.1:5000 --reload
 ** 如果 venv 無法啟動 (powershell) **
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
+== github ==
 ** Git 使用者資訊設定 **
 git config --global user.email "you@example.com"
 git config --global user.name "Your Name"
 
-
+同步分支: git fetch origin
 
 == 需要安裝的模組 ==
 

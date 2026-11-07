@@ -457,7 +457,7 @@ async def clear_locker(locker_number):
 @quart_app.route('/api/fire_status', methods=['GET'])
 async def get_fire_status():
     try:
-        if RPI:
+        if RPI==False:
             # 【修改核心】使用 asyncio.gather 將兩個請求打包，同時發出！
             # 它會回傳一個列表，我們可以利用 Python 的解構賦值，直接對應給 dht22 和 mq135
             dht22, mq135 = await asyncio.gather(

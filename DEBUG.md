@@ -12,3 +12,6 @@ results = face_recognizer.recognize_face_from_frame(...)
 RuntimeWarning: coroutine 'FaceRecognition.recognize_face_from_frame' was never awaited
 
 結論: 非同步函式的呼叫端漏了 await，導致 coroutine 物件被當成辨識結果列表迭代。
+
+# face_fecognition 找不到 face_fecognition_models
+請安裝 setuptools<70.0.0 版本
