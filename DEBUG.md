@@ -15,3 +15,19 @@ RuntimeWarning: coroutine 'FaceRecognition.recognize_face_from_frame' was never 
 
 # face_fecognition 找不到 face_fecognition_models
 請安裝 setuptools<70.0.0 版本
+
+# quart非同步: RuntimeWarning: coroutine 'Cursor.execute' was never awaited
+詳細錯誤:
+D:\Users\Gina\Desktop\python_project\Community-Management\app.py:311: RuntimeWarning: coroutine 'Cursor.execute' was never awaited
+  cursor.execute(f"DELETE FROM face_recognition WHERE id IN ({placeholders})", tuple(face_ids))
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+D:\Users\Gina\Desktop\python_project\Community-Management\app.py:312: RuntimeWarning: coroutine 'Connection.commit' was never awaited
+  conn.commit()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+D:\Users\Gina\Desktop\python_project\Community-Management\app.py:315: RuntimeWarning: coroutine 'Connection.close' was never awaited
+  conn.close()
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+
+原因:
+
+

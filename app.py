@@ -308,11 +308,11 @@ async def delete_faces():
 
         conn, cursor = await db_manager.get_db_connection()
         placeholders = ','.join(['?'] * len(face_ids))
-        cursor.execute(f"DELETE FROM face_recognition WHERE id IN ({placeholders})", tuple(face_ids))
-        conn.commit()
+        await cursor.execute(f"DELETE FROM face_recognition WHERE id IN ({placeholders})", tuple(face_ids))
+        await conn.commit()
         
         deleted_count = cursor.rowcount
-        conn.close()
+        await conn.close()
 
         await refresh_face_cache()
         return success_response(f'成功刪除 {deleted_count} 筆記錄')
@@ -457,7 +457,7 @@ async def clear_locker(locker_number):
 @quart_app.route('/api/fire_status', methods=['GET'])
 async def get_fire_status():
     try:
-        if RPI==False:
+        if RPI:
             # 【修改核心】使用 asyncio.gather 將兩個請求打包，同時發出！
             # 它會回傳一個列表，我們可以利用 Python 的解構賦值，直接對應給 dht22 和 mq135
             dht22, mq135 = await asyncio.gather(

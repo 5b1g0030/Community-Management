@@ -231,6 +231,7 @@ class FaceRecognition:
                 
                 x, y, w, h = left, top, right - left, bottom - top
 
+                # 檢查是否有「任一筆」符合
                 if True in matches:
                     face_distances = face_recognition.face_distance(known_encodings, face_encoding)
                     best_match_index = np.argmin(face_distances)
