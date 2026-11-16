@@ -59,7 +59,7 @@ export function initializeRecognitionLogsTable() {
         order: [[1, 'desc']], // [指定要排序的欄位索引（從 0 開始）, 排序方向]
         // 載入中文語言包
         language: {
-            url: '//cdn.datatables.net/plug-ins/2.0.8/i18n/zh-Hant.json'
+            url: '/static/zh-Hant.json' // 指定中文語言包的路徑
         },
         // 每頁顯示數量選項
         lengthMenu: [10, 25, 50, 100],

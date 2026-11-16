@@ -7,7 +7,7 @@ import * as DOM from "./dom.js" // 引入網頁元素
 import { login, register, getFireStatus, FireStatusDanger, FireStatusSafe, FireStatusClose } from "./api.js"; // 引入後端api溝通函式
 import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbModal, pickUp, packageRegistration } from "./modals.js";
 import { initializeRecognitionLogsTable, initRecognitionSocket, clearLogFilters } from "./recognitionLogs.js";
-import { io } from "https://cdn.socket.io/4.6.1/socket.io.esm.min.js";
+import { io } from "/static/js/socket.io.esm.js"; // 引入 Socket.IO 客戶端庫
 import { modalsClose } from "./modalController.js";
 
 document.addEventListener('DOMContentLoaded', () => {

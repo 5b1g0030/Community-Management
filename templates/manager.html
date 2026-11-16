@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dataTablesFilter.css') }}"> <!-- 辨識記錄篩選器樣式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fire.css') }}"> <!-- 火災監測樣式 -->
     <!-- 引入 DataTables CSS -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/dataTables.dataTables.css') }}">
 
 </head>
 <body>
@@ -114,10 +114,10 @@
     <!-- 引入 JavaScript -->
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
     <!-- 引入 Flask SocketIO -->
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
     <!-- 引入 jQuery 和 DataTables -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+    <script src="{{ url_for('static', filename='js/jquery-3.7.1.js') }}"></script>
+    <script type="text/javascript" charset="utf8" src="{{ url_for('static', filename='js/dataTables.js') }}"></script>
 
     <!-- 加入人臉 Modal(彈出視窗) -->
     <!--
