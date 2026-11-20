@@ -1,0 +1,16 @@
+/* The overlay matches the MJPEG image, including its responsive dimensions. */
+/* 區域偵測 CSS */
+.intrusion-video-wrap { position: relative; display: inline-block; width: 100%; max-width: 426px; line-height: 0; }
+.intrusion-video-wrap #video-stream { display: block; width: 100%; max-width: none; height: auto; }
+#intrusion-canvas { position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none; touch-action: none; }
+.intrusion-panel { background: #fff8f1; border: 1px solid #f1ca9b; border-radius: 8px; padding: 12px; margin: 10px 0 18px; }
+.intrusion-panel h3, .intrusion-panel h4 { margin: 6px 0 10px; }
+.intrusion-hint { font-size: 13px; line-height: 1.5; color: #554c43; }
+.intrusion-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.intrusion-actions button { border: 1px solid #b88e68; background: #fff; color: #35291f; border-radius: 5px; padding: 6px 9px; cursor: pointer; }
+.intrusion-actions button:disabled { cursor: not-allowed; opacity: .45; }
+#intrusion-state { font-weight: 600; margin: 10px 0; }
+#intrusion-error { font-size: 13px; color: #9c1e1e; overflow-wrap: anywhere; }
+#intrusion-events { padding-left: 18px; max-height: 220px; overflow-y: auto; font-size: 13px; line-height: 1.45; }
+#intrusion-events li { padding: 6px 0; border-bottom: 1px solid #eed9c7; }
+.intrusion-toast { position: fixed; bottom: 25px; right: 25px; z-index: 9000; max-width: 420px; padding: 16px; background: #a61b1b; border: 2px solid #ffb9b9; color: #fff; border-radius: 8px; box-shadow: 0 5px 22px rgba(0,0,0,.3); font-weight: bold; }

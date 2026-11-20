@@ -328,7 +328,7 @@ async def get_recognition_logs_datatables():
     data = []
     for item in logs:
         face_id = item['face_id'] if item['face_id'] is not None else '無'
-        confidence = f"{item['confidence']:.1f}" if item['confidence'] is not None else '無'
+        confidence = f"{item['confidence']:.2f}" if item['confidence'] is not None else '無'
         
         data.append([
             item['id'],

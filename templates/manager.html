@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/recognitionMessages.css') }}"> <!-- 即時顯示紀錄區樣式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dataTablesFilter.css') }}"> <!-- 辨識記錄篩選器樣式 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fire.css') }}"> <!-- 火災監測樣式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/intrusion.css') }}"> <!-- 區域偵測樣式 -->
     <!-- 引入 DataTables CSS -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/dataTables.dataTables.css') }}">
 
@@ -95,6 +96,25 @@
             <div class="video-container">
                 <img id="video-stream" src="{{ url_for('video_feed') }}" alt="影像串流" >
             </div>
+
+            <!-- 區域偵測-控制面板 -->
+            <section class="intrusion-panel" aria-label="區域入侵警報">
+                <h3>🚨 禁止進入區域</h3>
+                <p class="intrusion-hint">先開啟相機，按「畫定區域」，在影像上依序左鍵點至少 3 個頂點，再按「儲存並啟用」。以人員腳部中心點是否進入區域為判準。</p>
+                <div class="intrusion-actions">
+                    <button type="button" id="intrusion-edit">✏️ 畫定區域</button>
+                    <button type="button" id="intrusion-undo" disabled>復原一點</button>
+                    <button type="button" id="intrusion-save" disabled>儲存並啟用</button>
+                    <button type="button" id="intrusion-toggle">停用偵測</button>
+                    <button type="button" id="intrusion-clear">清除區域</button>
+                    <button type="button" id="intrusion-permission">開啟桌面通知</button>
+                </div>
+                <p id="intrusion-state" role="status">正在讀取警戒區設定…</p>
+                <p id="intrusion-error" role="alert"></p>
+                <h4>最近入侵事件</h4>
+                <ul id="intrusion-events" aria-live="polite"></ul>
+            </section>
+            <!-- 區域偵測-控制面板 -->
             
             <!-- 相機控制按鈕 -->
             <div class="camera-controls" style="margin-top: 15px; text-align: center;">

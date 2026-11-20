@@ -9,6 +9,7 @@ import { addFaceModal, testFaceModal, viewFace, visitorBooking, initViewLogDbMod
 import { initializeRecognitionLogsTable, initRecognitionSocket, clearLogFilters } from "./recognitionLogs.js";
 import { io } from "/static/js/socket.io.esm.js"; // 引入 Socket.IO 客戶端庫
 import { modalsClose } from "./modalController.js";
+import { initIntrusionUI } from "./intrusion.js"; // 區域偵測
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -262,14 +263,14 @@ document.addEventListener('DOMContentLoaded', () => {
         setInterval(updateFireStatus, 5000);
     }
 
-    // *************************
-    // 辨識紀錄篩選-初始化函式
-    // *************************
     // ===== 初始化辨識紀錄 DataTable =====
     // var recognitionLogsTable = null; // DataTables 實例變數
     // 辨識紀錄即時推送
     const socket = io();
     initRecognitionSocket(socket); // 辨識紀錄及時顯示與更新
+
+    // ===== 初始化區域偵測 UI =====
+    initIntrusionUI(socket); // 區域入侵警報／區域畫定
     
     // ===== 監聽取貨成功事件 =====
     socket.on('pickup_success', function(data) {

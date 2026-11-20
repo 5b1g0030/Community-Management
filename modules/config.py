@@ -4,7 +4,7 @@
 DATABASE = "face_database/face_database.db"
 
 # 信心度(越小越相似)
-FACE_RECOGNITION_TOLERANCE = 0.5
+FACE_RECOGNITION_TOLERANCE = 0.43
 
 # ===== 人臉辨識優化參數 =====
 FACE_RECOGNITION_FRAME_SKIP = 12  # 每 n 幀才執行一次辨識（原本 3，提高以減少運算）
