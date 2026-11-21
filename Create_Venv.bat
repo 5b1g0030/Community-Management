@@ -75,6 +75,18 @@ if exist "requirements.txt" (
     echo [5/5] 未找到 requirements.txt，跳過此步驟。
 )
 
+:: 6. 最後再次固定 face_recognition 相容的 setuptools
+"%PY%" -m pip install --force-reinstall --no-cache-dir "setuptools==69.5.1"
+
+"%PY%" -c "from pkg_resources import resource_filename; import setuptools; print('setuptools=' + setuptools.__version__); print('pkg_resources=OK')"
+if errorlevel 1 (
+    echo [錯誤] setuptools 安裝失敗，face_recognition_models 無法正常匯入。
+    goto failed
+)
+
+"%PY%" -c "import face_recognition_models; print('face_recognition_models=OK')"
+if errorlevel 1 goto failed
+
 echo.
 echo =============================================================
 echo 所有套件安裝成功！

@@ -94,7 +94,10 @@
         <div class="video-section">
             <h2>即時影像串流</h2>
             <div class="video-container">
+                <div class="intrusion-video-wrap">
                 <img id="video-stream" src="{{ url_for('video_feed') }}" alt="影像串流" >
+                <canvas id="intrusion-canvas" aria-label="禁止進入區域畫定圖層"></canvas> <!-- 區域偵測畫布 -->
+                </div>
             </div>
 
             <!-- 區域偵測-控制面板 -->

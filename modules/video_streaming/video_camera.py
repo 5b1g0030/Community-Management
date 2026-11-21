@@ -1,4 +1,4 @@
-from modules import db_manager, face_recognizer
+from modules import db_manager, face_recognizer, sio
 from utils.camera_utils import CameraManager
 from modules.config import FACE_RECOGNITION_FRAME_SKIP
 import modules.config as config 
@@ -42,6 +42,12 @@ async def stream_camera(): # 修改為 async def 產生器[cite: 1]
     last_results = []  
     last_names = set()  
 
+    # 區域偵測
+    # 引入偵測主模組、警報事件紀錄模組
+    from modules import intrusion_monitor, intrusion_event_log
+    intrusion_monitor.reset_tracking() # 重置追蹤器，避免上一個串流的追蹤資訊影響新串流
+    intrusion_last_error = None # 記錄上一個錯誤訊息，避免重複推送相同錯誤訊息
+
     while config.CAMERA_ACTIVE:
         # log.info("進入影像串流...")
         ret, frame = config.CAMERA_INSTANCE.read()  
@@ -66,6 +72,32 @@ async def stream_camera(): # 修改為 async def 產生器[cite: 1]
                 await face_message(results, frame)  
             last_names = current_names
             show_resultFrame(results, frame)  
+
+        """
+                    區域偵測-影像分析
+                """
+                # 以原始影像進行禁止區域偵測，避免人臉框影響 YOLO。
+                # 發生模型錯誤時不讓既有的人臉辨識/影像串流中斷。
+        try:
+                    frame, intrusion_alert = intrusion_monitor.process_frame(frame)
+                    if intrusion_alert is not None:
+                        await sio.emit('intrusion_alert', intrusion_alert)
+                        try:
+                            intrusion_event_log.add(intrusion_alert)
+                        except Exception as log_exc:
+                            print('[區域入侵] 事件紀錄寫入失敗:', log_exc)
+                        print('[區域入侵]', intrusion_alert['message'])
+                    intrusion_last_error = None
+        except Exception as exc:
+                    err = str(exc)
+                    if intrusion_last_error != err:
+                        print('[區域入侵] 偵測模組錯誤:', err)
+                        await sio.emit('intrusion_error', {'message': err})
+                        intrusion_last_error = err
+
+        """
+            區域偵測-影像分析結束
+        """
 
         ret, buffer = cv2.imencode('.jpg', frame)
         frame_bytes = buffer.tobytes()

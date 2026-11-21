@@ -11,7 +11,7 @@ import random
 from modules.config import RPI
 import modules.config as config  # 給相機做同步修改
 from modules.video_streaming.video_streaming import gen_frames, pick_up_frame
-from modules import app, quart_app, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up
+from modules import app, sio, quart_app, db_manager, face_recognizer, user, recognition_Logs, visitor_Booking, pick_up, intrusion_monitor, intrusion_event_log
 from modules.resberryPi import rpi_to_dht22, rpi_to_mq135, rpi_to_buzzer, rpi_to_redled, rpi_to_servo
 from modules.cameraController import set_camera_state
 from modules.video_streaming.faceMessage import save_log
@@ -519,6 +519,37 @@ async def fire_status_close():
     await set_fire_status(is_danger=False)
     config.fire_status_is_open = False
     return success_response('火災警報已手動關閉')
+
+# 區域偵測
+# ===== 禁止進入區域設定與警報 API =====
+@quart_app.route('/api/intrusion/zone', methods=['GET', 'PUT', 'DELETE'])
+async def intrusion_zone():
+    if request.method == 'GET':
+        return jsonify({'success': True, **intrusion_monitor.get_zone()})
+    try:
+        if request.method == 'DELETE':
+            return jsonify({'success': True, **intrusion_monitor.clear_zone()})
+        if not request.is_json:
+            return jsonify({'success': False, 'message': '請送出 JSON'}), 400
+        payload = await request.get_json()
+        if not isinstance(payload, dict):
+            return jsonify({'success': False, 'message': 'JSON 格式錯誤'}), 400
+        if 'points' in payload:
+            value = intrusion_monitor.save_zone(payload['points'], enabled=payload.get('enabled', True))
+        elif 'enabled' in payload:
+            value = intrusion_monitor.enable(payload['enabled'])
+        else:
+            return jsonify({'success': False, 'message': '缺少 points 或 enabled'}), 400
+        await sio.emit('intrusion_zone_updated', value)
+        return jsonify({'success': True, **value})
+    except (ValueError, TypeError) as exc:
+        return jsonify({'success': False, 'message': str(exc)}), 400
+
+# 區域偵測
+# ==== 取得最近入侵事件紀錄 API =====
+@quart_app.route('/api/intrusion/events', methods=['GET'])
+async def intrusion_events():
+    return jsonify({'success': True, 'events': intrusion_event_log.recent(30)})
 
 if __name__ == '__main__':
     # 本地直接執行 (生產環境建議使用 hypercorn app:app)

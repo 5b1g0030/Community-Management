@@ -11,6 +11,7 @@ from modules.databases.recognitionLogs import RecognitionLogs
 from modules.databases.visitorBooking import VisitorBooking
 from modules.databases.pickUp import PickUp
 from modules.face.face_cache import init_face_cache
+from modules.intrusion import IntrusionMonitor, IntrusionEventLog
 
 # 初始化紀錄訊息設定
 log.basicConfig(
@@ -54,7 +55,7 @@ quart_app.secret_key = 'MySecretKey950907'
 
 # 2. 初始化 Async SocketIO，並封裝成 ASGI 應用程式
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
-app = socketio.ASGIApp(sio, quart_app)
+app = socketio.ASGIApp(sio, quart_app) # Quart專案要執行需要的物件
 
 # 3. 初始化商務邏輯類別
 db_manager = DatabaseManager()
@@ -63,6 +64,8 @@ user = UserManager()
 recognition_Logs = RecognitionLogs()
 visitor_Booking = VisitorBooking()
 pick_up = PickUp()
+intrusion_monitor = IntrusionMonitor()
+intrusion_event_log = IntrusionEventLog()
 
 # 4. 利用 Quart 生命週期管理 I/O 初始化
 @quart_app.before_serving
